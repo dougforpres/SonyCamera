@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "TestDLL": {
+      "commandName": "Project",
+      "workingDirectory": "C:\\Users\\dougf\\source\\repos\\SonyCamera\\Debug"
+    }
+  }
+}

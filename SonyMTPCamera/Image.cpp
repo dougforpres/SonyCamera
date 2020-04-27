@@ -1,0 +1,570 @@
+#include "pch.h"
+#include "Image.h"
+#include "libraw/libraw.h"
+#include "libjpeg//turbojpeg.h"
+#include "Logger.h"
+#include "Registry.h"
+#include <codecvt>
+
+static const DWORD EXIF_IDENT = 0x002a4949;
+static const DWORD JPEG_IDENT = 0xe1ffd8ff;
+
+Image::Image(ObjectInfo* info, Message* message)
+    : MessageReader(message),
+      m_info(info)
+{
+    LOGTRACE(L"In: Image::Image @x%p - Creating from USB Data", (void*)this);
+
+    DWORD offset = 0;
+    DWORD ident = GetDWORD(offset);
+
+    if (ident == EXIF_IDENT)
+    {
+        m_inputMode = InputMode::ARW;
+        LOGTRACE(L"Image identified as ARW");
+    }
+    else if (ident == JPEG_IDENT)
+    {
+        m_inputMode = InputMode::JPEG;
+        LOGTRACE(L"Image identified as JPEG");
+    }
+    else
+    {
+        // Preview images have some cruft at the beginning that I think is
+        // something like focus point array or similar
+        m_inputMode = InputMode::JPEG;
+        m_imageOffset = ident;
+        LOGTRACE(L"Image identified as Preview (JPEG)");
+    }
+
+    LOGTRACE(L"Out: Image::Image - Created");
+}
+
+Image::~Image()
+{
+    LOGTRACE(L"In: Image::~Image @x%p", (void*)this);
+
+    if (m_pixelData && m_outputMode != OutputMode::PASSTHRU)
+    {
+        LOGTRACE(L"Cleaning up cached pixel data (%d bytes)", m_pixelDataSize);
+        delete[] m_pixelData;
+        m_pixelData = nullptr;
+    }
+
+    if (m_info)
+    {
+        delete m_info;
+        m_info = nullptr;
+    }
+
+    LOGTRACE(L"Out: Image::~Image");
+}
+
+DWORD
+Image::GetImageDataSize()
+{
+    LOGTRACE(L"In: Image::GetImageDataSize");
+
+    DWORD result = 0;
+
+    if (EnsurePixelsProcessed())
+    {
+        result = m_pixelDataSize;
+    }
+
+    LOGTRACE(L"Out: Image::GetImageDataSize - returning %d", result);
+
+    return result;
+}
+
+BYTE*
+Image::GetImageData()
+{
+    BYTE* result = nullptr;
+
+    LOGTRACE(L"In:: Image::GetImageData");
+
+    if (EnsurePixelsProcessed())
+    {
+        result = m_pixelData;
+    }
+
+    LOGTRACE(L"Out: Image::GetImageData - result x%p", result);
+
+    return result;
+}
+
+LibRaw*
+Image::InitializeLibRaw(bool process)
+{
+    LOGTRACE(L"Image:: InitLibRaw(%d)", process ? 1  : 0);
+    LibRaw* libraw = new LibRaw(0);
+
+    int r = libraw->open_buffer(GetData(), GetDataLength());
+
+    if (r != LIBRAW_SUCCESS)
+    {
+        LOGERROR(L"Error opening ARW data in libraw %s", LibRawErrorToString(libraw, r));
+
+        delete libraw;
+
+        return nullptr;
+    }
+
+    libraw->imgdata.params.use_camera_wb = 0;
+    libraw->imgdata.params.output_bps = 16;
+    libraw->imgdata.params.output_color = process ? 1 : 0;
+    libraw->imgdata.params.gamm[0] = 1;
+    libraw->imgdata.params.gamm[1] = 1;
+    libraw->imgdata.params.highlight = 0;
+    libraw->imgdata.params.no_auto_bright = 1;
+    libraw->imgdata.params.user_qual = 0;
+
+    r = libraw->unpack();
+
+    if (r != LIBRAW_SUCCESS)
+    {
+        LOGERROR(L"LibRaw - problem unpacking data %s", LibRawErrorToString(libraw, r));
+    }
+
+    if (process)
+    {
+        r = libraw->dcraw_process();
+
+        if (r != LIBRAW_SUCCESS)
+        {
+            LOGERROR(L"Unable to dcraw_process %s", LibRawErrorToString(libraw, r));
+        }
+    }
+
+    return libraw;
+}
+
+bool
+Image::ProcessARWData()
+{
+    LOGTRACE(L"In: Image:: ProcessARWData()");
+
+    BYTE* result = nullptr;
+    LibRaw* libraw = nullptr;
+    libraw_processed_image_t* processed = nullptr;
+    int r = 0;
+    ushort width = 0;
+    ushort height = 0;
+    int linesize = 0;
+
+    // Both RGB and RGGB require libraw to process the data to some extent or another
+    switch (m_outputMode)
+    {
+    case OutputMode::RGB:
+        LOGINFO(L"Output mode RGB...");
+        libraw = InitializeLibRaw(true);
+        processed = libraw->dcraw_make_mem_image(&r);
+
+        if (r != LIBRAW_SUCCESS)
+        {
+            LOGERROR(L"Unable to dcraw_make_mem_image %s", LibRawErrorToString(libraw, r));
+        }
+        else
+        {
+            if (processed)
+            {
+                if (processed->data_size > 0)
+                {
+                    m_pixelDataSize = processed->data_size;
+                    m_pixelData = new BYTE[m_pixelDataSize];
+                    memcpy(m_pixelData, processed->data, processed->data_size);
+                    m_info->SetWidth(libraw->imgdata.sizes.iwidth);
+                    m_info->SetHeight(libraw->imgdata.sizes.iheight);
+                }
+                else
+                {
+                    LOGERROR(L"libraw failed to make memory image, BUT DIDN'T ERROR!");
+                }
+
+                LibRaw::dcraw_clear_mem(processed);
+                processed = nullptr;
+            }
+        }
+        break;
+
+    case OutputMode::RGGB:
+        LOGINFO(L"Output mode RGGB...");
+        libraw = InitializeLibRaw(false);
+
+        r = libraw->raw2image();
+
+        if (r != LIBRAW_SUCCESS)
+        {
+            LOGERROR(L"Unable to raw2image %s", LibRawErrorToString(libraw, r));
+        }
+
+        width = libraw->imgdata.sizes.iwidth;
+        height = libraw->imgdata.sizes.iheight;
+        linesize = 4 * 2 * width;
+
+        {
+            std::string colorsStr = libraw->imgdata.idata.cdesc;
+            LOGINFO(L"RAW file color format = %S", colorsStr.c_str());
+
+            int xoffs = 0;
+            int yoffs = 0;
+
+            std::ostringstream builder;
+
+            builder << colorsStr[libraw->COLOR(0, 0)];
+            builder << colorsStr[libraw->COLOR(0, 1)];
+            builder << colorsStr[libraw->COLOR(1, 0)];
+            builder << colorsStr[libraw->COLOR(1, 1)];
+
+            LOGINFO(L"Raw data layout in form: %S", builder.str().c_str());
+        }
+
+        m_pixelDataSize = width * height * sizeof(short);
+        m_pixelData = new BYTE[m_pixelDataSize];
+
+        for (int y = 0; y < height; y++)
+        {
+            ushort* pds = (ushort*)m_pixelData;
+            int readOffset = y * width;
+            int writeOffset = (m_pixelDataSize / sizeof(short)) - (y + 1) * width;
+
+            int i0 = libraw->COLOR(y, 0);
+            int i1 = libraw->COLOR(y, 1);
+
+            ushort* ptr = (ushort*)(libraw->imgdata.image + readOffset);
+
+            for (int x = 0; x < width; x += 2)
+            {
+                pds[x + writeOffset] = *(ptr + i0);
+                ptr += 4;
+                pds[x + 1 + writeOffset] = *(ptr + i1);
+                ptr += 4;
+            }
+        }
+
+        m_info->SetWidth(width);
+        m_info->SetHeight(height);
+        break;
+
+    case OutputMode::PASSTHRU:
+        LOGINFO(L"Output mode PASSTHRU...");
+        // We're passing the raw in to out, so just shuffle the pointers
+        m_pixelData = GetData();
+        m_pixelDataSize = GetDataLength();
+        break;
+
+    default:
+        LOGERROR(L"Unsupported output mode %d for ARW file (only supports RGB, RGGB, PASSTHRU)", m_outputMode);
+    }
+
+    if (libraw)
+    {
+        delete libraw;
+        libraw = nullptr;
+    }
+
+    LOGTRACE(L"Out: Image:: ProcessARWData()");
+
+    return m_pixelData != nullptr;
+}
+
+bool
+Image::ProcessJPEGData()
+{
+    LOGTRACE(L"In: Image:: ProcessJPEGData()");
+
+    tjhandle tj = nullptr;
+    BYTE* result = nullptr;
+    int r = 0;
+    int width = 0;
+    int height = 0;
+    int pitch = 0;
+    BYTE* temp = nullptr;
+    int imageDataSize = GetDataLength() - m_imageOffset;
+    BYTE* imageData = GetData() + m_imageOffset;
+
+    // Don't care about these two, but are required
+    int jpegSubsamp = 0;
+    int jpegColorspace = 0;
+
+    // RGB requires libjpeg to process the data to some extent or another
+    switch (m_outputMode)
+    {
+    case OutputMode::RGB:
+        LOGINFO(L"Output mode RGB...");
+        tj = tjInitDecompress();
+
+        r = tjDecompressHeader3(tj, imageData, imageDataSize, &width, &height, &jpegSubsamp, &jpegColorspace);
+
+        if (r != ERROR_SUCCESS)
+        {
+            LOGERROR(L"Unable to Decode jpeg header, error %s", TurboJPEGErrorToString(tj, r).c_str());
+        }
+
+        pitch = tjPixelSize[TJPF_RGB];
+
+        {
+            BYTE* temp = new BYTE[width * height * pitch];
+            r = tjDecompress2(tj, imageData, imageDataSize, temp, width, width * pitch, height, TJPF_RGB, TJFLAG_ACCURATEDCT);
+
+            if (r == ERROR_SUCCESS)
+            {
+                // Stretch the bytes out from byte to short
+                m_pixelDataSize = width * height * pitch * sizeof(short);
+                m_pixelData = new BYTE[m_pixelDataSize];
+                memset(m_pixelData, 0, m_pixelDataSize);
+
+                for (int s = 0; s < width * height * pitch; s++)
+                {
+                    m_pixelData[s * 2] = temp[s];
+                }
+            }
+            else
+            {
+                LOGERROR(L"Unable to Decompress image, error %s", TurboJPEGErrorToString(tj, r).c_str());
+            }
+
+            delete[] temp;
+        }
+
+        r = tjDestroy(tj);
+
+        if (r != ERROR_SUCCESS)
+        {
+            LOGERROR(L"Unable to Destroy TJ instance, error %s", TurboJPEGErrorToString(tj, r).c_str());
+        }
+
+        m_info->SetWidth(width);
+        m_info->SetHeight(height);
+        break;
+
+    case OutputMode::JPEG:
+        m_outputMode = OutputMode::PASSTHRU;
+        // fall thru
+
+    case OutputMode::PASSTHRU:
+        LOGINFO(L"Output mode PASSTHRU...");
+        // We're passing the raw in to out, so just shuffle the pointers
+        m_pixelData = (GetData() + m_imageOffset);
+        m_pixelDataSize = (GetDataLength() - m_imageOffset);
+        break;
+
+    default:
+        LOGERROR(L"Unsupported output mode %d for JPEG file (only supports RGB, JPEG, PASSTHRU", m_outputMode);
+        break;
+    }
+
+    LOGTRACE(L"Out: Image:: ProcessJPEGData()");
+
+    return m_pixelData != nullptr;
+}
+
+bool
+Image::EnsurePixelsProcessed()
+{
+    bool result = false;
+
+    LOGTRACE(L"In: EnsurePixelsProcessed..");
+    if (!m_pixelData)
+    {
+        if (GetDataLength())
+        {
+            switch (m_inputMode)
+            {
+            case InputMode::ARW:
+                result = ProcessARWData();
+                break;
+
+            case InputMode::JPEG:
+                result = ProcessJPEGData();
+                break;
+
+            default:
+                LOGERROR(L"Unknown incoming image format %d", (int)m_inputMode);
+                break;
+            }
+        }
+        else
+        {
+            LOGWARN(L"Unable to process image as it is NULL");
+        }
+    }
+    else
+    {
+        result = true;
+    }
+
+    LOGTRACE(L"In: EnsurePixelsProcessed - returning %d", result);
+
+    return result;
+}
+
+OutputMode
+Image::GetOutputMode()
+{
+    return m_outputMode;
+}
+
+void
+Image::SetOutputMode(OutputMode mode)
+{
+    m_outputMode = mode;
+}
+
+InputMode
+Image::GetInputMode()
+{
+    return m_inputMode;
+}
+
+DWORD
+Image::GetDataLength()
+{
+    LOGTRACE(L"In: Image::GetDataLength");
+
+    DWORD result = m_message ? m_message->GetDataLen() : 0;
+
+    LOGTRACE(L"Out: Image::GetDataLength - result %p", result);
+
+    return result;
+}
+
+BYTE *
+Image::GetData()
+{
+    LOGTRACE(L"In: Image::GetData");
+
+    BYTE* result = m_message ? m_message->GetData() : nullptr;
+
+    LOGTRACE(L"Out: Image::GetData - result @ x%p", (void*)result);
+
+    return result;
+}
+
+std::wstring
+Image::WidenString(const char* shortString)
+{
+    static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+
+    return converter.from_bytes(shortString);
+}
+
+std::wstring
+Image::LibRawErrorToString(LibRaw* libraw, int librawError)
+{
+    std::wostringstream builder;
+
+    builder << WidenString(libraw->strerror(librawError)) << L" (" << librawError << L")";
+
+    return builder.str();
+}
+
+std::wstring
+Image::TurboJPEGErrorToString(tjhandle tj, int tjError)
+{
+    std::wostringstream builder;
+
+    builder << WidenString(tjGetErrorStr2(tj)) << L" (" << tjError << L")";
+
+    return builder.str();
+}
+
+DWORD
+Image::GetWidth()
+{
+    return m_info->GetWidth();
+}
+
+DWORD
+Image::GetHeight()
+{
+    return m_info->GetHeight();
+}
+
+bool
+Image::StringEndsWith(const std::wstring& mainStr, const std::wstring& toMatch)
+{
+    if (mainStr.size() >= toMatch.size() &&
+        mainStr.compare(mainStr.size() - toMatch.size(), toMatch.size(), toMatch) == 0)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+void
+Image::SaveFile(std::wstring path)
+{
+    LOGTRACE(L"In: Image::SaveFile('%s')", path.c_str());
+
+    if (path.empty())
+    {
+        // Whenever we open a device, set the save file path
+        registry.Open();
+        path = registry.GetString(L"", L"File Save Path", L"");
+        registry.Close();
+    }
+
+    if (!path.empty())
+    {
+        std::wostringstream builder;
+
+        builder << path;
+
+        if (!StringEndsWith(path, L"\\"))
+        {
+            builder << L"\\";
+        }
+
+        builder << m_info->GetFilename();
+
+        std::wstring filename = builder.str();
+
+        LOGTRACE(L"Saving to '%s'", filename.c_str());
+
+        // Create the file, overwriting if needed (this is needed for the preview JPEG's which are all same filename)
+        HANDLE hfile = CreateFile(filename.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, TRUNCATE_EXISTING, nullptr);
+
+        if (hfile != INVALID_HANDLE_VALUE)
+        {
+            DWORD offset = 0;
+            DWORD size = GetDataLength();
+            DWORD bytesWritten = 0;
+
+            if (m_inputMode == InputMode::JPEG)
+            {
+                offset = m_imageOffset;
+                size = size - m_imageOffset;
+            }
+
+            WriteFile(hfile, GetData() + offset, size, &bytesWritten, nullptr);
+            CloseHandle(hfile);
+        }
+        else
+        {
+            LOGWARN(L"Unable to open output file, error x%08x", GetLastError());
+        }
+    }
+    else
+    {
+        LOGWARN(L"Unable to save file, path not specified");
+    }
+
+    LOGTRACE(L"Out: Image::SaveFile('%s')", path.c_str());
+}
+
+void
+Image::SetDuration(double duration)
+{
+    m_duration = duration;
+}
+
+double
+Image::GetDuration()
+{
+    return m_duration;
+}
