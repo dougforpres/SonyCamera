@@ -575,8 +575,8 @@ StringLookupProperty::StringLookupProperty()
         AddResource(Property::ExposureProgramMode, 0x0002, IDS_FUNCTIONALMODE_P);
 
         // Shutter Button Status
-        AddResource(Property::ShutterButtonStatus, 0x0002, IDS_SHUTTERSTATUS_UP);
-        AddResource(Property::ShutterButtonStatus, 0x0001, IDS_SHUTTERSTATUS_HALF);
+        AddResource(Property::ShutterButtonStatus, 0x0001, IDS_SHUTTERSTATUS_UP);
+        AddResource(Property::ShutterButtonStatus, 0x0002, IDS_SHUTTERSTATUS_HALF);
         AddResource(Property::ShutterButtonStatus, 0x0003, IDS_SHUTTERSTATUS_DOWN);
 
         // Photo Buffer Status
