@@ -26,6 +26,19 @@ Message::~Message()
 }
 
 void
+Message::Allocate(DWORD dataLen)
+{
+    SetData(nullptr, 0);
+
+    if (dataLen)
+    {
+        m_data = new BYTE[dataLen];
+        memset(m_data, 0, dataLen);
+        m_dataLen = dataLen;
+    }
+}
+
+void
 Message::SetCommand(WORD command)
 {
     m_command = command;
@@ -52,19 +65,13 @@ Message::GetDataLen()
 bool
 Message::AddData(BYTE* data, DWORD dataLen)
 {
-    if (m_data)
-    {
-        BYTE* newData = new BYTE[dataLen + m_dataLen];
+    // This will ignore any data bigger than allocated size
+    DWORD bytesToWrite = min(m_dataLen - m_writeOffset, dataLen);
 
-        memcpy(newData, m_data, m_dataLen);
-        memcpy(newData + m_dataLen, data, dataLen);
-        delete[] m_data;
-        m_data = newData;
-        m_dataLen = m_dataLen + dataLen;
-    }
-    else
+    if (m_data && bytesToWrite > 0)
     {
-        SetData(data, dataLen);
+        memcpy(m_data + m_writeOffset, data, bytesToWrite);
+        m_writeOffset += bytesToWrite;
     }
 
     return true;

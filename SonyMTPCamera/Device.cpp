@@ -661,10 +661,16 @@ Device::InternalSend(Device::Op kind, Message* out)
             }
             else
             {
+                // Tell the message to pre-allocate data (this will save a lot of reallocation/copy operations)
+                result->Allocate(cbReportedDataSize);
+
                 // Use the WPD_COMMAND_MTP_EXT_READ_DATA command to read in the data
                 // Allocate a buffer for the command to read data into - this should 
                 // be the same size as the number of bytes we are expecting to read (per chunk, if applicable).
-                ULONG bufferSize = min(cbReportedDataSize, cbOptimalDataSize);
+                // Use up to 8MB buffer, currently the optimal buffer size seems to be 256kB
+                ULONG bufferSize = min(cbReportedDataSize, max(cbOptimalDataSize * 16, 2^23));
+                LOGTRACE(L"Using a transfer buffer of %d bytes", bufferSize);
+
                 BYTE* pbBufferIn = NULL;
                 if (IsSuccess(hr, L"SetStringValue(WPD_PROPERTY_MTP_EXT_TRANSFER_CONTEXT) (Read Data)"))
                 {
@@ -681,7 +687,7 @@ Device::InternalSend(Device::Op kind, Message* out)
 
                     do
                     {
-                        ULONG xferSize = min(cbReportedDataSize, cbOptimalDataSize);
+                        ULONG xferSize = min(cbReportedDataSize, bufferSize);
 
                         hr = pDevValues->Clear();
 
@@ -745,14 +751,10 @@ Device::InternalSend(Device::Op kind, Message* out)
 
                             totalBytesRead += cbBytesRead;
 
-                            //if (totalBytesRead != cbReportedDataSize)
-                            //{
-                            //    LOGWARN(L"Bytes read (%d) != reported data size (%d)", totalBytesRead, cbReportedDataSize);
-                            //}
-
                             if (IsSuccess(hr, L"GetBufferValue (WPD_PROPERTY_MTP_EXT_TRANSFER_DATA) (Read Data)"))
                             {
                                 result->AddData(pbBufferOut, cbBytesRead);
+                                LOGTRACE(L"Read %d of %d bytes", totalBytesRead, cbReportedDataSize);
                             }
                         }
 
@@ -775,11 +777,6 @@ Device::InternalSend(Device::Op kind, Message* out)
                 }
             }
         }
-        //// Reset hr to S_OK because we skipped the data phase
-        //if (hr == S_FALSE && bSkipDataPhase == TRUE)
-        //{
-        //    hr = S_OK;
-        //}
     }
 
     // Use the WPD_COMMAND_MTP_EXT_END_DATA_TRANSFER command to signal transfer completion
@@ -853,8 +850,6 @@ Device::InternalSend(Device::Op kind, Message* out)
 
     // Free up any allocated memory
     CoTaskMemFree(pwszContext);
-
-//    LogIfFailed(hr, L"! Failed to communicate with device");
 
     if (pDevValues)
     {

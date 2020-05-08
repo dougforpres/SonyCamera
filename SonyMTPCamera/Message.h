@@ -18,6 +18,7 @@ public:
 
     std::wstring Dump();
 
+    void Allocate(DWORD size);
     void SetCommand(WORD command);
     WORD GetCommand();
     DWORD GetDataLen();
@@ -37,5 +38,6 @@ private:
     std::list<DWORD> m_params;
     BYTE* m_data = nullptr;
     DWORD m_dataLen = 0;
+    DWORD m_writeOffset = 0;
 };
 
