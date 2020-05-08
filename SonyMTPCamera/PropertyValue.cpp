@@ -256,31 +256,31 @@ PropertyValue::ToString()
     switch (m_type)
     {
     case DataType::INT8:
-        builder << L"x" << std::hex << std::setw(2) << std::setfill(L'0') << m_int8;
+        builder << L"(INT8)x" << std::hex << std::setw(2) << std::setfill(L'0') << m_int8;
         break;
 
     case DataType::UINT8:
-        builder << L"x" << std::hex << std::setw(2) << std::setfill(L'0') << m_uint8;
+        builder << L"(UINT8)x" << std::hex << std::setw(2) << std::setfill(L'0') << m_uint8;
         break;
 
     case DataType::INT16:
-        builder << L"x" << std::hex << std::setw(4) << std::setfill(L'0') << m_int16;
+        builder << L"(INT16)x" << std::hex << std::setw(4) << std::setfill(L'0') << m_int16;
         break;
 
     case DataType::UINT16:
-        builder << L"x" << std::hex << std::setw(4) << std::setfill(L'0') << m_uint16;
+        builder << L"(UINT16)x" << std::hex << std::setw(4) << std::setfill(L'0') << m_uint16;
         break;
 
     case DataType::INT32:
-        builder << L"x" << std::hex << std::setw(8) << std::setfill(L'0') << m_int32;
+        builder << L"(INT32)x" << std::hex << std::setw(8) << std::setfill(L'0') << m_int32;
         break;
 
     case DataType::UINT32:
-        builder << L"x" << std::hex << std::setw(8) << std::setfill(L'0') << m_uint32;
+        builder << L"(UINT32)x" << std::hex << std::setw(8) << std::setfill(L'0') << m_uint32;
         break;
 
     case DataType::STR:
-        builder << m_str;
+        builder << L"(STR)'" << m_str << "'";
         break;
 
     default:
