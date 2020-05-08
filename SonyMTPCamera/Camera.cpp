@@ -63,10 +63,10 @@ Camera::GetDeviceInfo()
         delete rx;
 
         m_device->Close();
-    }
 
-    ProcessDeviceInfoOverrides();
-    m_deviceInfo->DumpToLog();
+        ProcessDeviceInfoOverrides();
+        m_deviceInfo->DumpToLog();
+    }
 
     return m_deviceInfo;
 }
@@ -107,6 +107,12 @@ Camera::ProcessDeviceInfoOverrides()
     d->SetExposureTimeStep(registry.GetDouble(cameraPath, L"Exposure Time Step", d->GetExposureTimeStep()));
     d->SetSensorType((SensorType)registry.GetDWORD(cameraPath, L"Sensor Type", (DWORD)d->GetSensorType()));
     d->SetSupportsLiveview((bool)registry.GetDWORD(cameraPath, L"Supports Liveview", d->GetSupportsLiveview()));
+    d->SetCropMode((CropMode)registry.GetDWORD(cameraPath, L"Crop Mode", (DWORD)d->GetCropMode()));
+    d->SetLeftCrop(registry.GetDWORD(cameraPath, L"Crop Left", d->GetLeftCrop()));
+    d->SetRightCrop(registry.GetDWORD(cameraPath, L"Crop Right", d->GetRightCrop()));
+    d->SetTopCrop(registry.GetDWORD(cameraPath, L"Crop Top", d->GetTopCrop()));
+    d->SetBottomCrop(registry.GetDWORD(cameraPath, L"Crop Bottom", d->GetBottomCrop()));
+    d->SetButtonPropertiesInverted((bool)registry.GetDWORD(cameraPath, L"Button Properties Inverted", d->GetButtonPropertiesInverted()));
 
     registry.Close();
 
@@ -186,8 +192,34 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
     // 1. Ensure camera is in a state that will allow a photo to be taken
     // 2. Allows us to clean out any "pending" images that could have been
     //    created by user pressing shutter button
-    LOGTRACE(L"  Getting latest camera settings");
+    PropertyValue up((UINT16)(GetDeviceInfo()->GetButtonPropertiesInverted() ? 2 : 1));
+
+    LOGTRACE(L"Up value is %d (%s)", up.GetUINT16(), up.ToString());
+    LOGTRACE(L"Getting latest camera settings");
+
     CameraSettings* settings = GetSettings(true);
+
+    // Ensure the shutter control properties are correct
+    if (settings->GetPropertyValue(Property::ShutterFullDown)->GetUINT16() != up.GetUINT16())
+    {
+        LOGWARN(L"ShutterFullDown is set, clearing");
+
+        SetProperty(Property::ShutterFullDown, &up);
+
+        // Re-fetch settings
+        settings = GetSettings(true);
+    }
+
+    if (settings->GetPropertyValue(Property::ShutterFullDown)->GetUINT16() != up.GetUINT16())
+    {
+        LOGWARN(L"ShutterHalfDown is set, clearing");
+        PropertyValue up((WORD)1);
+
+        SetProperty(Property::ShutterHalfDown, &up);
+
+        // Re-fetch settings
+        settings = GetSettings(true);
+    }
 
     while (WORD bufferStatus = settings->GetPropertyValue(Property::PhotoBufferStatus)->GetUINT16() != 0)
     {
@@ -224,7 +256,7 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
         settings = GetSettings(true);
     }
 
-    if (settings->GetPropertyValue(Property::ShutterFullDown)->GetUINT16() == 1)
+    if (settings->GetPropertyValue(Property::ShutterButtonStatus)->GetUINT8() == 1)
     {
         LOGTRACE(L"  Shutter button is UP");
 
@@ -254,7 +286,7 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
     }
     else
     {
-        LOGWARN(L"StartCapture: Cannot start capture as shutter already down");
+        LOGWARN(L"StartCapture: Cannot start capture as someone has their finger on the shutter button (%s)", settings->GetPropertyValue(Property::ShutterButtonStatus)->ToString());
         throw CameraException(L"Cannot start capture as shutter already open");
     }
 
@@ -266,8 +298,6 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
 CaptureStatus
 Camera::GetCaptureStatus()
 {
-//    LOGTRACE(L"In: Camera::GetCaptureStatus");
-
     CaptureStatus result = CaptureStatus::Failed;
     CaptureThread* capture = m_captureThread;
 

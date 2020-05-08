@@ -13,6 +13,13 @@ enum class SensorType
     LRGB = 5,
 };
 
+enum class CropMode
+{
+    NONE = 0,
+    AUTO = 1,
+    USER = 2,
+};
+
 class DeviceInfo : public MessageReader
 {
 public:
@@ -54,6 +61,19 @@ public:
     std::wstring GetVersion();
     bool GetSupportsLiveview();
     void SetSupportsLiveview(bool support);
+    CropMode GetCropMode();
+    void SetCropMode(CropMode mode);
+    UINT16 GetLeftCrop();
+    void SetLeftCrop(UINT16 crop);
+    UINT16 GetBottomCrop();
+    void SetBottomCrop(UINT16 crop);
+    UINT16 GetRightCrop();
+    void SetRightCrop(UINT16 crop);
+    UINT16 GetTopCrop();
+    void SetTopCrop(UINT16 crop);
+
+    bool GetButtonPropertiesInverted();
+    void SetButtonPropertiesInverted(bool invert);
 
 private:
     void DumpList(std::list<WORD> list);
@@ -78,6 +98,16 @@ private:
     DWORD m_sensorYResolution = 0;
     DWORD m_previewXResolution = 0;
     DWORD m_previewYResolution = 0;
+    UINT16 m_leftCrop = 0;
+    UINT16 m_rightCrop = 0;
+    UINT16 m_topCrop = 0;
+    UINT16 m_bottomCrop = 0;
+    // Why not AUTO here?
+    // Well some apps (not mentioning names SharpCap) don't deal too well with
+    // returned images being a different size than the camera originally reported
+    // We'll add some extra fields later so we can use AUTO, but for now this is
+    // here for backwards compatibility
+    CropMode m_cropMode = CropMode::NONE;
     BYTE m_bayerOffsetX = 0;
     BYTE m_bayerOffsetY = 0;
     double m_sensorPixelWidth = 0.0;
@@ -86,5 +116,6 @@ private:
     double m_exposureTimeMax = 0.0;
     double m_exposureTimeStep = 0.0;
     bool m_supportsLiveview = false;
+    bool m_buttonPropertiesInverted = false;
 };
 

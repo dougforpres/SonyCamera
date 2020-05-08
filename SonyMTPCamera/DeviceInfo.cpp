@@ -324,3 +324,75 @@ DeviceInfo::SetSupportsLiveview(bool support)
 {
     m_supportsLiveview = support;
 }
+
+CropMode
+DeviceInfo::GetCropMode()
+{
+    return m_cropMode;
+}
+
+void
+DeviceInfo::SetCropMode(CropMode mode)
+{
+    m_cropMode = mode;
+}
+
+UINT16
+DeviceInfo::GetLeftCrop()
+{
+    return m_leftCrop;
+}
+
+void
+DeviceInfo::SetLeftCrop(UINT16 crop)
+{
+    m_leftCrop = crop;
+}
+
+UINT16
+DeviceInfo::GetRightCrop()
+{
+    return m_rightCrop;
+}
+
+void
+DeviceInfo::SetRightCrop(UINT16 crop)
+{
+    m_rightCrop = crop;
+}
+
+UINT16
+DeviceInfo::GetTopCrop()
+{
+    return m_topCrop;
+}
+
+void
+DeviceInfo::SetTopCrop(UINT16 crop)
+{
+    m_topCrop = crop;
+}
+
+UINT16
+DeviceInfo::GetBottomCrop()
+{
+    return m_bottomCrop;
+}
+
+void
+DeviceInfo::SetBottomCrop(UINT16 crop)
+{
+    m_bottomCrop = crop;
+}
+
+bool
+DeviceInfo::GetButtonPropertiesInverted()
+{
+    return m_buttonPropertiesInverted;
+}
+
+void
+DeviceInfo::SetButtonPropertiesInverted(bool invert)
+{
+    m_buttonPropertiesInverted = invert;
+}
