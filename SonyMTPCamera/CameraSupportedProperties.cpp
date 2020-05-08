@@ -43,7 +43,7 @@ CameraSupportedProperties::AsString()
         builder << "    x" << std::hex << std::setw(4) << std::setfill(L'0') << (WORD)*it << std::dec << " (" << ResourceLoader::GetString((DWORD)*it) << ")" << std::endl;
     }
 
-    builder << "]," << std::endl << "listb [";
+    builder << "]," << std::endl << "listb (buttons?) [";
 
     for (it = m_listb.begin(); it != m_listb.end(); it++)
     {
