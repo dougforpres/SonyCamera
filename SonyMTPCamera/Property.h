@@ -77,19 +77,13 @@ enum class Property {
     DROAutoHDR                  = 0xd201, // **  on = 1, off = 31
     JPEGImageSize               = 0xd203,
     ShutterSpeed                = 0xd20d,
-    //                          = 0xd20e,
     CustomWhiteBalance          = 0xd20f,
-    //                          = 0xd210,
     AspectRatio                 = 0xd211,
-    //                          = 0xd212,
     ShutterButtonStatus         = 0xd213,
-    //                          = 0xd214,
     PhotoBufferStatus           = 0xd215,
     AutoExposureLock            = 0xd217,  //** NEW Off = 1, On = 2
     Battery                     = 0xd218,
     FlashExposureLock           = 0xd219, //** NEW Off = 1, On = 2
-    //                          = 0xd21b,
-    //                          = 0xd21c,
     Aperture                    = 0xd21d,
     ISO                         = 0xd21e,
     //                          = 0xd21f,
