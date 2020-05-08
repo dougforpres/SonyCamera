@@ -2,6 +2,7 @@
 #include "Camera.h"
 #include "CameraException.h"
 #include "Logger.h"
+#include "Registry.h"
 
 #define IMAGE_WAIT_READY_SLEEP  250
 #define IMAGE_WAIT_READY_LOOPS  100
@@ -185,15 +186,25 @@ DWORD
 Camera::CaptureThread::Run()
 {
     LOGTRACE(L"In: CaptureThread::Run");
-    PropertyValue up((WORD)1);
-    PropertyValue down((WORD)2);
+    PropertyValue up((WORD)(m_camera->GetDeviceInfo()->GetButtonPropertiesInverted() ? 2 : 1));
+    PropertyValue down((WORD)(m_camera->GetDeviceInfo()->GetButtonPropertiesInverted() ? 1: 2));
 
-    m_camera->GetSettings(true);
+    CameraSettings* settings = m_camera->GetSettings(true);
 
+    // If auto-focus is enabled, we should add a short pause between 1/2 down and full down to let it
+    // do its thing
+    bool isManualFocus = settings->GetProperty(Property::FocusMode)->GetCurrentValue()->GetUINT16() == 1;
     SetStatus(CaptureStatus::Capturing);
 
     LOGINFO(L"Step 1: Shutter button down");
     m_camera->SetProperty(Property::ShutterHalfDown, &down);
+
+    if (!isManualFocus)
+    {
+        LOGINFO(L"Step 1a: Pausing to allow auto-focus... why is it on?");
+        Sleep(500);
+    }
+
     m_camera->SetProperty(Property::ShutterFullDown, &down);
 
     WaitForSingleObject(m_hWakeupEvent, (DWORD)(m_duration * 1000));
@@ -208,7 +219,6 @@ Camera::CaptureThread::Run()
     LOGINFO(L"Step 3: Wait for camera to indicate image ready");
     int waitLoop = 0;
     bool imageReady = false;
-    CameraSettings* settings = nullptr;
 
     // Wait up to 10 seconds for camera to report the image is ready for download
     do
@@ -251,22 +261,8 @@ Camera::CaptureThread::Run()
 
             imageCount++;
 
-//            Sleep(IMAGE_WAIT_READY_SLEEP);
-
-//            try
-//            {
             settings = m_camera->GetSettings(true);
             imageReady = this->ImageReady(settings);
-            //}
-            //catch (CameraException & gfe)
-            //{
-            //    LOGERROR(L"Exception in GetSettings: %s (will retry)", gfe.GetMessage().c_str());
-
-            //    Sleep(IMAGE_WAIT_READY_SLEEP);
-            //    settings = m_camera->GetSettings(true);
-            //}
-
-//            imageReady = this->ImageReady(settings);
         }
     }
 
@@ -282,6 +278,28 @@ Camera::CaptureThread::Run()
                 // We do it in here as there is a chance we'll get multiple hits on other threads that will cause... issues
                 m_image->SetOutputMode(m_outputMode);
                 m_image->SetDuration(m_duration);
+
+                // Tell the image how it should be cropped
+                DeviceInfo* deviceInfo = m_camera->GetDeviceInfo();
+
+                switch (deviceInfo->GetCropMode())
+                {
+                case CropMode::AUTO:
+                    m_image->SetCrop(-1, -1, -1, -1);
+                    break;
+
+                case CropMode::NONE:
+                    m_image->SetCrop(0, 0, 0, 0);
+                    break;
+
+                case CropMode::USER:
+                    m_image->SetCrop(deviceInfo->GetTopCrop(), deviceInfo->GetLeftCrop(), deviceInfo->GetBottomCrop(), deviceInfo->GetRightCrop());
+                    break;
+
+                default:
+                    // Image default is 0, 0, 0, 0
+                    break;
+                }
 
                 bool success = m_image->EnsurePixelsProcessed();
 
