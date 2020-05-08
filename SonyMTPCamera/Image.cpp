@@ -94,6 +94,15 @@ Image::GetImageData()
     return result;
 }
 
+void
+Image::SetCrop(int top, int left, int bottom, int right)
+{
+    m_cropTop = top;
+    m_cropLeft = left;
+    m_cropBottom = bottom;
+    m_cropRight = right;
+}
+
 LibRaw*
 Image::InitializeLibRaw(bool process)
 {
@@ -149,8 +158,8 @@ Image::ProcessARWData()
     LibRaw* libraw = nullptr;
     libraw_processed_image_t* processed = nullptr;
     int r = 0;
-    ushort width = 0;
-    ushort height = 0;
+    ushort rawWidth = 0;
+    ushort rawHeight = 0;
     int linesize = 0;
 
     // Both RGB and RGGB require libraw to process the data to some extent or another
@@ -199,9 +208,9 @@ Image::ProcessARWData()
             LOGERROR(L"Unable to raw2image %s", LibRawErrorToString(libraw, r));
         }
 
-        width = libraw->imgdata.sizes.iwidth;
-        height = libraw->imgdata.sizes.iheight;
-        linesize = 4 * 2 * width;
+        rawWidth = libraw->imgdata.sizes.iwidth;
+        rawHeight = libraw->imgdata.sizes.iheight;
+        linesize = 4 * 2 * rawWidth;
 
         {
             std::string colorsStr = libraw->imgdata.idata.cdesc;
@@ -218,33 +227,46 @@ Image::ProcessARWData()
             builder << colorsStr[libraw->COLOR(1, 1)];
 
             LOGINFO(L"Raw data layout in form: %S", builder.str().c_str());
-        }
 
-        m_pixelDataSize = width * height * sizeof(short);
-        m_pixelData = new BYTE[m_pixelDataSize];
-
-        for (int y = 0; y < height; y++)
-        {
-            ushort* pds = (ushort*)m_pixelData;
-            int readOffset = y * width;
-            int writeOffset = (m_pixelDataSize / sizeof(short)) - (y + 1) * width;
-
-            int i0 = libraw->COLOR(y, 0);
-            int i1 = libraw->COLOR(y, 1);
-
-            ushort* ptr = (ushort*)(libraw->imgdata.image + readOffset);
-
-            for (int x = 0; x < width; x += 2)
-            {
-                pds[x + writeOffset] = *(ptr + i0);
-                ptr += 4;
-                pds[x + 1 + writeOffset] = *(ptr + i1);
-                ptr += 4;
+            if (m_cropLeft < 0) {
+                LOGINFO(L"Crop Mode set to auto, using info from image");
+                m_cropLeft = libraw->imgdata.sizes.raw_crop.cleft * 2; // expressed in 2 pixel units because RGGB;
+                m_cropTop = libraw->imgdata.sizes.raw_crop.ctop * 2;
+                m_cropRight = 0;
+                m_cropBottom = 0;
             }
-        }
 
-        m_info->SetWidth(width);
-        m_info->SetHeight(height);
+            ushort width = rawWidth - m_cropLeft - m_cropRight;
+            ushort height = rawHeight - m_cropTop - m_cropBottom;
+
+            LOGINFO(L"Raw size is %d x %d, crop (T,L,R,B) = %d, %d, %d, %d, result will be %d x %d", rawWidth, rawHeight, m_cropTop, m_cropLeft, m_cropBottom, m_cropRight, width, height);
+
+            m_pixelDataSize = width * height * sizeof(short);
+            m_pixelData = new BYTE[m_pixelDataSize];
+
+            for (int y = m_cropTop; y < (rawHeight - m_cropBottom); y++)
+            {
+                ushort* pds = (ushort*)m_pixelData;
+                int readOffset = y * rawWidth;
+                int writeOffset = (m_pixelDataSize / sizeof(short)) - (y - m_cropTop + 1) * width;
+
+                int i0 = libraw->COLOR(y, 0);
+                int i1 = libraw->COLOR(y, 1);
+
+                ushort* ptr = (ushort*)(libraw->imgdata.image + readOffset);
+
+                for (int x = 0; x < width; x += 2)
+                {
+                    pds[x + writeOffset] = *(ptr + i0);
+                    ptr += 4;
+                    pds[x + 1 + writeOffset] = *(ptr + i1);
+                    ptr += 4;
+                }
+            }
+
+            m_info->SetWidth(width);
+            m_info->SetHeight(height);
+        }
         break;
 
     case OutputMode::PASSTHRU:

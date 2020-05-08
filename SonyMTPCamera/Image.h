@@ -26,6 +26,7 @@ public:
     bool EnsurePixelsProcessed();
     void SetDuration(double duration);
     double GetDuration();
+    void SetCrop(int top, int left, int bottom, int right);
 
 private:
     std::wstring WidenString(const char* shortString);
@@ -47,4 +48,8 @@ private:
     OutputMode m_outputMode = OutputMode::RGB;
     InputMode m_inputMode = InputMode::UNKNOWN;
     BYTE* m_pixelData = nullptr;
+    int m_cropTop = 0;
+    int m_cropLeft = 0;
+    int m_cropBottom = 0;
+    int m_cropRight = 0;
 };
