@@ -11,6 +11,8 @@ This software was developed primarily for Astrophotography purposes, and a compa
 
 This is the first c++ code I've written since 2005/2006, so please don't judge me :)
 
+See [Wiki pages](https://github.com/dougforpres/ASCOMSonyCameraDriver/wiki) of the companion ASCOM driver for install info
+
 ## Dependencies
 https://www.libraw.org
 Being used to convert received ARW files to RGGB and RGB format
