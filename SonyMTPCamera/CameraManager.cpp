@@ -141,6 +141,23 @@ CameraManager::SetupSupportedDevices()
     registry.SetDWORDDefault(key, L"Sensor Type", 2);
     registry.SetDWORDDefault(key, L"Supports Liveview", 1);
 
+    // a7RM2
+    key = L"Cameras\\Sony Corporation\\ILCE-7RM2";
+
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
+    registry.SetDoubleDefault(key, L"Sensor X Size um", 4.86);
+    registry.SetDoubleDefault(key, L"Sensor Y Size um", 4.86);
+    registry.SetDWORDDefault(key, L"Sensor X Resolution", 7968);
+    registry.SetDWORDDefault(key, L"Sensor Y Resolution", 5320);
+    registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
+    registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
+    registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
+    registry.SetDoubleDefault(key, L"Exposure Time Max", 900.0);
+    registry.SetDoubleDefault(key, L"Exposure Time Step", 0.000125);
+    registry.SetDWORDDefault(key, L"Sensor Type", 2);
+    registry.SetDWORDDefault(key, L"Supports Liveview", 1);
+
     // a7R IV
     key = L"Cameras\\Sony Corporation\\ILCE-7RM4";
 

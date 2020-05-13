@@ -3,6 +3,7 @@
 #include <PortableDevice.h>
 #include <WpdMtpExtensions.h>
 #include "Logger.h"
+#include "Registry.h"
 
 Device::Device(IPortableDeviceManager* PortableDeviceManager, std::wstring DeviceId)
   : m_manager(PortableDeviceManager),
@@ -668,8 +669,12 @@ Device::InternalSend(Device::Op kind, Message* out)
                 // Allocate a buffer for the command to read data into - this should 
                 // be the same size as the number of bytes we are expecting to read (per chunk, if applicable).
                 // Use up to 8MB buffer, currently the optimal buffer size seems to be 256kB
-                ULONG bufferSize = min(cbReportedDataSize, max(cbOptimalDataSize * 16, 2^23));
-                LOGTRACE(L"Using a transfer buffer of %d bytes", bufferSize);
+                registry.Open();
+                bool maximumMemoryMode = (bool)registry.GetDWORD(L"", L"Maximum Memory Mode", 0);
+                registry.Close();
+
+                ULONG bufferSize = maximumMemoryMode ? cbReportedDataSize : min(cbReportedDataSize, max(cbOptimalDataSize * 16, 2^23));
+                LOGTRACE(L"Using a transfer buffer of %d bytes (maxmum memory mode is %s)", bufferSize, maximumMemoryMode ? L"ON" : L"OFF");
 
                 BYTE* pbBufferIn = NULL;
                 if (IsSuccess(hr, L"SetStringValue(WPD_PROPERTY_MTP_EXT_TRANSFER_CONTEXT) (Read Data)"))
