@@ -130,6 +130,8 @@ Device::Close()
 {
     LOGTRACE(L"In: Device::Close");
 
+    bool closed;
+
     if (m_openCount)
     {
         if (m_openCount == 1)
@@ -149,7 +151,7 @@ Device::Close()
 
                 LOGTRACE(L"Out: Device::Close - Closed()");
 
-                return true;
+                closed = true;
             }
         }
         else
@@ -158,13 +160,13 @@ Device::Close()
 
             LOGTRACE(L"Out: Device::Close - Still open, opencount reduced to %d", m_openCount);
 
-            return true;
+            closed = false;
         }
     }
 
-    LOGWARN(L"Out: Device::Close - Attempt to close device that is not open");
+    LOGWARN(L"Out: Device::Close (result = %d)", closed);
 
-    return false;
+    return closed;
 }
 
 bool
