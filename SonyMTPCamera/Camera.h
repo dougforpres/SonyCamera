@@ -83,7 +83,7 @@ public:
 
     const std::wstring GetId();
     HANDLE Open();
-    void Close();
+    bool Close();
 
     virtual DeviceInfo* GetDeviceInfo();
     virtual bool SetProperty(Property id, PropertyValue* value) = 0;

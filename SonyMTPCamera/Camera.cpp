@@ -36,10 +36,10 @@ Camera::Open()
     return m_device->Open();
 }
 
-void
+bool
 Camera::Close()
 {
-    m_device->Close();
+    return m_device->Close();
 }
 
 DeviceInfo*

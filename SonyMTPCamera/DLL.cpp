@@ -209,7 +209,11 @@ CloseDevice(HANDLE hCamera)
     {
         Locker lock(camera);
 
-        camera->Close();
+        if (camera->Close())
+        {
+            // This happens if the device is fully closed
+            GetCameraManager()->RemoveCamera(camera);
+        }
     }
     catch (CameraException & gfe)
     {
