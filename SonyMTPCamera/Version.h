@@ -13,4 +13,3 @@ private:
     std::wstring m_productName;
     std::wstring m_version;
 };
-
