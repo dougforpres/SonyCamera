@@ -181,6 +181,7 @@ OpenDeviceEx(LPWSTR deviceName, DWORD flags)
 
                 if (!camera->Initialize())
                 {
+                    LOGERROR(L"Unable to initialize camera");
                     result = INVALID_HANDLE_VALUE;
                     GetCameraManager()->RemoveCamera(camera);
                     camera = nullptr;
@@ -189,6 +190,10 @@ OpenDeviceEx(LPWSTR deviceName, DWORD flags)
             catch (CameraException & gfe)
             {
                 LOGERROR(L"Exception initializing camera: %s", gfe.GetMessage().c_str());
+
+                result = INVALID_HANDLE_VALUE;
+                GetCameraManager()->RemoveCamera(camera);
+                camera = nullptr;
             }
         }
     }
