@@ -3,6 +3,7 @@
 #include "Logger.h"
 #include "Registry.h"
 #include "CameraManager.h"
+#include "ResourceLoader.h"
 
 static DWORD dwTlsIndex;
 
@@ -33,7 +34,18 @@ BOOL APIENTRY DllMain( HMODULE hModule,
         logger.SetLogFilename(registry.GetString(L"", L"Logfile Name", L""));
         logger.SetLogLevel((Logger::LogLevel)registry.GetDWORD(L"", L"Log Level", (DWORD)Logger::LogLevel::Error));
 
-        LOGINFO(L"DLL Starting up");
+        {
+            Version* version = ResourceLoader::GetVersion();
+
+            if (!version)
+            {
+                version = new Version(L"**Not Found**", L"No Version");
+            }
+
+            LOGINFO(L"DLL Starting up (%s v%s)", version->GetProductName().c_str(), version->GetVersion().c_str());
+
+            delete version;
+        }
 
         // Ensure the cameras we know about are in the registry, otherwise the code will fail to find any viable candidates
         CameraManager::SetupSupportedDevices();

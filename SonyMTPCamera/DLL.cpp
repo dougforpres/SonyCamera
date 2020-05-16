@@ -5,7 +5,6 @@
 #include "CameraManager.h"
 #include "SonyCamera.h"
 #include "DeviceInfo.h"
-//#include "CaptureThread.h"
 #include "Logger.h"
 #include <unordered_map>
 #include "Registry.h"

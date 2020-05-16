@@ -1,11 +1,13 @@
 #pragma once
 #include "pch.h"
 #include <unordered_map>
+#include "Version.h"
 
 class ResourceLoader
 {
 public:
     static std::wstring GetString(DWORD id);
+    static Version* GetVersion();
 
 protected:
     static std::unordered_map<DWORD, std::wstring> s_cache;

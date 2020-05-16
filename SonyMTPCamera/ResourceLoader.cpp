@@ -45,3 +45,55 @@ ResourceLoader::GetString(DWORD id)
 
     return result;
 }
+
+Version *
+ResourceLoader::GetVersion()
+{
+    // get the filename of the executable containing the version resource
+    TCHAR szFilename[MAX_PATH + 1] = { 0 };
+
+    if (GetModuleFileName(dllInstance, szFilename, MAX_PATH) == 0)
+    {
+        LOGERROR(L"GetModuleFileName failed with error %d", GetLastError());
+
+        return nullptr;
+    }
+
+    // allocate a block of memory for the version info
+    DWORD dummy;
+    DWORD dwSize = GetFileVersionInfoSize(szFilename, &dummy);
+
+    if (dwSize == 0)
+    {
+        LOGERROR(L"GetFileVersionInfoSize failed with error %d", GetLastError());
+
+        return nullptr;
+    }
+
+    std::vector<BYTE> data(dwSize);
+
+    // load the version info
+    if (!GetFileVersionInfo(szFilename, NULL, dwSize, &data[0]))
+    {
+        LOGERROR(L"GetFileVersionInfo failed with error %d", GetLastError());
+
+        return nullptr;
+    }
+
+    // get the name and version strings
+    LPVOID pvProductName = NULL;
+    unsigned int iProductNameLen = 0;
+    LPVOID pvProductVersion = NULL;
+    unsigned int iProductVersionLen = 0;
+
+    // replace "040904e4" with the language ID of your resources
+    if (!VerQueryValue(&data[0], L"\\StringFileInfo\\040904b0\\ProductName", &pvProductName, &iProductNameLen) ||
+        !VerQueryValue(&data[0], L"\\StringFileInfo\\040904b0\\ProductVersion", &pvProductVersion, &iProductVersionLen))
+    {
+        LOGERROR(L"Can't obtain ProductName and ProductVersion from resources");
+
+        return nullptr;
+    }
+
+    return new Version((LPWSTR)pvProductName, (LPWSTR)pvProductVersion);
+}
