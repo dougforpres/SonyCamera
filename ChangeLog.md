@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.0.0.9
+
+## APT Unexpected Exits
+Isolated and fixed cause of APT crash when camera physically unplugged.  This was due to the way spontaneous events from Windows were being handled (yay for lack of documentation!).
+
 ## 1.0.0.8
 There isn't really a changelog for earlier versions, thus this version includes documentation for the current as well as a couple of prior releases.
 
