@@ -37,7 +37,7 @@ DeviceEventHandler::DeviceEventHandler(IPortableDevice* device)
     // Call Advise to register the callback and receive events.
     if (hr == S_OK)
     {
-        hr = device-> Advise(0, this, NULL, &wszEventCookie);
+        hr = device->Advise(0, this, NULL, &wszEventCookie);
 
         if (FAILED(hr))
         {
@@ -60,7 +60,7 @@ DeviceEventHandler::DeviceEventHandler(IPortableDevice* device)
 
     if (hr == S_OK)
     {
-        LOGERROR(L"This application has registered for device event notifications and was returned the registration cookie '%ws'", g_strEventRegistrationCookie.c_str());
+        LOGINFO(L"This application has registered for device event notifications and was returned the registration cookie '%ws'", g_strEventRegistrationCookie.c_str());
     }
 
     // If a failure occurs, remember to delete the allocated callback object, if one exists.
@@ -88,7 +88,7 @@ DeviceEventHandler::~DeviceEventHandler()
 
     if (hr == S_OK)
     {
-        LOGERROR(L"This application used the registration cookie '%ws' to unregister from receiving device event notifications", g_strEventRegistrationCookie.c_str());
+        LOGINFO(L"This application used the registration cookie '%ws' to unregister from receiving device event notifications", g_strEventRegistrationCookie.c_str());
     }
 
     g_strEventRegistrationCookie = L"";
@@ -153,6 +153,7 @@ DeviceEventHandler::Release()
 HRESULT __stdcall 
 DeviceEventHandler::OnEvent(IPortableDeviceValues* pEventParameters)
 {
+//    LOGTRACE(L"DeviceEventHandler::OnEvent() - in");
     HRESULT hr = S_OK;
 
     if (pEventParameters != NULL)
@@ -166,39 +167,85 @@ DeviceEventHandler::OnEvent(IPortableDeviceValues* pEventParameters)
 
         // May be pointless, as the event-type always seems to be 0x0000 in USB packet
         pEventParameters->GetGuidValue(WPD_EVENT_PARAMETER_EVENT_ID, &guid);
-        UuidToString(&guid, &guidString);
-        LOGTRACE(L"  Event type: %s", guidString);
-        RpcStringFree(&guidString);
 
-        IPortableDevicePropVariantCollection* pdpvc;
-
-        hr = pEventParameters->GetIPortableDevicePropVariantCollectionValue(WPD_PROPERTY_MTP_EXT_EVENT_PARAMS, &pdpvc);
-
-        if (SUCCEEDED(hr))
+        if (IsEqualGUID(guid, WPD_EVENT_NOTIFICATION))
         {
-            pdpvc->AddRef();
-            DWORD count = 0;
-            pdpvc->GetCount(&count);
-
-            for (int i = 0; i < count; i++)
-            {
-                LOGTRACE(L"--- Property %d", i);
-                PROPVARIANT val;
-                pdpvc->GetAt(i, &val);
-
-                if (val.vt == VT_UI4)
-                {
-                    LOGTRACE(L"    UI4 => x%08x (%s)", val.uiVal, ResourceLoader::GetString(val.uiVal).c_str());
-                }
-                else
-                {
-                    LOGTRACE(L"    type = %d", val.vt);
-                }
-            }
+            LOGTRACE(L"Event Type: Event Notification");
+        }
+        else if (IsEqualGUID(guid, WPD_EVENT_OBJECT_ADDED))
+        {
+            LOGTRACE(L"Event Type: Object Added");
+        }
+        else if (IsEqualGUID(guid, WPD_EVENT_OBJECT_REMOVED))
+        {
+            LOGTRACE(L"Event Type: Object Removed");
+        }
+        else if (IsEqualGUID(guid, WPD_EVENT_OBJECT_UPDATED))
+        {
+            LOGTRACE(L"Event Type: Object Updated");
+        }
+        else if (IsEqualGUID(guid, WPD_EVENT_DEVICE_RESET))
+        {
+            LOGTRACE(L"Event Type: Device Reset");
+        }
+        else if (IsEqualGUID(guid, WPD_EVENT_DEVICE_CAPABILITIES_UPDATED))
+        {
+            LOGTRACE(L"Event Type: Device Capabilities Updated");
+        }
+        else if (IsEqualGUID(guid, WPD_EVENT_STORAGE_FORMAT))
+        {
+            LOGTRACE(L"Event Type: Storage Format");
+        }
+        else if (IsEqualGUID(guid, WPD_EVENT_OBJECT_TRANSFER_REQUESTED))
+        {
+            LOGTRACE(L"Event Type: Object Transfer Requested");
+        }
+        else if (IsEqualGUID(guid, WPD_EVENT_DEVICE_REMOVED))
+        {
+            LOGTRACE(L"Event Type: Device Removed");
+        }
+        else if (IsEqualGUID(guid, WPD_EVENT_SERVICE_METHOD_COMPLETE))
+        {
+            LOGTRACE(L"Event Type: Service Method Complete");
+        }
+        else
+        {
+            UuidToString(&guid, &guidString);
+            LOGTRACE(L"Event Type: Unknown - %s", guidString);
+            RpcStringFree(&guidString);
         }
 
-        pdpvc->Release();
+        //IPortableDevicePropVariantCollection* pdpvc;
+
+        //hr = pEventParameters->GetIPortableDevicePropVariantCollectionValue(WPD_PROPERTY_MTP_EXT_EVENT_PARAMS, &pdpvc);
+
+        //if (SUCCEEDED(hr))
+        //{
+        //    pdpvc->AddRef();
+        //    DWORD count = 0;
+        //    pdpvc->GetCount(&count);
+
+        //    for (int i = 0; i < count; i++)
+        //    {
+        //        LOGTRACE(L"--- Property %d", i);
+        //        PROPVARIANT val;
+        //        pdpvc->GetAt(i, &val);
+
+        //        if (val.vt == VT_UI4)
+        //        {
+        //            LOGTRACE(L"    UI4 => x%08x (%s)", val.uiVal, ResourceLoader::GetString(val.uiVal).c_str());
+        //        }
+        //        else
+        //        {
+        //            LOGTRACE(L"    type = %d", val.vt);
+        //        }
+        //    }
+        //}
+
+        //pdpvc->Release();
     }
+
+//    LOGTRACE(L"DeviceEventHandler::OnEvent() - out, returning %08x", hr);
 
     return hr;
 }
