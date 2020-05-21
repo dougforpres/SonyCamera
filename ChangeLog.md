@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.0.0.11
+
+### Added a7R IV
+Added camera definition for a7R IV
+
 ## 1.0.0.10
 
 ### Dummy Device Updates
