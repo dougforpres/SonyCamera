@@ -184,14 +184,16 @@ DummyDevice::ReadSettings(Message* out)
 {
     MessageWriter w(COMMAND_RESULT_SUCCESS);
 
-    w.WriteDWORD(5); // Number of properties
+    w.WriteDWORD(7); // Number of properties
     w.WriteDWORD(0); // Some other value
 
-    AddCameraProperty(w, Property::PhotoBufferStatus, new PropertyValue((UINT16)(m_photoReady ? 0x8001 : 0))); // Ready
-    AddCameraProperty(w, Property::ShutterFullDown, new PropertyValue((UINT16)m_shutterHalf));
-    AddCameraProperty(w, Property::ShutterHalfDown, new PropertyValue((UINT16)m_shutterFull));
-    AddCameraProperty(w, Property::ShutterSpeed, new PropertyValue((UINT32)0));  // BULB
-    AddCameraProperty(w, Property::CompressionSetting, new PropertyValue((UINT8)0x10)); // RAW
+    AddCameraProperty(w, Property::PhotoBufferStatus, new PropertyValue((UINT16)(m_photoReady ? 0x8001 : 0)), false); // Ready
+    AddCameraProperty(w, Property::ShutterFullDown, new PropertyValue((UINT16)m_shutterHalf), true);
+    AddCameraProperty(w, Property::ShutterHalfDown, new PropertyValue((UINT16)m_shutterFull), true);
+    AddCameraProperty(w, Property::ShutterSpeed, new PropertyValue((UINT32)0), false);  // BULB
+    AddCameraProperty(w, Property::CompressionSetting, new PropertyValue((UINT8)0x10), false); // RAW
+    AddCameraProperty(w, Property::ShutterButtonStatus, new PropertyValue((UINT8)1), false); // Shutter button UP
+    AddCameraProperty(w, Property::FocusMode, new PropertyValue((UINT16)1), false); // Focus Manual
 
     return w.GetMessageObj();
 }
@@ -296,11 +298,11 @@ DummyDevice::SetProperty(Message* out)
 }
 
 void
-DummyDevice::AddCameraProperty(MessageWriter& w, Property property, PropertyValue* value)
+DummyDevice::AddCameraProperty(MessageWriter& w, Property property, PropertyValue* value, bool writable)
 {
     w.WriteWORD((WORD)property);
     w.WriteWORD((WORD)value->GetType());
-    w.WriteBYTE((BYTE)Accessibility::READ_ONLY);
+    w.WriteBYTE((BYTE)(writable ? Accessibility::READ_WRITE : Accessibility::READ_ONLY));
     w.WriteBYTE(0); // Sony Spare
     WriteValue(w, value);
     WriteValue(w, value);

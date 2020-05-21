@@ -34,7 +34,7 @@ private:
     Message* GetObject(Message* out);
     Message* SetProperty(Message* out);
 
-    void AddCameraProperty(MessageWriter& w, Property property, PropertyValue* value);
+    void AddCameraProperty(MessageWriter& w, Property property, PropertyValue* value, bool writable);
     void WriteValue(MessageWriter& w, PropertyValue* value);
     std::wstring JustFilename(std::wstring fullpath);
 
