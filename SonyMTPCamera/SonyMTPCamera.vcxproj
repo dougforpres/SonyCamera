@@ -247,6 +247,8 @@
     <Library Include="libraw\libraw.lib" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\ChangeLog.md" />
+    <None Include="..\README.md" />
     <None Include="libjpeg\turbojpeg.dll" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

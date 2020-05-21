@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.0.0.10
+
+### Dummy Device Updates
+The Dummy camera device is used for testing, it needed to have support for the newer properties that are used when taking images
+
 ## 1.0.0.9
 
 ### APT Unexpected Exits
