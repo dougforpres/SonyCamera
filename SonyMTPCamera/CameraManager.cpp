@@ -226,7 +226,7 @@ CameraManager::SetupSupportedDevices()
     registry.SetDWORDDefault(key, L"Sensor Type", 2);
     registry.SetDWORDDefault(key, L"Supports Liveview", 1);
 
-    key = L"Cameras\\Sony Corporation\\ILCE-77M2";
+    key = L"Cameras\\Sony Corporation\\ILCA-77M2";
 
     registry.CreateKey(key);
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
