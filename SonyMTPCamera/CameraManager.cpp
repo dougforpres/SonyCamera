@@ -22,6 +22,23 @@ CameraManager::SetupSupportedDevices()
     // Set up defaults for cameras
     registry.Open();
 
+    // a5000
+    std::wstring key = L"Cameras\\Sony Corporation\\ILCE-5000";
+
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
+    registry.SetDoubleDefault(key, L"Sensor X Size um", 4.22);
+    registry.SetDoubleDefault(key, L"Sensor Y Size um", 4.22);
+    registry.SetDWORDDefault(key, L"Sensor X Resolution", 5472);
+    registry.SetDWORDDefault(key, L"Sensor Y Resolution", 3656);
+    registry.SetDWORDDefault(key, L"Preview X Resolution", 0);
+    registry.SetDWORDDefault(key, L"Preview Y Resolution", 0);
+    registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
+    registry.SetDoubleDefault(key, L"Exposure Time Max", 900.0);
+    registry.SetDoubleDefault(key, L"Exposure Time Step", 0.000125);
+    registry.SetDWORDDefault(key, L"Sensor Type", 2);
+    registry.SetDWORDDefault(key, L"Supports Liveview", 0);
+
     // a6400
     std::wstring key = L"Cameras\\Sony Corporation\\ILCE-6400";
 
