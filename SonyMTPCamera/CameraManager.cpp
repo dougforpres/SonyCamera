@@ -40,7 +40,7 @@ CameraManager::SetupSupportedDevices()
     registry.SetDWORDDefault(key, L"Supports Liveview", 0);
 
     // a6400
-    std::wstring key = L"Cameras\\Sony Corporation\\ILCE-6400";
+    key = L"Cameras\\Sony Corporation\\ILCE-6400";
 
     registry.CreateKey(key);
     registry.SetStringDefault(key, L"Sensor Name", L"EXMOR");
