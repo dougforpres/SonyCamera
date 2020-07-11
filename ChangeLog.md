@@ -1,5 +1,8 @@
 # Change Log
 
+## 1.0.0.13
+Added camera definition for a7 II
+
 ## 1.0.0.12
 Added camera definition for a5000
 
