@@ -1,5 +1,8 @@
 # Change Log
 
+## 1.0.0.12
+Added camera definition for a5000
+
 ## 1.0.0.11
 
 ### Added a7R IV
