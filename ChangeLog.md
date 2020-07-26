@@ -1,5 +1,8 @@
 # Change Log
 
+## 1.0.0.14
+Added camera definition for a6600
+
 ## 1.0.0.13
 Added camera definition for a7 II
 

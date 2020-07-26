@@ -107,6 +107,23 @@ CameraManager::SetupSupportedDevices()
     registry.SetDWORDDefault(key, L"Sensor Type", 2);
     registry.SetDWORDDefault(key, L"Supports Liveview", 1);
 
+    // a6600
+    key = L"Cameras\\Sony Corporation\\ILCE-6600";
+
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"Sensor Name", L"EXMOR");
+    registry.SetDoubleDefault(key, L"Sensor X Size um", 3.91);
+    registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.91);
+    registry.SetDWORDDefault(key, L"Sensor X Resolution", 6024);
+    registry.SetDWORDDefault(key, L"Sensor Y Resolution", 4024);
+    registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
+    registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
+    registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
+    registry.SetDoubleDefault(key, L"Exposure Time Max", 900.0);
+    registry.SetDoubleDefault(key, L"Exposure Time Step", 0.000125);
+    registry.SetDWORDDefault(key, L"Sensor Type", 2);
+    registry.SetDWORDDefault(key, L"Supports Liveview", 1);
+
     // a7
     key = L"Cameras\\Sony Corporation\\ILCE-7";
 
