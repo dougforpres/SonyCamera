@@ -1,4 +1,6 @@
 # Change Log
+## 1.0.0.15
+Added camera definition for SLT a58
 
 ## 1.0.0.14
 Added camera definition for a6600

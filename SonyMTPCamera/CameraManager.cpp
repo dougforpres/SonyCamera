@@ -310,6 +310,23 @@ CameraManager::SetupSupportedDevices()
     registry.SetDWORDDefault(key, L"Sensor Type", 2);
     registry.SetDWORDDefault(key, L"Supports Liveview", 1);
 
+    // SLT Alpha 58
+    key = L"Cameras\\Sony Corporation\\SLT-A58";
+
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
+    registry.SetDoubleDefault(key, L"Sensor X Size um", 4.27);
+    registry.SetDoubleDefault(key, L"Sensor Y Size um", 4.27);
+    registry.SetDWORDDefault(key, L"Sensor X Resolution", 5472);
+    registry.SetDWORDDefault(key, L"Sensor Y Resolution", 3656);
+    registry.SetDWORDDefault(key, L"Preview X Resolution", 0);
+    registry.SetDWORDDefault(key, L"Preview Y Resolution", 0);
+    registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
+    registry.SetDoubleDefault(key, L"Exposure Time Max", 900.0);
+    registry.SetDoubleDefault(key, L"Exposure Time Step", 0.000125);
+    registry.SetDWORDDefault(key, L"Sensor Type", 2);
+    registry.SetDWORDDefault(key, L"Supports Liveview", 0);
+
     registry.Close();
 
     LOGINFO(L"Out: CameraManager::SetupSupportedDevices()");
