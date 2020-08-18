@@ -182,7 +182,7 @@ OpenDeviceEx(LPWSTR deviceName, DWORD flags)
                 {
                     LOGERROR(L"Unable to initialize camera");
                     result = INVALID_HANDLE_VALUE;
-                    GetCameraManager()->RemoveCamera(camera);
+                    GetCameraManager()->RemoveCamera(result);
                     camera = nullptr;
                 }
             }
@@ -191,7 +191,7 @@ OpenDeviceEx(LPWSTR deviceName, DWORD flags)
                 LOGERROR(L"Exception initializing camera: %s", gfe.GetMessage().c_str());
 
                 result = INVALID_HANDLE_VALUE;
-                GetCameraManager()->RemoveCamera(camera);
+                GetCameraManager()->RemoveCamera(result);
                 camera = nullptr;
             }
         }
@@ -216,7 +216,13 @@ CloseDevice(HANDLE hCamera)
         if (camera->Close())
         {
             // This happens if the device is fully closed
-            GetCameraManager()->RemoveCamera(camera);
+            LOGINFO(L"Removing device x%08x as it is no longer open", hCamera);
+
+            GetCameraManager()->RemoveCamera(hCamera);
+        }
+        else
+        {
+            LOGINFO(L"Not removing device x%08x as it is still open", hCamera);
         }
     }
     catch (CameraException & gfe)

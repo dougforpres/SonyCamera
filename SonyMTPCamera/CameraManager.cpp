@@ -364,7 +364,7 @@ CameraManager::CreateCamera(Device* device, DWORD flags)
         if ((*it).second->GetId() == device->GetId())
         {
             camera = (*it).second;
-            LOGTRACE(L"CameraManager::CreateCamera: Found existing camera");
+            LOGTRACE(L"CameraManager::CreateCamera: Found existing camera with handle x%08x", (*it).first);
             hResult = camera->Open();
         }
     }
@@ -412,7 +412,11 @@ CameraManager::AddCamera(HANDLE hCamera, Camera* camera)
 void
 CameraManager::RemoveCamera(HANDLE hCamera)
 {
+    LOGTRACE(L"In: CameraManager::RemoveCamera(x%08x)", hCamera);
+
     m_cameraMap.erase(hCamera);
+
+    LOGTRACE(L"Out: CameraManager::RemoveCamera(x%08x)", hCamera);
 }
 
 Camera*
