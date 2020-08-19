@@ -1,6 +1,7 @@
 # Change Log
 ## 1.0.0.15
 Added camera definition for SLT a58
+Fixed issue where if ASCOM closed a device (camera) it could not reopen it.  Caused by passing the object pointer instead of the handle to the cleanup method
 
 ## 1.0.0.14
 Added camera definition for a6600
