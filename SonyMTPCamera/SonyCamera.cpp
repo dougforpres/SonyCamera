@@ -129,8 +129,6 @@ SonyCamera::GetSettings(bool refresh)
         Message* rx;
 
         tx = new Message(COMMAND_READ_SETTINGS);
-        tx->AddParam(0x025c);
-        tx->AddParam(0x0000);
         rx = m_device->Receive(tx);
 
         if (rx->IsSuccess())
