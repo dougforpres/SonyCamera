@@ -56,14 +56,19 @@ int main()
 
     DEVICEINFO info;
 
+    memset(&info, 0, sizeof(info));
     info.version = 1;
     GetDeviceInfo(0, &info);
 
     HANDLE h = OpenDevice(info.deviceName);
+
+    // Try to close device, then reopen it
+    CloseDevice(h);
+    h = OpenDevice(info.deviceName);
     DWORD count = 0;
     IMAGEINFO iinfo;
 
-    bool previewOnly = true;
+    bool previewOnly = false;
 
     while (1)
     {

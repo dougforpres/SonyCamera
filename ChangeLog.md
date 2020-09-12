@@ -1,4 +1,7 @@
 # Change Log
+## 1.0.0.17
+Added 64 bit support to the project, plus indicator of 32/64 in log startup
+
 ## 1.0.0.16
 Found and fixed the issue with a6300 (and a6500) not being able to use LiveView mode.
 
