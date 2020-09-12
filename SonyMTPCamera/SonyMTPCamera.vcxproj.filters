@@ -25,6 +25,9 @@
     <Filter Include="Docs">
       <UniqueIdentifier>{7718152a-3630-4f17-9cdf-9fb9909e028d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Libraries\x64">
+      <UniqueIdentifier>{b432248d-bee7-4b2c-86cf-b409181ed8aa}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -263,6 +266,12 @@
     </Library>
     <Library Include="libjpeg\turbojpeg.lib">
       <Filter>Libraries</Filter>
+    </Library>
+    <Library Include="..\..\..\..\..\..\libjpeg-turbo64\lib\turbojpeg.lib">
+      <Filter>Libraries\x64</Filter>
+    </Library>
+    <Library Include="..\..\..\..\..\..\LibRaw-0.19.5-Win64\LibRaw-0.19.5\lib\libraw.lib">
+      <Filter>Libraries\x64</Filter>
     </Library>
   </ItemGroup>
   <ItemGroup>
