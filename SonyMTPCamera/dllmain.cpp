@@ -42,7 +42,13 @@ BOOL APIENTRY DllMain( HMODULE hModule,
                 version = new Version(L"**Not Found**", L"No Version");
             }
 
-            LOGINFO(L"DLL Starting up (%s v%s)", version->GetProductName().c_str(), version->GetVersion().c_str());
+            bool isWin64 = false;
+
+#if _WIN64
+            isWin64 = true;
+#endif
+
+            LOGINFO(L"DLL Starting up (%s v%s) - %d-bit", version->GetProductName().c_str(), version->GetVersion().c_str(), isWin64 ? 64 : 32);
 
             delete version;
         }
