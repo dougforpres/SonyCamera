@@ -128,7 +128,7 @@ FindCamera(HANDLE hCamera)
 
     if (!result)
     {
-        LOGWARN(L"FindCamera: Unable to find camera for handle x%08p", hCamera);
+        LOGWARN(L"FindCamera: Unable to find camera for handle x%p", hCamera);
     }
 
     return result;
@@ -155,7 +155,7 @@ OpenDevice(LPWSTR deviceName)
 HANDLE
 OpenDeviceEx(LPWSTR deviceName, DWORD flags)
 {
-    LOGTRACE(L"In: OpenDeviceEx(%s, x%08x)", deviceName, flags);
+    LOGTRACE(L"In: OpenDeviceEx(%s, x%p)", deviceName, flags);
 
     HANDLE result = INVALID_HANDLE_VALUE;
     std::list<Device*> deviceList = (flags & OPENDEVICEEX_OPEN_ANY_DEVICE) ? GetDeviceManager()->GetAllDevices() : GetDeviceManager()->GetFilteredDevices();
@@ -205,7 +205,7 @@ OpenDeviceEx(LPWSTR deviceName, DWORD flags)
 void
 CloseDevice(HANDLE hCamera)
 {
-    LOGTRACE(L"In: CloseDevice(x%08p)", hCamera);
+    LOGTRACE(L"In: CloseDevice(x%p)", hCamera);
 
     Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
 
@@ -216,13 +216,13 @@ CloseDevice(HANDLE hCamera)
         if (camera->Close())
         {
             // This happens if the device is fully closed
-            LOGINFO(L"Removing device x%08x as it is no longer open", hCamera);
+            LOGINFO(L"Removing device x%p as it is no longer open", hCamera);
 
             GetCameraManager()->RemoveCamera(hCamera);
         }
         else
         {
-            LOGINFO(L"Not removing device x%08x as it is still open", hCamera);
+            LOGINFO(L"Not removing device x%p as it is still open", hCamera);
         }
     }
     catch (CameraException & gfe)
@@ -241,17 +241,17 @@ CloseDevice(HANDLE hCamera)
         }
     }*/
 
-    LOGTRACE(L"Out: CloseDevice(x%08p)", hCamera);
+    LOGTRACE(L"Out: CloseDevice(x%p)", hCamera);
 }
 
 HRESULT
 GetDeviceInfo(DWORD deviceId, DEVICEINFO *info)
 {
-    LOGTRACE(L"In: GetDeviceInfo(x%08p, @ x%08p)", deviceId, info);
+    LOGTRACE(L"In: GetDeviceInfo(x%p, @ x%p)", deviceId, info);
 
     if (!info || info->version != 1)
     {
-        LOGWARN(L"Out: GetDeviceInfo(x%08p, @ x%08p) - Passed wrong version", deviceId, info);
+        LOGWARN(L"Out: GetDeviceInfo(x%p, @ x%p) - Passed wrong version", deviceId, info);
 
         return ERROR_INCORRECT_SIZE;
     }
@@ -288,7 +288,7 @@ GetDeviceInfo(DWORD deviceId, DEVICEINFO *info)
 
         delete deviceInfo;
 
-        LOGTRACE(L"Out: GetDeviceInfo(x%08p, @ x%08p) - Returning data", deviceId, info);
+        LOGTRACE(L"Out: GetDeviceInfo(x%p, @ x%p) - Returning data", deviceId, info);
 
         camera->Close();
         delete camera;
@@ -297,7 +297,7 @@ GetDeviceInfo(DWORD deviceId, DEVICEINFO *info)
     }
     else
     {
-        LOGWARN(L"Out: GetDeviceInfo(x%08p, @ x%08p) - Device Not Found", deviceId, info);
+        LOGWARN(L"Out: GetDeviceInfo(x%p, @ x%p) - Device Not Found", deviceId, info);
 
         return ERROR_NOT_FOUND;
     }
@@ -306,7 +306,7 @@ GetDeviceInfo(DWORD deviceId, DEVICEINFO *info)
 HRESULT
 GetPreviewImage(HANDLE hCamera, IMAGEINFO *info)
 {
-    LOGTRACE(L"In: GetPreviewImage(x%08p, @ x%08p)", hCamera, info);
+    LOGTRACE(L"In: GetPreviewImage(x%p, @ x%p)", hCamera, info);
 
     Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
 
@@ -368,7 +368,7 @@ GetPreviewImage(HANDLE hCamera, IMAGEINFO *info)
         LOGERROR(L"Exception in GetPreviewImage: %s", gfe.GetMessage().c_str());
     }
 
-    LOGTRACE(L"Out: GetPreviewImage(x%08p, @ x%08p) - Returning data", hCamera, info);
+    LOGTRACE(L"Out: GetPreviewImage(x%p, @ x%p) - Returning data", hCamera, info);
 
     return ERROR_SUCCESS;
 }
@@ -376,7 +376,7 @@ GetPreviewImage(HANDLE hCamera, IMAGEINFO *info)
 HRESULT
 StartCapture(HANDLE hCamera, IMAGEINFO* info)
 {
-    LOGTRACE(L"In: StartCapture(x%08p, @ x%08p)", hCamera, info);
+    LOGTRACE(L"In: StartCapture(x%p, @ x%p)", hCamera, info);
 
     HRESULT result = ERROR_CANCELLED;
 
@@ -480,7 +480,7 @@ CancelCapture(HANDLE hCamera, IMAGEINFO* info)
 HRESULT
 GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
 {
-    LOGTRACE(L"In: GetCameraInfo(x%08p)", hCamera);
+    LOGTRACE(L"In: GetCameraInfo(x%p)", hCamera);
 
     HRESULT result = ERROR_NOT_FOUND;
     Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
@@ -669,7 +669,7 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
     }
     else
     {
-        LOGWARN(L"Unabel to find camera x%p", hCamera);
+        LOGWARN(L"Unable to find camera x%p", hCamera);
     }
 
     LOGTRACE(L"Out: GetCameraInfo(x%08p)", hCamera);

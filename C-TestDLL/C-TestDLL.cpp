@@ -70,6 +70,11 @@ int main()
 
     bool previewOnly = false;
 
+    CAMERAINFO cameraInfo;
+
+    memset(&cameraInfo, 0, sizeof(cameraInfo));
+    GetCameraInfo(h, &cameraInfo, 0);
+
     while (1)
     {
         memset(&iinfo, 0, sizeof(IMAGEINFO));

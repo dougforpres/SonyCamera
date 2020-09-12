@@ -365,7 +365,7 @@ CameraManager::CreateCamera(Device* device, DWORD flags)
         {
             camera = (*it).second;
             LOGTRACE(L"CameraManager::CreateCamera: Found existing camera with handle x%08x", (*it).first);
-            hResult = camera->Open();
+            hResult = CompatibleHandle(camera->Open());
         }
     }
 
@@ -383,9 +383,7 @@ CameraManager::CreateCamera(Device* device, DWORD flags)
 
             camera = new SonyCamera(device);
 
-            hResult = camera->Open();
-
-            m_cameraMap.insert(std::pair<HANDLE, Camera*>(hResult, camera));
+            hResult = AddCamera(camera->Open(), camera);
         }
         else
         {
@@ -398,30 +396,55 @@ CameraManager::CreateCamera(Device* device, DWORD flags)
         camera->GetDevice()->StartNotifications();
     }
 
-    LOGTRACE(L"Out: CameraManager::CreateCamera - returning x%08x", hResult);
+    LOGTRACE(L"Out: CameraManager::CreateCamera - returning x%p", hResult);
 
     return hResult;
 }
 
-void
+HANDLE
 CameraManager::AddCamera(HANDLE hCamera, Camera* camera)
 {
-    m_cameraMap.insert(std::pair<HANDLE, Camera*>(hCamera, camera));
+    LOGTRACE(L"In: CameraManager::AddCamera(x%p, x%p)", hCamera, camera);
+
+    HANDLE shortHandle = CompatibleHandle(hCamera);
+    // In 64-bit windows we could get a > 32-bit handle.  The ASCOM code is expecting a 32-bit value.
+    // According to MSDN, only the bottom 32-bits are valid, so we can trim the top 32-bits
+    m_cameraMap.insert(std::pair<HANDLE, Camera*>(shortHandle, camera));
+
+    LOGTRACE(L"Out: CameraManager::AddCamera(x%p, x%p), added handle x%p", hCamera, camera, shortHandle);
+
+    return shortHandle;
+}
+
+HANDLE
+CameraManager::CompatibleHandle(HANDLE handle)
+{
+#if _WIN64
+    uint64_t temp = (uint64_t)handle & 0xffffffff;
+
+    LOGTRACE(L"CameraManager::CompatibleHandle(x%p) = x%p", handle, temp);
+
+    return (HANDLE)temp;
+#else
+    return handle;
+#endif
 }
 
 void
 CameraManager::RemoveCamera(HANDLE hCamera)
 {
-    LOGTRACE(L"In: CameraManager::RemoveCamera(x%08x)", hCamera);
+    LOGTRACE(L"In: CameraManager::RemoveCamera(x%p)", hCamera);
 
     m_cameraMap.erase(hCamera);
 
-    LOGTRACE(L"Out: CameraManager::RemoveCamera(x%08x)", hCamera);
+    LOGTRACE(L"Out: CameraManager::RemoveCamera(x%p)", hCamera);
 }
 
 Camera*
 CameraManager::GetCameraForHandle(HANDLE hCamera)
 {
+    hCamera = CompatibleHandle(hCamera);
+
     std::unordered_map<HANDLE, Camera*>::iterator it = m_cameraMap.find(hCamera);
 
     if (it != m_cameraMap.end())
@@ -430,7 +453,14 @@ CameraManager::GetCameraForHandle(HANDLE hCamera)
     }
     else
     {
-        LOGWARN(L"Unable to find camera for handle x%08x", hCamera);
+        LOGWARN(L"Unable to find camera for handle x%p", hCamera);
+        LOGWARN(L"I have %d cameras in my list", m_cameraMap.size());
+
+        for (it = m_cameraMap.begin(); it != m_cameraMap.end(); it++)
+        {
+            LOGWARN(L"-- got a x%p with name %s", (it->first), (it->second)->GetDeviceInfo()->GetManufacturer().c_str());
+        }
+
         return nullptr;
     }
 }

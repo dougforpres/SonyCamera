@@ -12,7 +12,7 @@ public:
     CameraManager();
     ~CameraManager();
     HANDLE CreateCamera(Device* device, DWORD flags);
-    void AddCamera(HANDLE hCamera, Camera* camera);
+    HANDLE AddCamera(HANDLE hCamera, Camera* camera);
     void RemoveCamera(HANDLE hCamera);
     Camera* GetCameraForHandle(HANDLE hCamera);
 
@@ -20,5 +20,7 @@ public:
     static bool IsSupportedDevice(Device* device);
 
 private:
+    HANDLE CompatibleHandle(HANDLE handle);
+
     std::unordered_map<HANDLE, Camera*> m_cameraMap;
 };

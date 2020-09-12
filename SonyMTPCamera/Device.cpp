@@ -97,7 +97,7 @@ Device::Open()
                 m_openCount++;
                 m_handle = CreateEvent(nullptr, false, false, nullptr);
 
-                LOGINFO(L"x%p - Opened() with handle %08x", (void*)this, (DWORD)m_handle);
+                LOGINFO(L"x%p - Opened() with handle %p", (void*)this, (DWORD)m_handle);
             }
             else
             {
@@ -130,7 +130,7 @@ Device::Close()
 {
     LOGTRACE(L"In: Device::Close");
 
-    bool closed;
+    bool closed = false;
 
     if (m_openCount)
     {
