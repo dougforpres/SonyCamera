@@ -48,6 +48,8 @@ CameraManager::SetupSupportedDevices()
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.91);
     registry.SetDWORDDefault(key, L"Sensor X Resolution", 6024);
     registry.SetDWORDDefault(key, L"Sensor Y Resolution", 4024);
+    registry.SetDWORDDefault(key, L"AutoCropped X Resolution", 6000);
+    registry.SetDWORDDefault(key, L"AutoCropped Y Resolution", 4000);
     registry.SetDWORDDefault(key, L"Preview X Resolution", 0);
     registry.SetDWORDDefault(key, L"Preview Y Resolution", 0);
     registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
@@ -65,6 +67,8 @@ CameraManager::SetupSupportedDevices()
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.91);
     registry.SetDWORDDefault(key, L"Sensor X Resolution", 6024);
     registry.SetDWORDDefault(key, L"Sensor Y Resolution", 4024);
+    registry.SetDWORDDefault(key, L"AutoCropped X Resolution", 6000);
+    registry.SetDWORDDefault(key, L"AutoCropped Y Resolution", 4000);
     registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
     registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
     registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
@@ -82,6 +86,8 @@ CameraManager::SetupSupportedDevices()
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.91);
     registry.SetDWORDDefault(key, L"Sensor X Resolution", 6024);
     registry.SetDWORDDefault(key, L"Sensor Y Resolution", 4024);
+    registry.SetDWORDDefault(key, L"AutoCropped X Resolution", 6000);
+    registry.SetDWORDDefault(key, L"AutoCropped Y Resolution", 4000);
     registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
     registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
     registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
@@ -89,6 +95,25 @@ CameraManager::SetupSupportedDevices()
     registry.SetDoubleDefault(key, L"Exposure Time Step", 0.000125);
     registry.SetDWORDDefault(key, L"Sensor Type", 2);
     registry.SetDWORDDefault(key, L"Supports Liveview", 0);
+
+    // a6100
+    key = L"Cameras\\Sony Corporation\\ILCE-6100";
+
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"Sensor Name", L"EXMOR");
+    registry.SetDoubleDefault(key, L"Sensor X Size um", 3.91);
+    registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.91);
+    registry.SetDWORDDefault(key, L"Sensor X Resolution", 6024);
+    registry.SetDWORDDefault(key, L"Sensor Y Resolution", 4024);
+    registry.SetDWORDDefault(key, L"AutoCropped X Resolution", 6000);
+    registry.SetDWORDDefault(key, L"AutoCropped Y Resolution", 4000);
+    registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
+    registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
+    registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
+    registry.SetDoubleDefault(key, L"Exposure Time Max", 900.0);
+    registry.SetDoubleDefault(key, L"Exposure Time Step", 0.000125);
+    registry.SetDWORDDefault(key, L"Sensor Type", 2);
+    registry.SetDWORDDefault(key, L"Supports Liveview", 1);
 
     // a6300
     key = L"Cameras\\Sony Corporation\\ILCE-6300";
@@ -99,6 +124,8 @@ CameraManager::SetupSupportedDevices()
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.91);
     registry.SetDWORDDefault(key, L"Sensor X Resolution", 6024);
     registry.SetDWORDDefault(key, L"Sensor Y Resolution", 4024);
+    registry.SetDWORDDefault(key, L"AutoCropped X Resolution", 6000);
+    registry.SetDWORDDefault(key, L"AutoCropped Y Resolution", 4000);
     registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
     registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
     registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
@@ -116,6 +143,8 @@ CameraManager::SetupSupportedDevices()
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.91);
     registry.SetDWORDDefault(key, L"Sensor X Resolution", 6024);
     registry.SetDWORDDefault(key, L"Sensor Y Resolution", 4024);
+    registry.SetDWORDDefault(key, L"AutoCropped X Resolution", 6000);
+    registry.SetDWORDDefault(key, L"AutoCropped Y Resolution", 4000);
     registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
     registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
     registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
@@ -133,6 +162,8 @@ CameraManager::SetupSupportedDevices()
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.91);
     registry.SetDWORDDefault(key, L"Sensor X Resolution", 6024);
     registry.SetDWORDDefault(key, L"Sensor Y Resolution", 4024);
+    registry.SetDWORDDefault(key, L"AutoCropped X Resolution", 6000);
+    registry.SetDWORDDefault(key, L"AutoCropped Y Resolution", 4000);
     registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
     registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
     registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
@@ -150,6 +181,8 @@ CameraManager::SetupSupportedDevices()
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 5.95);
     registry.SetDWORDDefault(key, L"Sensor X Resolution", 6024);
     registry.SetDWORDDefault(key, L"Sensor Y Resolution", 4024);
+    registry.SetDWORDDefault(key, L"AutoCropped X Resolution", 6000);
+    registry.SetDWORDDefault(key, L"AutoCropped Y Resolution", 4000);
     registry.SetDWORDDefault(key, L"Preview X Resolution", 0);
     registry.SetDWORDDefault(key, L"Preview Y Resolution", 0);
     registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
@@ -167,6 +200,8 @@ CameraManager::SetupSupportedDevices()
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 5.95);
     registry.SetDWORDDefault(key, L"Sensor X Resolution", 6024);
     registry.SetDWORDDefault(key, L"Sensor Y Resolution", 4024);
+    registry.SetDWORDDefault(key, L"AutoCropped X Resolution", 6000);
+    registry.SetDWORDDefault(key, L"AutoCropped Y Resolution", 4000);
     registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
     registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
     registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
@@ -184,6 +219,8 @@ CameraManager::SetupSupportedDevices()
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 5.95);
     registry.SetDWORDDefault(key, L"Sensor X Resolution", 6024);
     registry.SetDWORDDefault(key, L"Sensor Y Resolution", 4024);
+    registry.SetDWORDDefault(key, L"AutoCropped X Resolution", 6000);
+    registry.SetDWORDDefault(key, L"AutoCropped Y Resolution", 4000);
     registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
     registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
     registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
