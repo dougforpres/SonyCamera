@@ -194,7 +194,7 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
     //    created by user pressing shutter button
     PropertyValue up((UINT16)(GetDeviceInfo()->GetButtonPropertiesInverted() ? 2 : 1));
 
-    LOGTRACE(L"Up value is %d (%s)", up.GetUINT16(), up.ToString());
+    LOGTRACE(L"Up value is %d (%s)", up.GetUINT16(), up.ToString().c_str());
     LOGTRACE(L"Getting latest camera settings");
 
     CameraSettings* settings = GetSettings(true);
@@ -286,7 +286,7 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
     }
     else
     {
-        LOGWARN(L"StartCapture: Cannot start capture as someone has their finger on the shutter button (%s)", settings->GetPropertyValue(Property::ShutterButtonStatus)->ToString());
+        LOGWARN(L"StartCapture: Cannot start capture as someone has their finger on the shutter button (%s)", settings->GetPropertyValue(Property::ShutterButtonStatus)->ToString().c_str());
         throw CameraException(L"Cannot start capture as shutter already open");
     }
 
