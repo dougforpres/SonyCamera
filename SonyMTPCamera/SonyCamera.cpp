@@ -42,10 +42,10 @@ SonyCamera::Initialize()
 */
     tx = new Message(COMMAND_GET_STORAGE_IDS);
     rx = m_device->Receive(tx);
-    result &= rx->IsSuccess();
+//  Ignore result of this method, a7siii (one sample) seems to return a non-success result
+//    result &= rx->IsSuccess();
 
     LOGTRACE(L"Get Storage ID's >> %s", rx->Dump().c_str());
-    //    LOGINFO(L"Asked for storage Id's\n%s", rx->Dump().c_str());
 
     delete tx;
     delete rx;
@@ -59,6 +59,8 @@ SonyCamera::Initialize()
     rx = m_device->Receive(tx);
     result &= rx->IsSuccess();
 
+    LOGTRACE(L"Get Next Handle (1) >> %s", rx->Dump().c_str());
+
     delete tx;
     delete rx;
 
@@ -71,6 +73,8 @@ SonyCamera::Initialize()
     rx = m_device->Receive(tx);
     result &= rx->IsSuccess();
 
+    LOGTRACE(L"Get Next Handle (2) >> %s", rx->Dump().c_str());
+
     delete tx;
     delete rx;
 
@@ -82,7 +86,7 @@ SonyCamera::Initialize()
     result &= rx->IsSuccess();
 
     m_supportedProperties = new CameraSupportedProperties(rx);
-    LOGTRACE(L"Get Supported Properties >> %s", m_supportedProperties->AsString().c_str());
+    LOGTRACE(L"Get Supported Properties (1) >> %s", m_supportedProperties->AsString().c_str());
 
     delete tx;
     delete rx;
@@ -96,6 +100,8 @@ SonyCamera::Initialize()
     rx = m_device->Receive(tx);
     result &= rx->IsSuccess();
 
+    LOGTRACE(L"Get Next Handle (3) >> %s", rx->Dump().c_str());
+
     delete tx;
     delete rx;
 
@@ -106,7 +112,7 @@ SonyCamera::Initialize()
     rx = m_device->Receive(tx);
     result &= rx->IsSuccess();
 
-    LOGTRACE(L"Get Supported Properties >> %s", rx->Dump().c_str());
+    LOGTRACE(L"Get Supported Properties (2) >> %s", rx->Dump().c_str());
 
     delete tx;
     delete rx;

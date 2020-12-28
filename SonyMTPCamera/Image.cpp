@@ -527,7 +527,12 @@ Image::SaveFile(std::wstring path)
     {
         // Whenever we open a device, set the save file path
         registry.Open();
-        path = registry.GetString(L"", L"File Save Path", L"");
+
+        if (registry.GetDWORD(L"", L"File Auto Save", 0))
+        {
+            path = registry.GetString(L"", L"File Save Path", L"");
+        }
+
         registry.Close();
     }
 

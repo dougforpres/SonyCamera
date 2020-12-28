@@ -843,6 +843,8 @@ Device::InternalSend(Device::Op kind, Message* out)
     if (IsSuccess(hr, L"GetUnsignedIntegerValue(WPD_PROPERTY_MTP_EXT_RESPONSE_CODE) (END)"))
     {
         result->SetCommand((WORD)dwResponseCode);
+
+        logger.Log(result->IsSuccess() ? Logger::LogLevel::Trace : Logger::LogLevel::Warn, L"Command x%04x result x%04x", out->GetCommand(), result->GetCommand());
     }
 
     if (spResults)
