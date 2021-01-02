@@ -505,7 +505,7 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
                     std::wostringstream builder;
                     bool previewNeeded = deviceInfo->GetPreviewXResolution() == 0 || deviceInfo->GetPreviewYResolution() == 0;
 
-                    builder << L"Cameras\\" << deviceInfo->GetManufacturer() << L"\\" << deviceInfo->GetModel();
+                    builder << L"Cameras\\" << camera->GetDevice()->GetRegistryPath();
 
                     registry.Open();
                     std::wstring cameraPath = builder.str();
@@ -548,7 +548,7 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
                         UINT32 exposure = p->GetCurrentValue()->GetUINT32();
 
                         double exp;
-                    
+
                         switch (exposure)
                         {
                         case 0x00000000:
@@ -713,6 +713,7 @@ GetPortableDeviceInfo(DWORD offset, PORTABLEDEVICEINFO* pdinfo)
         pdinfo->id = exportString((*it)->GetId());
         pdinfo->manufacturer = exportString(device->GetManufacturer());
         pdinfo->model = exportString(device->GetFriendlyName());
+        pdinfo->devicePath = exportString(device->GetRegistryPath());
 
         LOGTRACE(L"Out: GetPortableDeviceInfo(x%08x, @ x%08p) - Returning data", offset, pdinfo);
 

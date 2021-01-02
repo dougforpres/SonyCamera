@@ -89,6 +89,7 @@ typedef struct
     LPWSTR id;
     LPWSTR manufacturer;
     LPWSTR model;
+    LPWSTR devicePath;
 } PORTABLEDEVICEINFO;
 //#pragma pack(pop)
 

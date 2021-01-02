@@ -88,7 +88,7 @@ Camera::ProcessDeviceInfoOverrides()
 {
     std::wostringstream builder;
 
-    builder << L"Cameras\\" << m_device->GetManufacturer() << L"\\" << m_device->GetFriendlyName();
+    builder << L"Cameras\\" << m_device->GetRegistryPath();
 
     std::wstring cameraPath = builder.str();
     DeviceInfo* d = m_deviceInfo;

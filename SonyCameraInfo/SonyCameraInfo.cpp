@@ -159,6 +159,7 @@ int main()
                                         std::wcout << L"\n\nPlease email the following info to: retrodotkiwi@gmail.com\n\n";
                                         std::wcout << L"   Manufacturer:           " << pdinfo.manufacturer << "\n";
                                         std::wcout << L"   Model:                  " << pdinfo.model << "\n";
+                                        std::wcout << L"   Device Path:            " << pdinfo.devicePath << "\n";
                                         std::wcout << L"   Preview image width:    " << cameraInfo.previewWidthPixels << "px\n";
                                         std::wcout << L"   Preview image height:   " << cameraInfo.previewHeightPixels << "px\n";
                                         std::wcout << L"   Full-size image width:  " << cameraInfo.imageWidthPixels << "px\n";
@@ -178,6 +179,7 @@ int main()
                                 std::wcout << L"\n\nPlease email the following info to: retrodotkiwi@gmail.com\n\n";
                                 std::wcout << L"   Manufacturer:           " << pdinfo.manufacturer << "\n";
                                 std::wcout << L"   Model:                  " << pdinfo.model << "\n";
+                                std::wcout << L"   Device Path:            " << pdinfo.devicePath << "\n";
                                 std::wcout << L"   Preview image width:    " << cameraInfo.previewWidthPixels << "px\n";
                                 std::wcout << L"   Preview image height:   " << cameraInfo.previewHeightPixels << "px\n";
                                 std::wcout << L"   Full-size image width:  " << cameraInfo.imageWidthPixels << "px\n";

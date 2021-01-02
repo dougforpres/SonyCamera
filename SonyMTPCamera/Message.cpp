@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Message.h"
+#include "Utils.h"
 
 Message::Message(WORD command)
     : m_command(command),
@@ -118,43 +119,7 @@ Message::Dump()
     result << "command: ";
 
     result << std::hex << std::setw(4) << std::setfill(L'0') << m_command;
-    result << "\ndataLen: ";
-    result << m_dataLen;
-    result << "\ndata: [ ";
-
-    DWORD i, j, k;
-
-    for (i = 0; i < m_dataLen; i += 16)
-    {
-        result << "\n" << std::hex << std::setw(4) << std::setfill(L'0') << i << ": ";
-
-        std::wostringstream chars;
-
-        for (j = 0; j < 16 && i+ j < m_dataLen; j++)
-        {
-            BYTE d = m_data[i + j];
-
-            result << std::hex << std::setw(2) << std::setfill(L'0') << (WORD)d << " ";
-
-            if (d >= 32 && d <= 127)
-            {
-                chars << (char)d;
-            }
-            else
-            {
-                chars << '.';
-            }
-        }
-
-        for (k = j; k < 16; k++)
-        {
-            result << "   ";
-        }
-
-        result << chars.str();
-    }
-
-    result << "\n]";
+    result << "\ndata: " << DumpBytes(m_data, m_dataLen).c_str();
 
     return result.str();
 }

@@ -17,7 +17,6 @@ public:
     Camera* GetCameraForHandle(HANDLE hCamera);
 
     static void SetupSupportedDevices();
-    static bool IsSupportedDevice(Device* device);
 
 private:
     HANDLE CompatibleHandle(HANDLE handle);

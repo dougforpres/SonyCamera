@@ -1,8 +1,5 @@
 #pragma once
 #include "pch.h"
-#include <PortableDeviceApi.h>
-#include "DeviceEventHandler.h"
-
 #include "Message.h"
 
 #define CLIENT_NAME L"Retro.kiwi Sony Camera"
@@ -21,47 +18,41 @@ public:
     };
 
     /* Constructor */
-    Device(IPortableDeviceManager* PortableDeviceManager, std::wstring DeviceId);
+    Device(std::wstring DeviceId);
     Device(const Device &rhs);
 
     /* Destructor */
     ~Device();
 
-    virtual Device* Clone();
+    virtual Device* Clone() = 0;
 
-    virtual HANDLE Open();
-    virtual bool Close();
+    virtual HANDLE Open() = 0;
+    virtual bool Close() = 0;
 
     virtual std::wstring GetId();
     virtual std::wstring GetFriendlyName();
     virtual std::wstring GetManufacturer();
     virtual std::wstring GetDescription();
 
-    virtual bool Send(Message* out);
-    virtual Message* Receive(Message* out);
+    virtual bool Send(Message* out) = 0;
+    virtual Message* Receive(Message* out) = 0;
 
     virtual HANDLE GetHandle();
     virtual bool StartNotifications();
     virtual bool StopNotifications();
 
-protected:
-    virtual Message* InternalSend(Op kind, Message* out);
+    bool IsSupported();
+    virtual std::wstring GetRegistryPath() = 0;
+    virtual bool NeedsSession();
 
+protected:
     std::wstring m_id;
     std::wstring m_friendlyName;
     std::wstring m_manufacturer;
     std::wstring m_description;
-
-private:
-    void CreateClientInformation();
-//    bool LogIfFailed(HRESULT hr, std::wstring message);
-    bool IsSuccess(HRESULT hr, const wchar_t * message);
-
     HANDLE m_handle = INVALID_HANDLE_VALUE;
     short m_openCount = 0;
-    IPortableDevice* m_device = nullptr;
-    IPortableDeviceManager* m_manager = nullptr;
-    IPortableDeviceValues* m_clientInformation = nullptr;
-    DeviceEventHandler* m_eventHandler = nullptr;
+
+private:
 };
 

@@ -1,12 +1,12 @@
 #pragma once
 #include "pch.h"
-#include "Device.h"
+#include "MTPDevice.h"
 #include "MessageWriter.h"
 #include "ObjectInfo.h"
 #include "PropertyValue.h"
 
 class DummyDevice :
-    public Device
+    public MTPDevice
 {
 public:
     DummyDevice(const std::wstring deviceId, const std::wstring friendlyName, const std::wstring manufacturer, const std::wstring description);

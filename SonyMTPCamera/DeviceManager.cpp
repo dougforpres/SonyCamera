@@ -1,17 +1,22 @@
 #include "pch.h"
 #include "DeviceManager.h"
 #include "CameraManager.h"
+#include "MTPEnumerator.h"
+#include "LibUSBKEnumerator.h"
 #include "Logger.h"
 #include "DummyDevice.h"
 #include "Registry.h"
 
 DeviceManager::DeviceManager()
 {
+    m_libusbkEnumerator = new LibUSBKEnumerator();
 }
 
 DeviceManager::~DeviceManager()
 {
     ClearDeviceList();
+    delete m_libusbkEnumerator;
+    m_libusbkEnumerator = nullptr;
 }
 
 void
@@ -42,92 +47,17 @@ DeviceManager::GetDevice(std::wstring id)
     return result;
 }
 
-std::list<Device*>
-DeviceManager::GetAllDevices()
+size_t
+DeviceManager::RefreshDevices()
 {
-    HRESULT hr;
-    IPortableDeviceManager* pPortableDeviceManager = nullptr;
-    DWORD cPnPDeviceIDs = 0;
+    MTPEnumerator* mtpEnumerator = new MTPEnumerator();
 
-    std::list<Device*> foundDevices;
+    std::list<Device*> foundDevices = mtpEnumerator->EnumerateDevices();
+    foundDevices.splice(foundDevices.end(), m_libusbkEnumerator->EnumerateDevices());
 
-    hr = CoCreateInstance(CLSID_PortableDeviceManager,
-        NULL,
-        CLSCTX_INPROC_SERVER,
-        IID_PPV_ARGS(&pPortableDeviceManager));
-    if (FAILED(hr))
-    {
-        LOGERROR(L"! Failed to CoCreateInstance CLSID_PortableDeviceManager, hr = 0x%lx", hr);
-    }
+    delete mtpEnumerator;
 
-    if (SUCCEEDED(hr))
-    {
-        hr = pPortableDeviceManager->GetDevices(NULL, &cPnPDeviceIDs);
-        if (FAILED(hr))
-        {
-            LOGERROR(L"! Failed to get number of devices on the system, hr = 0x%lx", hr);
-        }
-    }
-
-    // Report the number of devices found.  NOTE: we will report 0, if an error
-    // occured.
-
-    LOGERROR(L"%d Windows Portable Device(s) found on the system", cPnPDeviceIDs);
-
-    PWSTR* pPnpDeviceIDs = NULL;
-    DWORD dwIndex = 0;
-
-    if (SUCCEEDED(hr) && (cPnPDeviceIDs > 0))
-    {
-        pPnpDeviceIDs = new (std::nothrow) PWSTR[cPnPDeviceIDs];
-
-        if (pPnpDeviceIDs != NULL)
-        {
-            ZeroMemory((void*)pPnpDeviceIDs, sizeof(PWSTR) * cPnPDeviceIDs);
-
-            hr = pPortableDeviceManager->GetDevices(pPnpDeviceIDs, &cPnPDeviceIDs);
-            if (SUCCEEDED(hr))
-            {
-                // For each device found, display the devices friendly name,
-                // manufacturer, and description strings.
-                for (dwIndex = 0; dwIndex < cPnPDeviceIDs; dwIndex++)
-                {
-                    std::wstring deviceId = (WCHAR*)pPnpDeviceIDs[dwIndex];
-
-                    if (!deviceId.empty())
-                    {
-                        // If device is already listed, do nothing
-                        Device* exists = nullptr;
-
-                        for (std::list<Device*>::iterator it = m_allDevices.begin(); it != m_allDevices.end() && !exists; it++)
-                        {
-                            if ((*it)->GetId() == deviceId)
-                            {
-                                exists = *it;
-                                LOGTRACE(L"Device '%s' already known", (*exists).GetFriendlyName().c_str());
-                            }
-                        }
-
-                        foundDevices.push_back(exists ? exists : new Device(pPortableDeviceManager, deviceId));
-                    }
-                }
-
-                for (dwIndex = 0; dwIndex < cPnPDeviceIDs; dwIndex++)
-                {
-                    CoTaskMemFree(pPnpDeviceIDs[dwIndex]);
-                    pPnpDeviceIDs[dwIndex] = nullptr;
-                }
-            }
-            else
-            {
-                LOGERROR(L"! Failed to get the device list from the system, hr = 0x%lx", hr);
-            }
-        }
-
-        // Delete the array of PWSTR pointers
-        delete[] pPnpDeviceIDs;
-        pPnpDeviceIDs = NULL;
-    }
+    mtpEnumerator = nullptr;
 
     // Add dummy device if there is a registry key for it
     registry.Open();
@@ -142,30 +72,57 @@ DeviceManager::GetAllDevices()
 
     registry.Close();
 
-    // We now have a list of _currently_ connected and available devices
-    // Compare with the current list and remove any that have disappeared.
-    for (std::list<Device*>::iterator it = m_allDevices.begin(); it != m_allDevices.end(); it++)
-    {
-        bool found = false;
+    std::list<Device*> newAllDevices = std::list<Device*>();
 
-        for (std::list<Device*>::iterator newit = foundDevices.begin(); newit != foundDevices.end() && !found; newit++)
+    for (std::list<Device*>::iterator newit = foundDevices.begin(); newit != foundDevices.end(); newit++)
+    {
+        // If the current item is already in "m_allDevices" then move the current one over
+        // If it's not, then move the new one in
+        // At the end we'll have a list of devices that have been removed
+        bool found = false;
+        std::list<Device*>::iterator it = m_allDevices.begin();
+
+        while (it != m_allDevices.end() && !found)
         {
             if ((*it)->GetId() == (*newit)->GetId())
             {
                 found = true;
+                LOGINFO(L"Existing device '%s' being copied over", (*it)->GetId().c_str());
+                newAllDevices.push_back(*it);
+                it = m_allDevices.erase(it);
+            }
+            else
+            {
+                it++;
             }
         }
 
         if (!found)
         {
-            // Device has disappeared.. we need to remove/delete it
-            delete* it;
+            LOGINFO(L"New device '%s' being added", (*newit)->GetId().c_str());
+            newAllDevices.push_back(*newit);
         }
     }
 
-    m_allDevices = foundDevices;
+    for (std::list<Device*>::iterator it = m_allDevices.begin(); it != m_allDevices.end(); it++)
+    {
+        delete* it;
+    }
 
-    return foundDevices;
+    m_allDevices = newAllDevices;
+
+    return m_allDevices.size();
+}
+
+std::list<Device*>
+DeviceManager::GetAllDevices()
+{
+    if (m_allDevices.empty())
+    {
+        RefreshDevices();
+    }
+
+    return m_allDevices;
 }
 
 std::list<Device*>
@@ -176,7 +133,7 @@ DeviceManager::GetFilteredDevices()
 
     for (std::list<Device*>::iterator it = allDevices.begin(); it != allDevices.end(); it++)
     {
-        if (CameraManager::IsSupportedDevice(*it))
+        if ((*it)->IsSupported())
         {
             result.push_back(*it);
         }

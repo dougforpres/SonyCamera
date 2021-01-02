@@ -1,6 +1,10 @@
 # Change Log
+## 1.0.0.21
+Large reshuffle of code to allow inclusion of native LibUSBK devices (which appears to be the way Sony are going with newer camera models.)  This will allow newer cameras to be supported out of the box without having to mess around with device driver fun.
+Fixed a couple of minor issues with older code.
+
 ## 1.0.0.20
-Added some new logging for command success/fail
+Added some new logging for command success/fail.
 Added an ignore for the success/fail of the initial "GetStorageIDs" query.
 Added camera definition for a7siii.
 Modified code to ignore error respose to the "GetStorageIDs" request.  Seems the a7siii returns an error, but otherwise works.

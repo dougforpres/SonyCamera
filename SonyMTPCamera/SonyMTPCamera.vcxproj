@@ -96,7 +96,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;cfgmgr32.lib;PortableDeviceGUIDs.lib;rpcrt4.lib;libraw\libraw.lib;libjpeg\turbojpeg.lib;Version.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;cfgmgr32.lib;PortableDeviceGUIDs.lib;rpcrt4.lib;libraw\libraw.lib;libjpeg\turbojpeg.lib;Version.lib;libUSBK\libusbK.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -113,7 +113,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;cfgmgr32.lib;PortableDeviceGUIDs.lib;rpcrt4.lib;libraw\x64\libraw.lib;libjpeg\x64\turbojpeg.lib;Version.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;cfgmgr32.lib;PortableDeviceGUIDs.lib;rpcrt4.lib;libraw\x64\libraw.lib;libjpeg\x64\turbojpeg.lib;Version.lib;libusbK/x64/libusbk.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -155,7 +155,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;cfgmgr32.lib;PortableDeviceGUIDs.lib;rpcrt4.lib;libraw\x64\libraw.lib;libjpeg\x64\turbojpeg.lib;Version.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;cfgmgr32.lib;PortableDeviceGUIDs.lib;rpcrt4.lib;libraw\x64\libraw.lib;libjpeg\x64\turbojpeg.lib;Version.lib;libusbK/x64/libusbk.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -165,11 +165,13 @@
     <ClInclude Include="CameraSettings.h" />
     <ClInclude Include="CameraSupportedProperties.h" />
     <ClInclude Include="Device.h" />
+    <ClInclude Include="DeviceEnumerator.h" />
     <ClInclude Include="DeviceEventHandler.h" />
     <ClInclude Include="DeviceInfo.h" />
     <ClInclude Include="DeviceManager.h" />
     <ClInclude Include="DummyDevice.h" />
     <ClInclude Include="CameraException.h" />
+    <ClInclude Include="LibUSBKDevice.h" />
     <ClInclude Include="Image.h" />
     <ClInclude Include="libjpeg\jconfig.h" />
     <ClInclude Include="libjpeg\jerror.h" />
@@ -183,12 +185,17 @@
     <ClInclude Include="libraw\libraw_internal.h" />
     <ClInclude Include="libraw\libraw_types.h" />
     <ClInclude Include="libraw\libraw_version.h" />
+    <ClInclude Include="LibUSBKEnumerator.h" />
+    <ClInclude Include="libusbK\libusbk.h" />
+    <ClInclude Include="libusbK\lusbk_shared.h" />
     <ClInclude Include="Lockable.h" />
     <ClInclude Include="Locker.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="Message.h" />
     <ClInclude Include="MessageReader.h" />
     <ClInclude Include="MessageWriter.h" />
+    <ClInclude Include="MTPDevice.h" />
+    <ClInclude Include="MTPEnumerator.h" />
     <ClInclude Include="ObjectInfo.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Property.h" />
@@ -201,6 +208,7 @@
     <ClInclude Include="ResourceLoader.h" />
     <ClInclude Include="SonyCamera.h" />
     <ClInclude Include="SonyMTPCamera.h" />
+    <ClInclude Include="Utils.h" />
     <ClInclude Include="Version.h" />
   </ItemGroup>
   <ItemGroup>
@@ -211,6 +219,7 @@
     <ClCompile Include="CameraSupportedProperties.cpp" />
     <ClCompile Include="CaptureThread.cpp" />
     <ClCompile Include="Device.cpp" />
+    <ClCompile Include="DeviceEnumerator.cpp" />
     <ClCompile Include="DeviceEventHandler.cpp" />
     <ClCompile Include="DeviceInfo.cpp" />
     <ClCompile Include="DeviceManager.cpp" />
@@ -219,12 +228,15 @@
     <ClCompile Include="DummyDevice.cpp" />
     <ClCompile Include="CameraException.cpp" />
     <ClCompile Include="Image.cpp" />
+    <ClCompile Include="LibUSBKEnumerator.cpp" />
     <ClCompile Include="Lockable.cpp" />
     <ClCompile Include="Locker.cpp" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="Message.cpp" />
     <ClCompile Include="MessageReader.cpp" />
     <ClCompile Include="MessageWriter.cpp" />
+    <ClCompile Include="MTPDevice.cpp" />
+    <ClCompile Include="MTPEnumerator.cpp" />
     <ClCompile Include="ObjectInfo.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -238,6 +250,8 @@
     <ClCompile Include="Registry.cpp" />
     <ClCompile Include="ResourceLoader.cpp" />
     <ClCompile Include="SonyCamera.cpp" />
+    <ClCompile Include="LibUSBKDevice.cpp" />
+    <ClCompile Include="Utils.cpp" />
     <ClCompile Include="Version.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -249,6 +263,7 @@
     <Library Include="..\..\..\..\..\..\LibRaw-0.19.5-Win64\LibRaw-0.19.5\lib\libraw.lib" />
     <Library Include="libjpeg\turbojpeg.lib" />
     <Library Include="libraw\libraw.lib" />
+    <Library Include="libusbK\libusbK.lib" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\ChangeLog.md" />

@@ -386,25 +386,6 @@ CameraManager::SetupSupportedDevices()
     LOGINFO(L"Out: CameraManager::SetupSupportedDevices()");
 }
 
-bool
-CameraManager::IsSupportedDevice(Device* device)
-{
-    bool result = false;
-    std::wostringstream builder;
-
-    builder << L"Cameras\\" << device->GetManufacturer() << "\\" << device->GetFriendlyName();
-
-    registry.Open();
-
-    result = registry.DoesKeyExist(builder.str().c_str());
-
-    registry.Close();
-
-    LOGINFO(L"CameraManager::IsSupportedDevice(%s) = %d", device->GetFriendlyName().c_str(), result);
-
-    return result;
-}
-
 HANDLE
 CameraManager::CreateCamera(Device* device, DWORD flags)
 {
@@ -430,7 +411,7 @@ CameraManager::CreateCamera(Device* device, DWORD flags)
 
         LOGTRACE(L"CameraManager::CreateCamera: Not an existing camera, looking to see if '%s' is supported", device->GetFriendlyName().c_str());
 
-        if ((flags & OPEN_OVERRIDE) || IsSupportedDevice(device))
+        if ((flags & OPEN_OVERRIDE) || device->IsSupported())
         {
             // Make a new camera...
             LOGTRACE(L"CameraManager::CreateCamera: Creating new camera object for '%s'", device->GetFriendlyName().c_str());

@@ -1,11 +1,12 @@
 #include "pch.h"
 #include "PTPContainer.h"
+#include "Utils.h"
 
 /*
    Constructor
    Creates a container that will typically be used to send data to a device
  */
-PTPContainer::PTPContainer(unsigned short containerType, unsigned short opcode, unsigned long sequenceNumber, unsigned long dataLen, BYTE * data)
+PTPContainer::PTPContainer(PTPContainer::Type containerType, unsigned short opcode, unsigned long sequenceNumber, unsigned long dataLen, BYTE * data)
     : _containerType(containerType),
       _opcode(opcode),
       _sequenceNumber(sequenceNumber)
@@ -25,7 +26,7 @@ PTPContainer::PTPContainer(unsigned long dataLen, BYTE * data)
     if (dataLen >= 12 && data)
     {
         pPTPHeader header = (pPTPHeader)data;
-        this->_containerType = header->containerType;
+        this->_containerType = (Type)header->containerType;
         this->_opcode = header->opcode;
         this->_sequenceNumber = header->sequenceNumber;
 
@@ -54,13 +55,13 @@ unsigned long PTPContainer::toBytes(unsigned long bufferLen, BYTE * buffer)
         pPTPHeader header = (pPTPHeader)buffer;
 
         header->containerLength = sizeof(PTPHeader) + this->_dataLen;
-        header->containerType = this->_containerType;
+        header->containerType = (unsigned short)this->_containerType;
         header->opcode = this->_opcode;
         header->sequenceNumber = this->_sequenceNumber;
 
         if (this->_dataLen)
         {
-            memcpy(buffer + sizeof(pPTPHeader), this->_data, this->_dataLen);
+            memcpy(buffer + sizeof(PTPHeader), this->_data, this->_dataLen);
         }
     }
 
@@ -93,4 +94,35 @@ unsigned long PTPContainer::getDataLen()
 BYTE * PTPContainer::getData()
 {
     return this->_data;
+}
+
+PTPContainer::Type
+PTPContainer::getContainerType()
+{
+    return _containerType;
+}
+
+unsigned long
+PTPContainer::getSequenceNumber()
+{
+    return _sequenceNumber;
+}
+
+unsigned short
+PTPContainer::getOpCode()
+{
+    return _opcode;
+}
+
+std::wstring
+PTPContainer::Dump()
+{
+    std::wostringstream result;
+
+    result << "type:   " << (unsigned short)_containerType << "\n";
+    result << "seq:    " << _sequenceNumber << "\n";
+    result << "opcode: " << std::hex << std::setw(4) << std::setfill(L'0') << _opcode << "\n";
+    result << "data:   " << DumpBytes(_data, _dataLen).c_str();
+
+    return result.str();
 }
