@@ -53,6 +53,9 @@ BOOL APIENTRY DllMain( HMODULE hModule,
             delete version;
         }
 
+        // Set the Auto File Save flag for legacy users
+        registry.SetDWORDDefault(L"", L"File Auto Save", registry.GetString(L"", L"File Save Path", L"").size() > 0);
+
         // Ensure the cameras we know about are in the registry, otherwise the code will fail to find any viable candidates
         CameraManager::SetupSupportedDevices();
         registry.Close();

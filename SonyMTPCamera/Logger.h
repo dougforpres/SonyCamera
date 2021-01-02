@@ -33,5 +33,4 @@ private:
     LogLevel m_level = LogLevel::Error;
 };
 
-
 extern Logger logger;

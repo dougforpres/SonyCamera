@@ -24,25 +24,22 @@ SonyCamera::Initialize()
     Message* tx;
     Message* rx;
 
-/*    this->GetDeviceInfo();
-    tx = new Message(COMMAND_GET_DEVICE_INFO);
-        rx = this->_device->Receive(tx);
+    if (GetDevice()->NeedsSession())
+    {
+        tx = new Message(COMMAND_OPEN_SESSION);
 
-        wprintf(L"Get Device Info:\n%s", rx->Dump().c_str());
+        tx->AddParam(0x00000001);
 
-        this->_deviceInfo = new DeviceInfo(rx);
+        this->m_device->Send(tx);
 
         delete tx;
-        delete rx;
+    }
 
-    tx = new Message(COMMAND_OPEN_SESSION);
-    this->_device->Send(tx);
-
-    delete tx;
-*/
     tx = new Message(COMMAND_GET_STORAGE_IDS);
+
     rx = m_device->Receive(tx);
-    result &= rx->IsSuccess();
+    //  Ignore result of this method, a7siii (one sample) seems to return a non-success result
+    //    result &= rx->IsSuccess();
 
     LOGTRACE(L"Get Storage ID's >> %s", rx->Dump().c_str());
     //    LOGINFO(L"Asked for storage Id's\n%s", rx->Dump().c_str());

@@ -28,6 +28,9 @@
     <Filter Include="Libraries\x64">
       <UniqueIdentifier>{b432248d-bee7-4b2c-86cf-b409181ed8aa}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\libUSBK">
+      <UniqueIdentifier>{d7748d53-43b7-4b84-9299-cf254aa5497b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -159,6 +162,30 @@
     <ClInclude Include="Version.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MTPDevice.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LibUSBKDevice.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="libusbK\libusbk.h">
+      <Filter>Header Files\libUSBK</Filter>
+    </ClInclude>
+    <ClInclude Include="libusbK\lusbk_shared.h">
+      <Filter>Header Files\libUSBK</Filter>
+    </ClInclude>
+    <ClInclude Include="MTPEnumerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DeviceEnumerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LibUSBKEnumerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -251,6 +278,24 @@
     <ClCompile Include="Version.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MTPDevice.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LibUSBKDevice.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DeviceEnumerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MTPEnumerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LibUSBKEnumerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="SonyTest.rc">
@@ -272,6 +317,9 @@
     </Library>
     <Library Include="..\..\..\..\..\..\LibRaw-0.19.5-Win64\LibRaw-0.19.5\lib\libraw.lib">
       <Filter>Libraries\x64</Filter>
+    </Library>
+    <Library Include="libusbK\libusbK.lib">
+      <Filter>Libraries</Filter>
     </Library>
   </ItemGroup>
   <ItemGroup>

@@ -19,7 +19,13 @@ typedef struct {
 class PTPContainer
 {
 public:
-    PTPContainer(unsigned short containerType, unsigned short opcode, unsigned long transactionId, unsigned long dataLen = 0, BYTE *data = NULL);
+    enum class Type {
+        Init = CONTAINER_TYPE_COMMAND,
+        Data = CONTAINER_TYPE_DATA,
+        Response = CONTAINER_TYPE_RESPONSE,
+    };
+
+    PTPContainer(PTPContainer::Type containerType, unsigned short opcode, unsigned long transactionId, unsigned long dataLen = 0, BYTE *data = NULL);
     PTPContainer(unsigned long dataLen, BYTE *data);
     ~PTPContainer();
 
@@ -27,9 +33,14 @@ public:
     void setData(unsigned long dataLen, BYTE *data);
     unsigned long getDataLen();
     BYTE *getData();
+    Type getContainerType();
+    unsigned long getSequenceNumber();
+    unsigned short getOpCode();
+
+    std::wstring Dump();
 
 protected:
-    unsigned short _containerType;
+    Type _containerType;
     unsigned short _opcode;
     unsigned long _sequenceNumber;
     BYTE *_data;
@@ -37,4 +48,3 @@ protected:
 
 private:
 };
-

@@ -1,33 +1,53 @@
 # Change Log
+## 1.0.0.21
+Large reshuffle of code to allow inclusion of native LibUSBK devices (which appears to be the way Sony are going with newer camera models.)  This will allow newer cameras to be supported out of the box without having to mess around with device driver fun.
+Fixed a couple of minor issues with older code.
+
+## 1.0.0.20
+Added some new logging for command success/fail.
+Added an ignore for the success/fail of the initial "GetStorageIDs" query.
+Added camera definition for a7siii.
+Modified code to ignore error respose to the "GetStorageIDs" request.  Seems the a7siii returns an error, but otherwise works.
+Include camera response code for all requests.
+
+## 1.0.0.19
+Added flag for enabling the Auto Save of images.  This works in conjunction with the Auto Save Path.  The flag setting is managed by the ASCOM driver.
+Fixed a couple of logging issues.
+Added camera defintion for a6100.
+Added autocrop image size data for a few cameras - need to get the rest before default crop mode can be set to "AutoCrop" to have RGGB size match ARW.
+
+## 1.0.0.18
+Fix to handle the difference between 32 and 64-bit handles being passed back and forth between this code and ASCOM driver (which is expecting 32-bit values).
+
 ## 1.0.0.17
-Added 64 bit support to the project, plus indicator of 32/64 in log startup
+Added 64 bit support to the project, plus indicator of 32/64 in log startup.
 
 ## 1.0.0.16
 Found and fixed the issue with a6300 (and a6500) not being able to use LiveView mode.
 
 ## 1.0.0.15
-Added camera definition for SLT a58
-Fixed issue where if ASCOM closed a device (camera) it could not reopen it.  Caused by passing the object pointer instead of the handle to the cleanup method
+Added camera definition for SLT a58.
+Fixed issue where if ASCOM closed a device (camera) it could not reopen it.  Caused by passing the object pointer instead of the handle to the cleanup method.
 
 ## 1.0.0.14
-Added camera definition for a6600
-Added camera definition for a5100
+Added camera definition for a6600.
+Added camera definition for a5100.
 
 ## 1.0.0.13
-Added camera definition for a7 II
+Added camera definition for a7 II.
 
 ## 1.0.0.12
-Added camera definition for a5000
+Added camera definition for a5000.
 
 ## 1.0.0.11
 
 ### Added a7R IV
-Added camera definition for a7R IV
+Added camera definition for a7R IV.
 
 ## 1.0.0.10
 
 ### Dummy Device Updates
-The Dummy camera device is used for testing, it needed to have support for the newer properties that are used when taking images
+The Dummy camera device is used for testing, it needed to have support for the newer properties that are used when taking images.
 
 ## 1.0.0.9
 

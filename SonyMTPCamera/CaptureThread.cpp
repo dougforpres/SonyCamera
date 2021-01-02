@@ -13,11 +13,11 @@
 DWORD WINAPI 
 Camera::CaptureThread::_run(LPVOID lpParameter)
 {
-    LOGTRACE(L"In: CaptureThread::_run(x%08x)");
+    LOGTRACE(L"In: CaptureThread::_run(x%08x)", lpParameter);
 
     DWORD result = ((CaptureThread*)lpParameter)->Run();
 
-    LOGTRACE(L"Out: CaptureThread::_run(x%08x) - returning %d", result);
+    LOGTRACE(L"Out: CaptureThread::_run(x%08x) - returning %d", lpParameter, result);
 
     return result;
 }
@@ -61,7 +61,7 @@ Camera::CaptureThread::~CaptureThread()
         }
 
         Sleep(THREAD_WAIT_EXIT_SLEEP);
-        GetExitCodeThread(&m_hThread, &exitCode);
+        GetExitCodeThread(m_hThread, &exitCode);
     }
 
     CloseHandle(m_hWakeupEvent);

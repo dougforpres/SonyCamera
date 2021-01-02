@@ -7,7 +7,7 @@
 #include "Camera.h"
 
 DummyDevice::DummyDevice(const std::wstring deviceId, const std::wstring friendlyName, const std::wstring manufacturer, const std::wstring description)
-    : Device(nullptr, deviceId)
+    : MTPDevice(nullptr, deviceId)
 {
     m_friendlyName = friendlyName;
     m_manufacturer = manufacturer;

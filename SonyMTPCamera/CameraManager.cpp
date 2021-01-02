@@ -331,6 +331,23 @@ CameraManager::SetupSupportedDevices()
     registry.SetDWORDDefault(key, L"Sensor Type", 2);
     registry.SetDWORDDefault(key, L"Supports Liveview", 1);
 
+    // a7S III
+    key = L"Cameras\\Sony Corporation\\ILCE-7SM3";
+
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
+    registry.SetDoubleDefault(key, L"Sensor X Size um", 8.31);
+    registry.SetDoubleDefault(key, L"Sensor Y Size um", 8.31);
+    registry.SetDWORDDefault(key, L"Sensor X Resolution", 4256);
+    registry.SetDWORDDefault(key, L"Sensor Y Resolution", 2848);
+    registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
+    registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
+    registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
+    registry.SetDoubleDefault(key, L"Exposure Time Max", 900.0);
+    registry.SetDoubleDefault(key, L"Exposure Time Step", 0.000125);
+    registry.SetDWORDDefault(key, L"Sensor Type", 2);
+    registry.SetDWORDDefault(key, L"Supports Liveview", 1);
+
     key = L"Cameras\\Sony Corporation\\ILCA-77M2";
 
     registry.CreateKey(key);
@@ -369,25 +386,6 @@ CameraManager::SetupSupportedDevices()
     LOGINFO(L"Out: CameraManager::SetupSupportedDevices()");
 }
 
-bool
-CameraManager::IsSupportedDevice(Device* device)
-{
-    bool result = false;
-    std::wostringstream builder;
-
-    builder << L"Cameras\\" << device->GetManufacturer() << "\\" << device->GetFriendlyName();
-
-    registry.Open();
-
-    result = registry.DoesKeyExist(builder.str().c_str());
-
-    registry.Close();
-
-    LOGINFO(L"CameraManager::IsSupportedDevice(%s) = %d", device->GetFriendlyName().c_str(), result);
-
-    return result;
-}
-
 HANDLE
 CameraManager::CreateCamera(Device* device, DWORD flags)
 {
@@ -413,7 +411,7 @@ CameraManager::CreateCamera(Device* device, DWORD flags)
 
         LOGTRACE(L"CameraManager::CreateCamera: Not an existing camera, looking to see if '%s' is supported", device->GetFriendlyName().c_str());
 
-        if ((flags & OPEN_OVERRIDE) || IsSupportedDevice(device))
+        if ((flags & OPEN_OVERRIDE) || device->IsSupported())
         {
             // Make a new camera...
             LOGTRACE(L"CameraManager::CreateCamera: Creating new camera object for '%s'", device->GetFriendlyName().c_str());
@@ -459,7 +457,7 @@ CameraManager::CompatibleHandle(HANDLE handle)
 #if _WIN64
     uint64_t temp = (uint64_t)handle & 0xffffffff;
 
-    LOGTRACE(L"CameraManager::CompatibleHandle(x%p) = x%p", handle, temp);
+//    LOGTRACE(L"CameraManager::CompatibleHandle(x%p) = x%p", handle, temp);
 
     return (HANDLE)temp;
 #else
