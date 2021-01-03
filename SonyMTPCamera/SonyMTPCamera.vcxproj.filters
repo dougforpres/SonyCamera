@@ -321,6 +321,9 @@
     <Library Include="libusbK\libusbK.lib">
       <Filter>Libraries</Filter>
     </Library>
+    <Library Include="libusbK\x64\libusbK.lib">
+      <Filter>Libraries\x64</Filter>
+    </Library>
   </ItemGroup>
   <ItemGroup>
     <None Include="libjpeg\turbojpeg.dll">
