@@ -116,7 +116,7 @@ Message::Dump()
 {
     std::wostringstream result;
 
-    result << "command: ";
+    result << "command: x";
 
     result << std::hex << std::setw(4) << std::setfill(L'0') << m_command;
     result << "\ndata: " << DumpBytes(m_data, m_dataLen).c_str();

@@ -343,13 +343,13 @@ LibUSBKDevice::RunBulkRx()
             switch (container->getContainerType())
             {
             case PTPContainer::Type::Data:
-                LOGINFO(L"Got a data message");
+                LOGINFO(L"Got a data message: command = x%04x", container->getOpCode());
                 rxMessage = new Message(container->getOpCode());
                 rxMessage->SetData(container->getData(), container->getDataLen());
                 break;
 
             case PTPContainer::Type::Response:
-                LOGINFO(L"Got a result");
+                LOGINFO(L"Got a result: command = x%04x", container->getOpCode());
                 if (!rxMessage)
                 {
                     LOGINFO(L"No prior data message, creating dummy one");
@@ -377,13 +377,20 @@ LibUSBKDevice::RunBulkRx()
         {
             DWORD lastError = GetLastError();
 
-            if (lastError == ERROR_SEM_TIMEOUT)
+            switch (lastError)
             {
+            case ERROR_SEM_TIMEOUT:
                 // This is expected, it means no data in the timeout window
-            }
-            else
-            {
-                LOGWARN(L"Didn't receive any bulk data - error %d", lastError);
+                break;
+
+            case ERROR_OPERATION_ABORTED:
+                // This is expected in shutdown/close scenario
+                LOGINFO(L"RunBulkRx: Got Shutdown notification");
+                break;
+
+            default:
+                LOGWARN(L"RunBulkRx: UsbK_ReadPipe returned error %d", lastError);
+                break;
             }
         }
     }
@@ -423,20 +430,33 @@ LibUSBKDevice::RunInterruptRx()
 
             case 0xc203:
                 LOGINFO(L"Camera Property Changed");
+                break;
+
+            default:
+                LOGWARN(L"Got unknown interrupt: x%04x", container->getOpCode());
+                break;
             }
+
             delete container;
         }
         else
         {
             DWORD lastError = GetLastError();
 
-            if (lastError == ERROR_SEM_TIMEOUT)
+            switch (lastError)
             {
+            case ERROR_SEM_TIMEOUT:
                 // This is expected, it means no data in the timeout window
-            }
-            else
-            {
-                LOGWARN(L"Didn't receive any interrupt data - error %d", lastError);
+                break;
+
+            case ERROR_OPERATION_ABORTED:
+                // This is expected in shutdown/close scenario
+                LOGINFO(L"RunInterruptRx: Got Shutdown notification");
+                break;
+
+            default:
+                LOGWARN(L"RunInterruptRx: UsbK_ReadPipe returned error %d", lastError);
+                break;
             }
         }
     }
