@@ -98,9 +98,118 @@ ensureStorageMode(HANDLE hCamera)
     return modeOk;
 }
 
+void
+checkLogging()
+{
+    HKEY key;
+
+    if (RegCreateKeyEx(HKEY_CURRENT_USER, L"Software\\Retro.kiwi\\SonyMTPCamera.dll", 0, NULL, REG_OPTION_NON_VOLATILE, KEY_READ, NULL, &key, NULL) == ERROR_SUCCESS)
+    {
+        // Get Log Level (use same default as driver)
+        DWORD dword;
+        DWORD dataSize = sizeof(DWORD);
+
+        LSTATUS regresult = RegGetValue(key, nullptr, L"Log Level", RRF_RT_REG_DWORD, nullptr, &dword, &dataSize);
+
+        if (regresult == ERROR_SUCCESS)
+        {
+            std::wcout << L"Logging level set to " << dword << L" (1 = everything... 5 = errors only)\n";
+        }
+        else
+        {
+            std::wcout << L"Logging level not set, DLL will attempt to log ERRORS only\n";
+        }
+
+        dataSize = 0;
+        regresult = RegGetValue(key, nullptr, L"Logfile Name", RRF_RT_REG_SZ, nullptr, nullptr, &dataSize);
+
+        if (regresult == ERROR_SUCCESS && dataSize)
+        {
+            LPWSTR str = (LPWSTR)new BYTE[dataSize];
+
+            regresult = RegGetValue(key, nullptr, L"Logfile Name", RRF_RT_REG_SZ, nullptr, str, &dataSize);
+
+            // Deal with ENV expansion first
+            WCHAR* buffer = new WCHAR[1024];
+
+            if (ExpandEnvironmentStrings(str, buffer, 1024))
+            {
+                delete[] str;
+                str = buffer;
+            }
+
+            std::wcout << L"Driver DLL IS configured to log to a file (" << str << L")\n";
+
+            // We cannot write to the file as the driver dll will have it locked for writing, but we can get its size and call a method that will write to the log
+            // Attempt to get size of the file, then write to it, and finally get size again and see if it got bigger
+            HANDLE hLog = CreateFile(str, 0, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+
+            if (hLog != INVALID_HANDLE_VALUE)
+            {
+                DWORD sizeLow = GetFileSize(hLog, nullptr);
+
+                TestFunc(nullptr);
+
+                DWORD biggerSizeLow = GetFileSize(hLog, nullptr);
+
+                if (biggerSizeLow == sizeLow)
+                {
+                    std::wcerr << L"Unable to write to the log file (error = " << GetLastError() << ")\n";
+                }
+
+                CloseHandle(hLog);
+            }
+            else
+            {
+                DWORD err = GetLastError();
+
+                std::wcerr << L"Unable to open the log file";
+
+                switch (err)
+                {
+                case ERROR_PATH_NOT_FOUND:
+                    std::wcerr << L" - Cannot find the directory\n";
+                    break;
+
+                case ERROR_FILE_NOT_FOUND:
+                    std::wcerr << L" - File cannot be found\n";
+                    break;
+
+                case ERROR_FILE_READ_ONLY:
+                    std::wcerr << L" - File is marked READ-ONLY\n";
+                    break;
+
+                case ERROR_SHARING_VIOLATION:
+                    std::wcerr << L" - Another program is preventing the file from being written to\n";
+                    break;
+
+                default:
+                    std::wcerr << L" (error = " << GetLastError() << L")\n";
+                    break;
+                }
+            }
+        }
+        else
+        {
+            std::wcout << L"Driver DLL IS NOT configured to log to a file\n";
+        }
+
+        RegCloseKey(key);
+    }
+    else
+    {
+        std::wcerr << L"Problem opening the registry for the camera driver... not ideal.  (Error " << GetLastError() << L")\n";
+    }
+
+    std::wcout << L"\n";
+}
+
 int main()
 {
     std::cout << "Sony Camera Info\n~~~~~~~~~~~~~~~~\n\n";
+
+    // Test logging if a logfile is specified
+    checkLogging();
 
     std::cout << "Enumerating connected devices...";
 
@@ -157,13 +266,15 @@ int main()
                                     if (hr == ERROR_SUCCESS)
                                     {
                                         std::wcout << L"\n\nPlease email the following info to: retrodotkiwi@gmail.com\n\n";
-                                        std::wcout << L"   Manufacturer:           " << pdinfo.manufacturer << "\n";
-                                        std::wcout << L"   Model:                  " << pdinfo.model << "\n";
-                                        std::wcout << L"   Device Path:            " << pdinfo.devicePath << "\n";
-                                        std::wcout << L"   Preview image width:    " << cameraInfo.previewWidthPixels << "px\n";
-                                        std::wcout << L"   Preview image height:   " << cameraInfo.previewHeightPixels << "px\n";
-                                        std::wcout << L"   Full-size image width:  " << cameraInfo.imageWidthPixels << "px\n";
-                                        std::wcout << L"   Full-size image height: " << cameraInfo.imageHeightPixels << "px\n";
+                                        std::wcout << L"   Manufacturer:                     " << pdinfo.manufacturer << "\n";
+                                        std::wcout << L"   Model:                            " << pdinfo.model << "\n";
+                                        std::wcout << L"   Device Path:                      " << pdinfo.devicePath << "\n";
+                                        std::wcout << L"   Preview image width:              " << cameraInfo.previewWidthPixels << "px\n";
+                                        std::wcout << L"   Preview image height:             " << cameraInfo.previewHeightPixels << "px\n";
+                                        std::wcout << L"   Full-size image width:            " << cameraInfo.imageWidthPixels << "px\n";
+                                        std::wcout << L"   Full-size image height:           " << cameraInfo.imageHeightPixels << "px\n";
+                                        std::wcout << L"   Full-size image width (Cropped):  " << cameraInfo.imageWidthCroppedPixels << "px\n";
+                                        std::wcout << L"   Full-size image height (Cropped): " << cameraInfo.imageHeightCroppedPixels << "px\n";
                                     }
                                     else
                                     {
@@ -177,13 +288,15 @@ int main()
                                 std::wcout << L" - already taken test shots";
 
                                 std::wcout << L"\n\nPlease email the following info to: retrodotkiwi@gmail.com\n\n";
-                                std::wcout << L"   Manufacturer:           " << pdinfo.manufacturer << "\n";
-                                std::wcout << L"   Model:                  " << pdinfo.model << "\n";
-                                std::wcout << L"   Device Path:            " << pdinfo.devicePath << "\n";
-                                std::wcout << L"   Preview image width:    " << cameraInfo.previewWidthPixels << "px\n";
-                                std::wcout << L"   Preview image height:   " << cameraInfo.previewHeightPixels << "px\n";
-                                std::wcout << L"   Full-size image width:  " << cameraInfo.imageWidthPixels << "px\n";
-                                std::wcout << L"   Full-size image height: " << cameraInfo.imageHeightPixels << "px\n";
+                                std::wcout << L"   Manufacturer:                     " << pdinfo.manufacturer << "\n";
+                                std::wcout << L"   Model:                            " << pdinfo.model << "\n";
+                                std::wcout << L"   Device Path:                      " << pdinfo.devicePath << "\n";
+                                std::wcout << L"   Preview image width:              " << cameraInfo.previewWidthPixels << "px\n";
+                                std::wcout << L"   Preview image height:             " << cameraInfo.previewHeightPixels << "px\n";
+                                std::wcout << L"   Full-size image width:            " << cameraInfo.imageWidthPixels << "px\n";
+                                std::wcout << L"   Full-size image height:           " << cameraInfo.imageHeightPixels << "px\n";
+                                std::wcout << L"   Full-size image width (Cropped):  " << cameraInfo.imageWidthPixels << "px\n";
+                                std::wcout << L"   Full-size image height (Cropped): " << cameraInfo.imageHeightPixels << "px\n";
                             }
                         }
                         else
@@ -195,6 +308,8 @@ int main()
                     {
                         std::wcout << L"Failed getting camera info - error " << hr << L"\n";
                     }
+
+                    CloseDevice(hCamera);
                 }
                 else
                 {

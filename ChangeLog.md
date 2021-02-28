@@ -1,4 +1,14 @@
 # Change Log
+## 1.0.0.22
+Added code to check that logfile is working correctly in the "SonyCameraInfo.exe" utility.
+Added code to the logging system so that it will tack the process-id to the end of the logfile name.  This should avoid situations where some other app has locked the file.
+Added camera definition for DSC-RX10M4.
+Added camera definition for ILCA-99M2.
+Added camera definition for A7R IV (as libusbK device, already had MTP defintion).
+Added camera definition for A7S III (as libusbK device, already had MTP defintion).
+Updated SonyCameraInfo.exe to write additional info to output.  It will also now enable live-view feature in APT (if camera supported) without requiring a driver update.
+Updated Logging system to respect environment variables.  Now user can just set "Logfile Name" to be "%HOMEDRIVE%%HOMEPATH%\mylogfile.log" and it'll put it in their home directory.'
+
 ## 1.0.0.21
 Large reshuffle of code to allow inclusion of native LibUSBK devices (which appears to be the way Sony are going with newer camera models.)  This will allow newer cameras to be supported out of the box without having to mess around with device driver fun.
 Fixed a couple of minor issues with older code.

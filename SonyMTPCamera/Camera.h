@@ -85,7 +85,7 @@ public:
     HANDLE Open();
     bool Close();
 
-    virtual DeviceInfo* GetDeviceInfo();
+    virtual DeviceInfo* GetDeviceInfo(bool refresh);
     virtual bool SetProperty(Property id, PropertyValue* value) = 0;
 
     Device* GetDevice();
@@ -100,6 +100,8 @@ public:
     bool CancelCapture();
     void CleanupCapture();
 
+    static DWORD WINAPI _runHandlerThread(LPVOID lpParameter);
+
 protected:
     virtual ObjectInfo* GetImageInfo(DWORD imageId);
     bool ProcessDeviceInfoOverrides();
@@ -110,5 +112,15 @@ protected:
     PropertyInfoMap m_propertyInfos;
     CameraSupportedProperties* m_supportedProperties = nullptr;
     CaptureThread* m_captureThread = nullptr;
+
+private:
+    DWORD RunHandlerThread();
+
+    HANDLE m_hHandlerThread = INVALID_HANDLE_VALUE;
+    HANDLE m_hHandlerMutex = INVALID_HANDLE_VALUE;
+    HANDLE m_hBusyMutex = INVALID_HANDLE_VALUE;
+    HANDLE m_hWakeEvent = INVALID_HANDLE_VALUE;
+//    DWORD m_handlerThreadId = 0;
+    bool m_shutdown = false;
 };
 

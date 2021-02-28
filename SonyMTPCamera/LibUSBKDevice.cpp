@@ -7,6 +7,9 @@
 #define THREAD_WAIT_EXIT_SLEEP 100
 #define THREAD_WAIT_EXIT_LOOPS 50
 
+#define INTERRUPT_TIMEOUT 45000
+#define READ_TIMEOUT 10000
+
 unsigned long LibUSBKDevice::m_sequence = 0;
 
 LibUSBKDevice::LibUSBKDevice(KLST_DEVINFO_HANDLE deviceInfo, std::wstring DeviceId)
@@ -40,12 +43,6 @@ LibUSBKDevice::~LibUSBKDevice()
 {
 }
 
-Device*
-LibUSBKDevice::Clone()
-{
-    return new LibUSBKDevice(*this);
-}
-
 bool
 LibUSBKDevice::NeedsSession()
 {
@@ -61,8 +58,6 @@ LibUSBKDevice::Open()
     {
         LOGTRACE(L"  First time opened, doing some setup");
 
-        m_bulkRxEvent = CreateEvent(NULL, true, false, L"LibUSBK Bulk Receive Wakeup Event");
-
         // Re-find the device
         KLST_HANDLE listHandle;
 
@@ -75,6 +70,8 @@ LibUSBKDevice::Open()
                 if (UsbK_Init(&m_interfaceHandle, deviceInfo))
                 {
                     WINUSB_PIPE_INFORMATION pipeInformation;
+                    unsigned int interruptTimeout = INTERRUPT_TIMEOUT;;
+                    unsigned int readTimeout = READ_TIMEOUT;
 
                     for (int pipeId = 0; UsbK_QueryPipe(m_interfaceHandle, 0, pipeId, &pipeInformation); pipeId++)
                     {
@@ -87,8 +84,7 @@ LibUSBKDevice::Open()
                                 LOGINFO(L"Input pipe = x%02x", m_inputPipe);
 
                                 // Set up a timeout
-                                unsigned int timeout = 30000;
-                                UsbK_SetPipePolicy(m_interfaceHandle, pipeInformation.PipeId, PIPE_TRANSFER_TIMEOUT, sizeof(unsigned int), &timeout);
+                                UsbK_SetPipePolicy(m_interfaceHandle, pipeInformation.PipeId, PIPE_TRANSFER_TIMEOUT, sizeof(unsigned int), &readTimeout);
                             }
                             else
                             {
@@ -103,19 +99,18 @@ LibUSBKDevice::Open()
 
                             {
                                 // Set up a timeout
-                                unsigned int timeout = 30000;
-                                UsbK_SetPipePolicy(m_interfaceHandle, pipeInformation.PipeId, PIPE_TRANSFER_TIMEOUT, sizeof(unsigned int), &timeout);
+                                UsbK_SetPipePolicy(m_interfaceHandle, pipeInformation.PipeId, PIPE_TRANSFER_TIMEOUT, sizeof(unsigned int), &interruptTimeout);
                             }
                             break;
 
                         default:
                             LOGERROR(L"Unknown pipe type: x%02x", (int)pipeInformation.PipeType);
+                            break;
                         }
                     }
 
                     m_openCount++;
                     m_handle = CreateEvent(nullptr, false, false, nullptr);
-                    m_hBulkRxThread = CreateThread(NULL, 0, &_runBulkRx, this, 0, &m_bulkRxThreadId);
                     m_hInterruptRxThread = CreateThread(NULL, 0, &_runInterruptRx, this, 0, &m_interruptRxThreadId);
 
                     LOGINFO(L"x%p - Opened() with handle %p", (void*)this, (DWORD)m_handle);
@@ -123,8 +118,6 @@ LibUSBKDevice::Open()
                 else
                 {
                     LOGERROR(L"! Failed to Open the device, error = %d", GetLastError());
-                    // Release the IPortableDevice interface, because we cannot proceed
-                    // with an unopen device.
                 }
 
                 LstK_Free(listHandle);
@@ -175,18 +168,6 @@ LibUSBKDevice::Close()
                 DWORD exitCode = 0;
                 DWORD waitCount = 0;
 
-                GetExitCodeThread(m_hBulkRxThread, &exitCode);
-
-                while (exitCode == STILL_ACTIVE && waitCount < THREAD_WAIT_EXIT_LOOPS)
-                {
-                    waitCount++;
-
-                    LOGINFO(L"Waiting for thread to exit %d / %d loops", waitCount, THREAD_WAIT_EXIT_LOOPS);
-
-                    Sleep(THREAD_WAIT_EXIT_SLEEP);
-                    GetExitCodeThread(m_hBulkRxThread, &exitCode);
-                }
-
                 GetExitCodeThread(m_hInterruptRxThread, &exitCode);
 
                 waitCount = 0;
@@ -200,8 +181,6 @@ LibUSBKDevice::Close()
                     Sleep(THREAD_WAIT_EXIT_SLEEP);
                     GetExitCodeThread(m_hInterruptRxThread, &exitCode);
                 }
-
-                CloseHandle(m_bulkRxEvent);
 
                 closed = true;
             }
@@ -259,9 +238,8 @@ LibUSBKDevice::Receive(Message* out)
     PTPContainer* container = nullptr;
 
     int paramCount = out->GetParams().size();
-    DWORD dl = paramCount * sizeof(unsigned long);
 
-    if (dl > 0)
+    if (paramCount > 0)
     {
         unsigned long* params = new unsigned long[paramCount];
         int index = 0;
@@ -285,51 +263,18 @@ LibUSBKDevice::Receive(Message* out)
         Tx(PTPContainer::Type::Data, out->GetCommand(), out->GetDataLen(), out->GetData());
     }
 
-
-    DWORD waitResult = WaitForSingleObject(m_bulkRxEvent, 5000);
-    Message* rxMessage = nullptr;
-
-    if (waitResult == WAIT_OBJECT_0) {
-        rxMessage = m_bulkRxQueue.front();
-        m_bulkRxQueue.pop_front();
-        ResetEvent(m_bulkRxEvent);
-    }
-
-    return rxMessage;
-}
-
-DWORD WINAPI
-LibUSBKDevice::_runBulkRx(LPVOID lpParameter)
-{
-    LOGTRACE(L"In: LibUSBKDevice::_runBulkRx(x%08x)", lpParameter);
-
-    DWORD result = ((LibUSBKDevice*)lpParameter)->RunBulkRx();
-
-    LOGTRACE(L"Out: LibUSBKDevice::_RunBulkRx(x%08x) - returning %d", lpParameter, result);
-
-    return result;
-}
-
-DWORD WINAPI
-LibUSBKDevice::_runInterruptRx(LPVOID lpParameter)
-{
-    LOGTRACE(L"In: LibUSBKDevice::_runInterruptRx(x%08x)", lpParameter);
-
-    DWORD result = ((LibUSBKDevice*)lpParameter)->RunInterruptRx();
-
-    LOGTRACE(L"Out: LibUSBKDevice::_runInterruptRx(x%08x) - returning %d", lpParameter, result);
-
-    return result;
-}
-
-DWORD
-LibUSBKDevice::RunBulkRx()
-{
+    // Every command has multiple phases
+    // The sent data (above) is phase 1 (Init)
+    // If the command is a "sendy" one (we are sending data to the device, phase 2 (Data) is done here, otherwise we expect phase 2 to be data
+    // reveived from the device.
+    // The device then always sends a phase 3 (Response)
+    // If there is no data to return, the device can skip phase 2
+    bool rxDone = false;
     BYTE* rxBuffer = new BYTE[MAX_BULK_RX_BUFFER_BYTES];
     unsigned int transferred = 0;
     Message* rxMessage = nullptr;
 
-    while (!m_stopRx)
+    while (!rxDone)
     {
         if (UsbK_ReadPipe(m_interfaceHandle, m_inputPipe, rxBuffer, MAX_BULK_RX_BUFFER_BYTES, &transferred, nullptr))
         {
@@ -343,13 +288,13 @@ LibUSBKDevice::RunBulkRx()
             switch (container->getContainerType())
             {
             case PTPContainer::Type::Data:
-                LOGINFO(L"Got a data message: command = x%04x", container->getOpCode());
+                LOGINFO(L"Rx DATA x%04x (%d bytes)", container->getOpCode(), transferred);
                 rxMessage = new Message(container->getOpCode());
                 rxMessage->SetData(container->getData(), container->getDataLen());
                 break;
 
             case PTPContainer::Type::Response:
-                LOGINFO(L"Got a result: command = x%04x", container->getOpCode());
+                LOGINFO(L"Rx RESPONSE x%04x (%d bytes)", container->getOpCode(), transferred);
                 if (!rxMessage)
                 {
                     LOGINFO(L"No prior data message, creating dummy one");
@@ -357,17 +302,15 @@ LibUSBKDevice::RunBulkRx()
                 }
 
                 rxMessage->SetCommand(container->getOpCode());
-
-                m_bulkRxQueue.push_back(rxMessage);
+                rxDone = true;
 
 #ifdef DEBUG
                 LOGINFO(L"Received message %s", rxMessage->Dump().c_str());
 #endif
+                break;
 
-                rxMessage = nullptr;
-
-                // Trigger a receive event
-                SetEvent(m_bulkRxEvent);
+            default:
+                LOGINFO(L"Got unknown response type: %d", container->getContainerType());
                 break;
             }
 
@@ -385,19 +328,33 @@ LibUSBKDevice::RunBulkRx()
 
             case ERROR_OPERATION_ABORTED:
                 // This is expected in shutdown/close scenario
-                LOGINFO(L"RunBulkRx: Got Shutdown notification");
+                LOGINFO(L"Got Shutdown notification");
                 break;
 
             default:
-                LOGWARN(L"RunBulkRx: UsbK_ReadPipe returned error %d", lastError);
+                LOGWARN(L"UsbK_ReadPipe returned error %d", lastError);
                 break;
             }
+
+            rxDone = true;
         }
     }
 
     delete[] rxBuffer;
 
-    return ERROR_SUCCESS;
+    return rxMessage;
+}
+
+DWORD WINAPI
+LibUSBKDevice::_runInterruptRx(LPVOID lpParameter)
+{
+    LOGTRACE(L"In: LibUSBKDevice::_runInterruptRx(x%08x)", lpParameter);
+
+    DWORD result = ((LibUSBKDevice*)lpParameter)->RunInterruptRx();
+
+    LOGTRACE(L"Out: LibUSBKDevice::_runInterruptRx(x%08x) - returning %d", lpParameter, result);
+
+    return result;
 }
 
 DWORD
@@ -410,7 +367,7 @@ LibUSBKDevice::RunInterruptRx()
     {
         if (UsbK_ReadPipe(m_interfaceHandle, m_interruptPipe, rxBuffer, MAX_BULK_RX_BUFFER_BYTES, &transferred, nullptr))
         {
-            LOGINFO(L"Received interrupt");
+            LOGINFO(L"Rx interrupt");
             // Got some data
             PTPContainer* container = new PTPContainer(transferred, rxBuffer);
 
@@ -473,6 +430,7 @@ LibUSBKDevice::Tx(PTPContainer::Type type, DWORD command, DWORD dataLen, BYTE* d
     unsigned int txDataLen = container.toBytes(0, nullptr);
     unsigned int transferred = 0;
     BYTE* txData = new BYTE[txDataLen];
+    bool result;
 
 #ifdef DEBUG
     LOGINFO(L"Sending: %s", container.Dump().c_str());
@@ -486,14 +444,16 @@ LibUSBKDevice::Tx(PTPContainer::Type type, DWORD command, DWORD dataLen, BYTE* d
 
     if (UsbK_WritePipe(m_interfaceHandle, m_outputPipe, txData, txDataLen, &transferred, nullptr))
     {
-        LOGTRACE(L"Sent %d bytes", transferred);
+        LOGTRACE(L"Tx REQUEST x%04x (%d bytes)", command, transferred);
+        result = true;
     }
     else
     {
-        LOGERROR(L"Unable to send data - error %d", GetLastError());
+        LOGERROR(L"Unable to send command x%04x data - error %d", command, GetLastError());
+        result = false;
     }
 
     delete[] txData;
 
-    return true;
+    return result;
 }

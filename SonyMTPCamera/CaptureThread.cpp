@@ -28,7 +28,7 @@ Camera::CaptureThread::CaptureThread(Camera* camera, OutputMode outputMode)
 {
     LOGTRACE(L"In: CaptureThread::CaptureThread(x%p)", (LPVOID)camera);
 
-    m_hWakeupEvent = CreateEvent(NULL, true, false, L"Capture Thread Wakeup Event");
+    m_hWakeupEvent = CreateEvent(nullptr, true, false, nullptr);
     m_hMutex= CreateMutex(nullptr, false, nullptr);
 
     LOGTRACE(L"Out: CaptureThread::CaptureThread(x%p)", (LPVOID)camera);
@@ -186,8 +186,8 @@ DWORD
 Camera::CaptureThread::Run()
 {
     LOGTRACE(L"In: CaptureThread::Run");
-    PropertyValue up((WORD)(m_camera->GetDeviceInfo()->GetButtonPropertiesInverted() ? 2 : 1));
-    PropertyValue down((WORD)(m_camera->GetDeviceInfo()->GetButtonPropertiesInverted() ? 1: 2));
+    PropertyValue up((WORD)(m_camera->GetDeviceInfo(false)->GetButtonPropertiesInverted() ? 2 : 1));
+    PropertyValue down((WORD)(m_camera->GetDeviceInfo(false)->GetButtonPropertiesInverted() ? 1: 2));
 
     CameraSettings* settings = m_camera->GetSettings(true);
 
@@ -280,7 +280,7 @@ Camera::CaptureThread::Run()
                 m_image->SetDuration(m_duration);
 
                 // Tell the image how it should be cropped
-                DeviceInfo* deviceInfo = m_camera->GetDeviceInfo();
+                DeviceInfo* deviceInfo = m_camera->GetDeviceInfo(false);
 
                 switch (deviceInfo->GetCropMode())
                 {

@@ -158,8 +158,6 @@ Image::ProcessARWData()
     LibRaw* libraw = nullptr;
     libraw_processed_image_t* processed = nullptr;
     int r = 0;
-    ushort rawWidth = 0;
-    ushort rawHeight = 0;
     int linesize = 0;
 
     // Both RGB and RGGB require libraw to process the data to some extent or another
@@ -208,9 +206,9 @@ Image::ProcessARWData()
             LOGERROR(L"Unable to raw2image %s", LibRawErrorToString(libraw, r));
         }
 
-        rawWidth = libraw->imgdata.sizes.iwidth;
-        rawHeight = libraw->imgdata.sizes.iheight;
-        linesize = 4 * 2 * rawWidth;
+        m_rawWidth = libraw->imgdata.sizes.iwidth;
+        m_rawHeight = libraw->imgdata.sizes.iheight;
+        linesize = 4 * 2 * m_rawWidth;
 
         {
             std::string colorsStr = libraw->imgdata.idata.cdesc;
@@ -236,18 +234,21 @@ Image::ProcessARWData()
                 m_cropBottom = 0;
             }
 
-            ushort width = rawWidth - m_cropLeft - m_cropRight;
-            ushort height = rawHeight - m_cropTop - m_cropBottom;
+            m_croppedWidth = m_rawWidth - libraw->imgdata.sizes.raw_crop.cleft * 2;
+            m_croppedHeight = m_rawHeight - libraw->imgdata.sizes.raw_crop.ctop * 2;
 
-            LOGINFO(L"Raw size is %d x %d, crop (T,L,R,B) = %d, %d, %d, %d, result will be %d x %d", rawWidth, rawHeight, m_cropTop, m_cropLeft, m_cropBottom, m_cropRight, width, height);
+            ushort width = m_rawWidth - m_cropLeft - m_cropRight;
+            ushort height = m_rawHeight - m_cropTop - m_cropBottom;
+
+            LOGINFO(L"Raw size is %d x %d, crop (T,L,R,B) = %d, %d, %d, %d, result will be %d x %d", m_rawWidth, m_rawHeight, m_cropTop, m_cropLeft, m_cropBottom, m_cropRight, width, height);
 
             m_pixelDataSize = width * height * sizeof(short);
             m_pixelData = new BYTE[m_pixelDataSize];
 
-            for (int y = m_cropTop; y < (rawHeight - m_cropBottom); y++)
+            for (int y = m_cropTop; y < (m_rawHeight - m_cropBottom); y++)
             {
                 ushort* pds = (ushort*)m_pixelData;
-                int readOffset = y * rawWidth;
+                int readOffset = y * m_rawWidth;
                 int writeOffset = (m_pixelDataSize / sizeof(short)) - (y - m_cropTop + 1) * width;
 
                 int i0 = libraw->COLOR(y, 0);
@@ -594,4 +595,28 @@ double
 Image::GetDuration()
 {
     return m_duration;
+}
+
+DWORD
+Image::GetRawWidth()
+{
+    return m_rawWidth;
+}
+
+DWORD
+Image::GetRawHeight()
+{
+    return m_rawHeight;
+}
+
+DWORD
+Image::GetCroppedWidth()
+{
+    return m_croppedWidth;
+}
+
+DWORD
+Image::GetCroppedHeight()
+{
+    return m_croppedHeight;
 }

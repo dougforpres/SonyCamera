@@ -114,14 +114,16 @@ DeviceInfo::DumpToLog()
         break;
     }
 
-    LOGINFO(L"  Sensor Type                 %s", sensorType.c_str());
-    LOGINFO(L"  Sensor Pixel Width          %f um", m_sensorPixelWidth);
-    LOGINFO(L"  Sensor Pixel Height         %f um", m_sensorPixelHeight);
-    LOGINFO(L"  Sensor X Resolution         %d pixels", m_sensorXResolution);
-    LOGINFO(L"  Sensor Y Resolution         %d pixels", m_sensorYResolution);
-    LOGINFO(L"  Minimum Exposure Time       %f sec", m_exposureTimeMin);
-    LOGINFO(L"  Maximum Exposure Time       %f sec", m_exposureTimeMax);
-    LOGINFO(L"  Exposure Time Step          %f sec", m_exposureTimeStep);
+    LOGINFO(L"  Sensor Type                   %s", sensorType.c_str());
+    LOGINFO(L"  Sensor Pixel Width            %f um", m_sensorPixelWidth);
+    LOGINFO(L"  Sensor Pixel Height           %f um", m_sensorPixelHeight);
+    LOGINFO(L"  Sensor X Resolution           %d pixels", m_sensorXResolution);
+    LOGINFO(L"  Sensor Y Resolution           %d pixels", m_sensorYResolution);
+    LOGINFO(L"  Sensor X Resolution (Cropped) %d pixels", m_sensorXCroppedResolution);
+    LOGINFO(L"  Sensor Y Resolution (Cropped) %d pixels", m_sensorYCroppedResolution);
+    LOGINFO(L"  Minimum Exposure Time         %f sec", m_exposureTimeMin);
+    LOGINFO(L"  Maximum Exposure Time         %f sec", m_exposureTimeMax);
+    LOGINFO(L"  Exposure Time Step            %f sec", m_exposureTimeStep);
 }
 
 void
@@ -197,6 +199,30 @@ UINT32
 DeviceInfo::GetSensorYResolution()
 {
     return m_sensorYResolution;
+}
+
+void
+DeviceInfo::SetSensorXCroppedResolution(UINT32 resolution)
+{
+    m_sensorXCroppedResolution = resolution;
+}
+
+UINT32
+DeviceInfo::GetSensorXCroppedResolution()
+{
+    return m_sensorXCroppedResolution;
+}
+
+void
+DeviceInfo::SetSensorYCroppedResolution(UINT32 resolution)
+{
+    m_sensorYCroppedResolution = resolution;
+}
+
+UINT32
+DeviceInfo::GetSensorYCroppedResolution()
+{
+    return m_sensorYCroppedResolution;
 }
 
 void

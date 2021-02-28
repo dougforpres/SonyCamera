@@ -52,14 +52,6 @@ DummyDevice::DummyDevice(const std::wstring deviceId, const std::wstring friendl
     }
 }
 
-Device*
-DummyDevice::Clone()
-{
-    LOGTRACE(L"DummyDevice::Clone of %s", GetFriendlyName().c_str());
-
-    return new DummyDevice(m_id, m_friendlyName, m_manufacturer, m_description);
-}
-
 HANDLE
 DummyDevice::Open()
 {

@@ -21,6 +21,8 @@ typedef struct
     DWORD version;
     DWORD imageWidthPixels;
     DWORD imageHeightPixels;
+    DWORD imageWidthCroppedPixels;
+    DWORD imageHeightCroppedPixels;
     DWORD bayerXOffset;
     DWORD bayerYOffset;
     double exposureTimeMin;
@@ -42,6 +44,8 @@ typedef struct
     DWORD flags;
     DWORD imageWidthPixels;
     DWORD imageHeightPixels;
+    DWORD imageWidthCroppedPixels;
+    DWORD imageHeightCroppedPixels;
     DWORD previewWidthPixels;
     DWORD previewHeightPixels;
     DWORD bayerXOffset;

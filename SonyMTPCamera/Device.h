@@ -24,7 +24,7 @@ public:
     /* Destructor */
     ~Device();
 
-    virtual Device* Clone() = 0;
+//    virtual Device* Clone() = 0;
 
     virtual HANDLE Open() = 0;
     virtual bool Close() = 0;

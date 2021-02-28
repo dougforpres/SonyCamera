@@ -4,24 +4,29 @@
 #include "Logger.h"
 #include "CameraException.h"
 
+#define THREAD_WAIT_EXIT_LOOPS 20
+#define THREAD_WAIT_EXIT_SLEEP 100
+#define MUTEX_TIMEOUT 10000
+
 Camera::Camera(Device* device)
     : m_device(device)
 {
+    m_hBusyMutex = CreateMutex(nullptr, false, nullptr);
+    m_hWakeEvent = CreateEvent(nullptr, false, false, nullptr);
 }
 
 Camera::~Camera()
 {
-    if (m_device)
-    {
-        delete m_device;
-        m_device = nullptr;
-    }
-
     if (m_settings)
     {
         delete m_settings;
         m_settings = nullptr;
     }
+
+    CloseHandle(m_hBusyMutex);
+    CloseHandle(m_hWakeEvent);
+    m_hBusyMutex = INVALID_HANDLE_VALUE;
+    m_hWakeEvent = INVALID_HANDLE_VALUE;
 }
 
 const std::wstring
@@ -33,19 +38,61 @@ Camera::GetId()
 HANDLE
 Camera::Open()
 {
-    return m_device->Open();
+    HANDLE hCamera =  m_device->Open();
+
+    if (hCamera != INVALID_HANDLE_VALUE && m_hHandlerThread == INVALID_HANDLE_VALUE)
+    {
+        // Start up handler thread
+        m_shutdown = false;
+        m_hHandlerThread = CreateThread(nullptr, 0, &_runHandlerThread, this, 0, nullptr);
+    }
+
+    return hCamera;
 }
 
 bool
 Camera::Close()
 {
-    return m_device->Close();
+    bool result = m_device->Close();
+
+    if (result && m_hHandlerThread != INVALID_HANDLE_VALUE)
+    {
+        // Stop the handler thread when device reports "closed for reals"
+        // Wait for exit
+        DWORD exitCode = 0;
+        DWORD waitCount = 0;
+
+        m_shutdown = true;
+        SetEvent(m_hWakeEvent);
+
+        BOOL ret = GetExitCodeThread(m_hHandlerThread, &exitCode);
+
+        waitCount = 0;
+
+        while (exitCode == STILL_ACTIVE && waitCount < THREAD_WAIT_EXIT_LOOPS)
+        {
+            waitCount++;
+
+            LOGINFO(L"Waiting for camera handler thread to exit %d / %d loops", waitCount, THREAD_WAIT_EXIT_LOOPS);
+
+            Sleep(THREAD_WAIT_EXIT_SLEEP);
+            GetExitCodeThread(m_hHandlerThread, &exitCode);
+        }
+
+        if (exitCode == STILL_ACTIVE)
+        {
+            LOGERROR(L"Camera handler thread would not exit, terminating with prejudice");
+            TerminateThread(m_hHandlerThread, -1);
+        }
+    }
+
+    return result;
 }
 
 DeviceInfo*
-Camera::GetDeviceInfo()
+Camera::GetDeviceInfo(bool refresh)
 {
-    if (!m_deviceInfo)
+    if (!m_deviceInfo || refresh)
     {
         m_device->Open();
 
@@ -100,6 +147,8 @@ Camera::ProcessDeviceInfoOverrides()
     d->SetSensorPixelHeight(registry.GetDouble(cameraPath, L"Sensor Y Size um", d->GetSensorPixelHeight()));
     d->SetSensorXResolution(registry.GetDWORD(cameraPath, L"Sensor X Resolution", d->GetSensorXResolution()));
     d->SetSensorYResolution(registry.GetDWORD(cameraPath, L"Sensor Y Resolution", d->GetSensorYResolution()));
+    d->SetSensorXCroppedResolution(registry.GetDWORD(cameraPath, L"AutoCropped X Resolution", d->GetSensorXResolution()));
+    d->SetSensorYCroppedResolution(registry.GetDWORD(cameraPath, L"AutoCropped Y Resolution", d->GetSensorYResolution()));
     d->SetPreviewXResolution(registry.GetDWORD(cameraPath, L"Preview X Resolution", d->GetPreviewXResolution()));
     d->SetPreviewYResolution(registry.GetDWORD(cameraPath, L"Preview Y Resolution", d->GetPreviewYResolution()));
     d->SetExposureTimeMin(registry.GetDouble(cameraPath, L"Exposure Time Min", d->GetExposureTimeMin()));
@@ -192,7 +241,7 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
     // 1. Ensure camera is in a state that will allow a photo to be taken
     // 2. Allows us to clean out any "pending" images that could have been
     //    created by user pressing shutter button
-    PropertyValue up((UINT16)(GetDeviceInfo()->GetButtonPropertiesInverted() ? 2 : 1));
+    PropertyValue up((UINT16)(GetDeviceInfo(false)->GetButtonPropertiesInverted() ? 2 : 1));
 
     LOGTRACE(L"Up value is %d (%s)", up.GetUINT16(), up.ToString().c_str());
     LOGTRACE(L"Getting latest camera settings");
@@ -386,4 +435,38 @@ Camera::CleanupCapture()
         delete m_captureThread;
         m_captureThread = nullptr;
     }
+}
+
+DWORD WINAPI
+Camera::_runHandlerThread(LPVOID lpParameter)
+{
+    LOGTRACE(L"In: Camera::_runHandlerThread(x%08x)", lpParameter);
+
+    DWORD result = ((Camera*)lpParameter)->RunHandlerThread();
+
+    LOGTRACE(L"Out: Camera::_runHandlerThread(x%08x) - returning %d", lpParameter, result);
+
+    return result;
+}
+
+DWORD
+Camera::RunHandlerThread()
+{
+    DWORD waitResult = 0;
+
+    // Waits for work to do
+    while (!m_shutdown)
+    {
+        if (WaitForSingleObject(m_hWakeEvent, INFINITE) == WAIT_OBJECT_0)
+        {
+            if (WaitForSingleObject(m_hBusyMutex, MUTEX_TIMEOUT) == WAIT_OBJECT_0)
+            {
+                // Process Queue
+
+                ReleaseMutex(m_hBusyMutex);
+            }
+        }
+    }
+
+    return 0;
 }

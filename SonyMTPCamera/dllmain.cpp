@@ -2,8 +2,10 @@
 #include "pch.h"
 #include "Logger.h"
 #include "Registry.h"
+#include "DeviceManager.h"
 #include "CameraManager.h"
 #include "ResourceLoader.h"
+#include "dll.h"
 
 static DWORD dwTlsIndex;
 
@@ -16,9 +18,6 @@ BOOL APIENTRY DllMain( HMODULE hModule,
                        LPVOID lpReserved
                      )
 {
-//    LPVOID lpvData;
-//    BOOL fIgnore;
-
     switch (ul_reason_for_call)
     {
     case DLL_PROCESS_ATTACH:
@@ -48,13 +47,21 @@ BOOL APIENTRY DllMain( HMODULE hModule,
             isWin64 = true;
 #endif
 
-            LOGINFO(L"DLL Starting up (%s v%s) - %d-bit", version->GetProductName().c_str(), version->GetVersion().c_str(), isWin64 ? 64 : 32);
+            LOGERROR(L"================================================================");
+            LOGERROR(L"DLL Starting up (%s v%s) - %d-bit", version->GetProductName().c_str(), version->GetVersion().c_str(), isWin64 ? 64 : 32);
+
+#ifdef DEBUG
+            LOGERROR(L"DEBUG Build");
+#endif
 
             delete version;
         }
 
         // Set the Auto File Save flag for legacy users
         registry.SetDWORDDefault(L"", L"File Auto Save", registry.GetString(L"", L"File Save Path", L"").size() > 0);
+
+        // Initialize things we need
+        Init();
 
         // Ensure the cameras we know about are in the registry, otherwise the code will fail to find any viable candidates
         CameraManager::SetupSupportedDevices();
@@ -91,6 +98,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
         // Release the TLS index.
         TlsFree(dwTlsIndex);
         LOGINFO(L"DLL Shutting Down");
+        Shutdown();
         Logger::SetLogFilename(L"");
         break;
     }

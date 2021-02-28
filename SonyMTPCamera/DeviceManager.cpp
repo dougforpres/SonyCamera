@@ -32,7 +32,7 @@ DeviceManager::ClearDeviceList()
 Device*
 DeviceManager::GetDevice(std::wstring id)
 {
-    std::list<Device*> devices = GetAllDevices();
+    std::list<Device*> devices = GetAllDevices(false);
 
     Device* result = nullptr;
 
@@ -115,9 +115,9 @@ DeviceManager::RefreshDevices()
 }
 
 std::list<Device*>
-DeviceManager::GetAllDevices()
+DeviceManager::GetAllDevices(bool refresh)
 {
-    if (m_allDevices.empty())
+    if (m_allDevices.empty() || refresh)
     {
         RefreshDevices();
     }
@@ -128,7 +128,7 @@ DeviceManager::GetAllDevices()
 std::list<Device*>
 DeviceManager::GetFilteredDevices()
 {
-    std::list<Device*> allDevices = GetAllDevices();
+    std::list<Device*> allDevices = GetAllDevices(false);
     std::list<Device*> result;
 
     for (std::list<Device*>::iterator it = allDevices.begin(); it != allDevices.end(); it++)

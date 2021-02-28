@@ -22,16 +22,36 @@
 static DeviceManager* deviceManager = nullptr;
 static CameraManager* cameraManager = nullptr;
 
-DeviceManager*
-GetDeviceManager()
+void
+Init()
 {
+    LOGINFO(L"Init() - Starting up");
+
     if (deviceManager == nullptr)
     {
         LOGINFO(L"GetDeviceManager: First time thru, creating new DeviceManager singleton");
         deviceManager = new DeviceManager();
     }
+}
 
-    return deviceManager;
+void
+Shutdown()
+{
+    LOGINFO(L"Shutdown() - Shutting down");
+
+    if (cameraManager)
+    {
+        LOGINFO(L"Destroying CameraManager");
+        delete cameraManager;
+        cameraManager = nullptr;
+    }
+
+    if (deviceManager)
+    {
+        LOGINFO(L"Destroying DeviceManager");
+        delete deviceManager;
+        deviceManager = nullptr;
+    }
 }
 
 CameraManager*
@@ -139,7 +159,9 @@ GetDeviceCount()
 {
     LOGTRACE(L"In: GetDeviceCount()");
 
-    DWORD count = GetDeviceManager()->GetFilteredDevices().size();
+    deviceManager->RefreshDevices();
+
+    DWORD count = deviceManager->GetFilteredDevices().size();
 
     LOGTRACE(L"Out: GetDeviceCount() = %d", count);
 
@@ -158,7 +180,7 @@ OpenDeviceEx(LPWSTR deviceName, DWORD flags)
     LOGTRACE(L"In: OpenDeviceEx(%s, x%p)", deviceName, flags);
 
     HANDLE result = INVALID_HANDLE_VALUE;
-    std::list<Device*> deviceList = (flags & OPENDEVICEEX_OPEN_ANY_DEVICE) ? GetDeviceManager()->GetAllDevices() : GetDeviceManager()->GetFilteredDevices();
+    std::list<Device*> deviceList = (flags & OPENDEVICEEX_OPEN_ANY_DEVICE) ? deviceManager->GetAllDevices(false) : deviceManager->GetFilteredDevices();
     std::list<Device*>::iterator it;
     std::wstring deviceId = deviceName;
 
@@ -230,17 +252,6 @@ CloseDevice(HANDLE hCamera)
         LOGERROR(L"Exception closing camera: %s", gfe.GetMessage().c_str());
     }
 
-/*    std::list<Device*> deviceList = GetDeviceManager()->GetFilteredDevices();
-    std::list<Device*>::iterator it;
-
-    for (it = deviceList.begin(); it != deviceList.end(); it++)
-    {
-        if ((*it)->GetHandle() == hCamera)
-        {
-            (*it)->Close();
-        }
-    }*/
-
     LOGTRACE(L"Out: CloseDevice(x%p)", hCamera);
 }
 
@@ -256,21 +267,23 @@ GetDeviceInfo(DWORD deviceId, DEVICEINFO *info)
         return ERROR_INCORRECT_SIZE;
     }
 
-    std::list<Device*> deviceList = GetDeviceManager()->GetFilteredDevices();
+    std::list<Device*> deviceList = deviceManager->GetFilteredDevices();
     std::list<Device*>::iterator it = deviceList.begin();
 
     std::advance(it, deviceId);
 
     if (it != deviceList.end())
     {
-        Device* device = (*it)->Clone();
+        Device* device = (*it);// ->Clone();
         SonyCamera* camera = new SonyCamera(device);
 
         camera->Open();
-        DeviceInfo* deviceInfo = camera->GetDeviceInfo();
+        DeviceInfo* deviceInfo = camera->GetDeviceInfo(false);
 
         info->imageWidthPixels = deviceInfo->GetSensorXResolution();
         info->imageHeightPixels = deviceInfo->GetSensorYResolution();
+        info->imageWidthCroppedPixels = deviceInfo->GetSensorXCroppedResolution();
+        info->imageHeightCroppedPixels = deviceInfo->GetSensorYCroppedResolution();
         info->pixelWidth = deviceInfo->GetSensorPixelWidth();
         info->pixelHeight = deviceInfo->GetSensorPixelHeight();
         info->exposureTimeMin = deviceInfo->GetExposureTimeMin();
@@ -493,7 +506,7 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
 
             result = ERROR_SUCCESS;
 
-            DeviceInfo* deviceInfo = camera->GetDeviceInfo();
+            DeviceInfo* deviceInfo = camera->GetDeviceInfo(false);
 
             if (deviceInfo->GetPreviewXResolution() == 0 || deviceInfo->GetPreviewYResolution() == 0 || deviceInfo->GetSensorXResolution() == 0 || deviceInfo->GetSensorYResolution() == 0)
             {
@@ -524,6 +537,11 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
                         {
                             registry.SetDWORD(cameraPath, L"Preview X Resolution", iinfo.width);
                             registry.SetDWORD(cameraPath, L"Preview Y Resolution", iinfo.height);
+
+                            if (iinfo.width != 0)
+                            {
+                                registry.SetDWORD(cameraPath, L"Supports Liveview", 1);
+                            }
                         }
                     }
 
@@ -604,8 +622,10 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
                                 image = camera->GetCapturedImage();
                                 image->GetImageDataSize();
 
-                                registry.SetDWORD(cameraPath, L"Sensor X Resolution", image->GetWidth());
-                                registry.SetDWORD(cameraPath, L"Sensor Y Resolution", image->GetHeight());
+                                registry.SetDWORD(cameraPath, L"Sensor X Resolution", image->GetRawWidth());
+                                registry.SetDWORD(cameraPath, L"Sensor Y Resolution", image->GetRawHeight());
+                                registry.SetDWORD(cameraPath, L"AutoCropped X Resolution", image->GetCroppedWidth());
+                                registry.SetDWORD(cameraPath, L"AutoCropped Y Resolution", image->GetCroppedHeight());
 
                                 // This deletes image too
                                 camera->CleanupCapture();
@@ -647,7 +667,7 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
                     registry.Close();
 
                     // Fetch updated
-                    deviceInfo = camera->GetDeviceInfo();
+                    deviceInfo = camera->GetDeviceInfo(true);
                 }
             }
 
@@ -655,6 +675,8 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
             info->flags |= deviceInfo->GetSupportsLiveview() ? CAMERAFLAGS_SUPPORTS_LIVEVIEW : 0;
             info->imageWidthPixels = deviceInfo->GetSensorXResolution();
             info->imageHeightPixels = deviceInfo->GetSensorYResolution();
+            info->imageWidthCroppedPixels = deviceInfo->GetSensorXCroppedResolution();
+            info->imageHeightCroppedPixels = deviceInfo->GetSensorYCroppedResolution();
             info->previewWidthPixels = deviceInfo->GetPreviewXResolution();
             info->previewHeightPixels = deviceInfo->GetPreviewYResolution();
             info->pixelWidth = deviceInfo->GetSensorPixelWidth();
@@ -682,7 +704,7 @@ GetPortableDeviceCount()
 {
     LOGTRACE(L"In: GetPortableDeviceCount()");
 
-    DWORD result = GetDeviceManager()->GetAllDevices().size();
+    DWORD result = deviceManager->GetAllDevices(true).size();
 
     LOGTRACE(L"Out: GetPortableDeviceCount() - returning %d", result);
 
@@ -701,14 +723,14 @@ GetPortableDeviceInfo(DWORD offset, PORTABLEDEVICEINFO* pdinfo)
         return ERROR_INCORRECT_SIZE;
     }
 
-    std::list<Device*> deviceList = GetDeviceManager()->GetAllDevices();
+    std::list<Device*> deviceList = deviceManager->GetAllDevices(false);
     std::list<Device*>::iterator it = deviceList.begin();
 
     std::advance(it, offset);
 
     if (it != deviceList.end())
     {
-        Device* device = (*it)->Clone();
+        Device* device = (*it);// ->Clone();
 
         pdinfo->id = exportString((*it)->GetId());
         pdinfo->manufacturer = exportString(device->GetManufacturer());
@@ -1130,6 +1152,9 @@ GetAllPropertyValues(HANDLE hCamera, PROPERTYVALUE* values, DWORD* count)
 HRESULT
 TestFunc(HANDLE hCamera)
 {
+    LOGERROR(L"Test log file by writing an error");
+
+    /*
 //    LOGTRACE(L"In: TestFunc(x%08x)", hCamera);
 
     Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
@@ -1163,6 +1188,6 @@ TestFunc(HANDLE hCamera)
 //    last = new CameraSettings(*cs);
 
 //    LOGTRACE(L"Out: TestFunc(x%08x)", hCamera);
-
+*/
     return ERROR_SUCCESS;
 }

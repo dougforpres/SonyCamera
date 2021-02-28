@@ -18,7 +18,10 @@ public:
     BYTE* GetImageData();
     DWORD GetWidth();
     DWORD GetHeight();
-//    InputMode GetFormat();
+    DWORD GetRawWidth();
+    DWORD GetRawHeight();
+    DWORD GetCroppedWidth();
+    DWORD GetCroppedHeight();
     OutputMode GetOutputMode();
     void SetOutputMode(OutputMode mode);
     void SaveFile(std::wstring path = L"");
@@ -52,4 +55,8 @@ private:
     int m_cropLeft = 0;
     int m_cropBottom = 0;
     int m_cropRight = 0;
+    DWORD m_rawWidth = 0;
+    DWORD m_rawHeight = 0;
+    DWORD m_croppedWidth = 0;
+    DWORD m_croppedHeight = 0;
 };

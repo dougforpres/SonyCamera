@@ -10,7 +10,7 @@ public:
     Device* GetDevice(std::wstring id);
 
     size_t RefreshDevices();
-    std::list<Device*> GetAllDevices();
+    std::list<Device*> GetAllDevices(bool refresh);
     std::list<Device*> GetFilteredDevices();
 
 protected:

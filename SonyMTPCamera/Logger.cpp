@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "Logger.h"
 
+#define MAX_LOGFILE_NAME_LENGTH 1024
+
 HANDLE Logger::s_logFileHandle = INVALID_HANDLE_VALUE;
 std::wstring Logger::s_logfileName = L"";
 
@@ -27,8 +29,37 @@ Logger::SetLogFilename(std::wstring filename)
 
     if (!filename.empty())
     {
-        s_logFileHandle = CreateFile(s_logfileName.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-        SetFilePointer(s_logFileHandle, 0L, nullptr, FILE_END);
+        // Deal with ENV expansion first
+        WCHAR* buffer = new WCHAR[MAX_LOGFILE_NAME_LENGTH];
+
+        if (ExpandEnvironmentStrings(filename.c_str(), buffer, MAX_LOGFILE_NAME_LENGTH))
+        {
+            s_logfileName = buffer;
+        }
+
+        HANDLE hResult = CreateFile(s_logfileName.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+
+        if (hResult == INVALID_HANDLE_VALUE)
+        {
+            if (GetLastError() == ERROR_SHARING_VIOLATION)
+            {
+                // Seems someone else may have the file locked, lets try adding pid to the end of the filename and try again
+                std::wostringstream builder;
+
+                builder << s_logfileName << L"." << GetCurrentProcessId() << L".log";
+                s_logfileName = builder.str();
+
+                hResult = CreateFile(s_logfileName.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+            }
+        }
+
+        if (hResult != INVALID_HANDLE_VALUE)
+        {
+            s_logFileHandle = hResult;
+            SetFilePointer(s_logFileHandle, 0L, nullptr, FILE_END);
+        }
+
+        delete[] buffer;
     }
 }
 

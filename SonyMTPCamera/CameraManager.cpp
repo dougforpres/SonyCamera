@@ -11,7 +11,15 @@ CameraManager::CameraManager()
 
 CameraManager::~CameraManager()
 {
-    // TODO Clean out camera map and close each if required
+    std::unordered_map<HANDLE, Camera*>::iterator it = m_cameraMap.begin();
+
+    while (it != m_cameraMap.end())
+    {
+        LOGWARN(L"-- deleting camera x%p with name %s", (it->first), (it->second)->GetDeviceInfo(false)->GetManufacturer().c_str());
+        (*it).second->Close();
+        delete (*it).second;
+        it = m_cameraMap.erase(it);
+    }
 }
 
 void
@@ -280,10 +288,28 @@ CameraManager::SetupSupportedDevices()
     registry.SetDWORDDefault(key, L"Sensor Type", 2);
     registry.SetDWORDDefault(key, L"Supports Liveview", 1);
 
-    // a7R IV
+    // a7R IV - using ms driver
     key = L"Cameras\\Sony Corporation\\ILCE-7RM4";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
+    registry.SetDoubleDefault(key, L"Sensor X Size um", 3.73);
+    registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.72);
+    registry.SetDWORDDefault(key, L"Sensor X Resolution", 9600);
+    registry.SetDWORDDefault(key, L"Sensor Y Resolution", 6376);
+    registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
+    registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
+    registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
+    registry.SetDoubleDefault(key, L"Exposure Time Max", 900.0);
+    registry.SetDoubleDefault(key, L"Exposure Time Step", 0.000125);
+    registry.SetDWORDDefault(key, L"Sensor Type", 2);
+    registry.SetDWORDDefault(key, L"Supports Liveview", 1);
+
+    // a7R IV - using libusbK driver
+    key = L"Cameras\\VID_054C&PID_0CCC";
+
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"A7R IV");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 3.73);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.72);
@@ -331,10 +357,28 @@ CameraManager::SetupSupportedDevices()
     registry.SetDWORDDefault(key, L"Sensor Type", 2);
     registry.SetDWORDDefault(key, L"Supports Liveview", 1);
 
-    // a7S III
+    // a7S III - using MTP driver
     key = L"Cameras\\Sony Corporation\\ILCE-7SM3";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
+    registry.SetDoubleDefault(key, L"Sensor X Size um", 8.31);
+    registry.SetDoubleDefault(key, L"Sensor Y Size um", 8.31);
+    registry.SetDWORDDefault(key, L"Sensor X Resolution", 4256);
+    registry.SetDWORDDefault(key, L"Sensor Y Resolution", 2848);
+    registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
+    registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
+    registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
+    registry.SetDoubleDefault(key, L"Exposure Time Max", 900.0);
+    registry.SetDoubleDefault(key, L"Exposure Time Step", 0.000125);
+    registry.SetDWORDDefault(key, L"Sensor Type", 2);
+    registry.SetDWORDDefault(key, L"Supports Liveview", 1);
+
+    // a7S III - using libusbK driver
+    key = L"Cameras\\VID_054C&PID_0D18";
+
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"A7S III");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 8.31);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 8.31);
@@ -364,6 +408,23 @@ CameraManager::SetupSupportedDevices()
     registry.SetDWORDDefault(key, L"Sensor Type", 2);
     registry.SetDWORDDefault(key, L"Supports Liveview", 1);
 
+    // A99 MkII
+    key = L"Cameras\\Sony Corporation\\ILCA-99M2";
+
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
+    registry.SetDoubleDefault(key, L"Sensor X Size um", 4.51);
+    registry.SetDoubleDefault(key, L"Sensor Y Size um", 4.51);
+    registry.SetDWORDDefault(key, L"Sensor X Resolution", 7968);
+    registry.SetDWORDDefault(key, L"Sensor Y Resolution", 5320);
+    registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
+    registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
+    registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
+    registry.SetDoubleDefault(key, L"Exposure Time Max", 900.0);
+    registry.SetDoubleDefault(key, L"Exposure Time Step", 0.000125);
+    registry.SetDWORDDefault(key, L"Sensor Type", 2);
+    registry.SetDWORDDefault(key, L"Supports Liveview", 1);
+
     // SLT Alpha 58
     key = L"Cameras\\Sony Corporation\\SLT-A58";
 
@@ -375,6 +436,25 @@ CameraManager::SetupSupportedDevices()
     registry.SetDWORDDefault(key, L"Sensor Y Resolution", 3656);
     registry.SetDWORDDefault(key, L"Preview X Resolution", 0);
     registry.SetDWORDDefault(key, L"Preview Y Resolution", 0);
+    registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
+    registry.SetDoubleDefault(key, L"Exposure Time Max", 900.0);
+    registry.SetDoubleDefault(key, L"Exposure Time Step", 0.000125);
+    registry.SetDWORDDefault(key, L"Sensor Type", 2);
+    registry.SetDWORDDefault(key, L"Supports Liveview", 0);
+
+    registry.Close();
+
+    // DSC RX10 Mk4
+    key = L"Cameras\\Sony Corporation\\DSC-RX10M4";
+
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
+    registry.SetDoubleDefault(key, L"Sensor X Size um", 2.40);
+    registry.SetDoubleDefault(key, L"Sensor Y Size um", 2.40);
+    registry.SetDWORDDefault(key, L"Sensor X Resolution", 5496);
+    registry.SetDWORDDefault(key, L"Sensor Y Resolution", 3672);
+    registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
+    registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
     registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
     registry.SetDoubleDefault(key, L"Exposure Time Max", 900.0);
     registry.SetDoubleDefault(key, L"Exposure Time Step", 0.000125);
@@ -493,7 +573,7 @@ CameraManager::GetCameraForHandle(HANDLE hCamera)
 
         for (it = m_cameraMap.begin(); it != m_cameraMap.end(); it++)
         {
-            LOGWARN(L"-- got a x%p with name %s", (it->first), (it->second)->GetDeviceInfo()->GetManufacturer().c_str());
+            LOGWARN(L"-- got a x%p with name %s", (it->first), (it->second)->GetDeviceInfo(false)->GetManufacturer().c_str());
         }
 
         return nullptr;

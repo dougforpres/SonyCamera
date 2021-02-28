@@ -14,7 +14,7 @@ public:
     /* Destructor */
     ~MTPDevice();
 
-    virtual Device* Clone();
+//    virtual Device* Clone();
 
     virtual HANDLE Open();
     virtual bool Close();

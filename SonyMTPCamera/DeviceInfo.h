@@ -40,6 +40,10 @@ public:
     UINT32 GetSensorXResolution();
     void SetSensorYResolution(UINT32 resolution);
     UINT32 GetSensorYResolution();
+    void SetSensorXCroppedResolution(UINT32 resolution);
+    UINT32 GetSensorXCroppedResolution();
+    void SetSensorYCroppedResolution(UINT32 resolution);
+    UINT32 GetSensorYCroppedResolution();
     void SetPreviewXResolution(UINT32 resolution);
     UINT32 GetPreviewXResolution();
     void SetPreviewYResolution(UINT32 resolution);
@@ -96,6 +100,8 @@ private:
     SensorType m_sensorType = SensorType::UNKNOWN;
     DWORD m_sensorXResolution = 0;
     DWORD m_sensorYResolution = 0;
+    DWORD m_sensorXCroppedResolution = 0;
+    DWORD m_sensorYCroppedResolution = 0;
     DWORD m_previewXResolution = 0;
     DWORD m_previewYResolution = 0;
     UINT16 m_leftCrop = 0;

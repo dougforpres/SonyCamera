@@ -15,7 +15,7 @@ public:
 
     ~LibUSBKDevice();
 
-    virtual Device* Clone();
+//    virtual Device* Clone();
 
     virtual HANDLE Open();
     virtual bool Close();
@@ -31,23 +31,23 @@ protected:
     virtual bool StopNotifications();
 
 private:
-    static DWORD WINAPI _runBulkRx(LPVOID lpParameter);
+//    static DWORD WINAPI _runBulkRx(LPVOID lpParameter);
     static DWORD WINAPI _runInterruptRx(LPVOID lpParameter);
 
     bool Tx(PTPContainer::Type type, DWORD command, DWORD dataLen, BYTE* data);
 
-    DWORD RunBulkRx();
+//    DWORD RunBulkRx();
     DWORD RunInterruptRx();
 
-    HANDLE m_hBulkRxThread = INVALID_HANDLE_VALUE;
+//    HANDLE m_hBulkRxThread = INVALID_HANDLE_VALUE;
     HANDLE m_hInterruptRxThread = INVALID_HANDLE_VALUE;
-    DWORD m_bulkRxThreadId = 0;
+//    DWORD m_bulkRxThreadId = 0;
     DWORD m_interruptRxThreadId = 0;
 
     bool m_stopRx = false;
-    std::list<Message*> m_bulkRxQueue;
+//    std::list<Message*> m_bulkRxQueue;
     std::list<DWORD> m_interruptRxQueue;
-    HANDLE m_bulkRxEvent = INVALID_HANDLE_VALUE;
+//    HANDLE m_bulkRxEvent = INVALID_HANDLE_VALUE;
 
     KUSB_HANDLE m_interfaceHandle = INVALID_HANDLE_VALUE;
 

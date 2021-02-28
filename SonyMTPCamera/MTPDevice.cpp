@@ -37,13 +37,6 @@ MTPDevice::MTPDevice(const MTPDevice& rhs)
     LOGTRACE(L"Out: MTPDevice::MTPDevice[copy](deviceId='%s')", m_id.c_str());
 }
 
-Device*
-MTPDevice::Clone()
-{
-    LOGTRACE(L"MTPDevice::Clone of %s", GetFriendlyName().c_str());
-    return new MTPDevice(*this);
-}
-
 MTPDevice::~MTPDevice()
 {
     LOGTRACE(L"In: MTPDevice::~MTPDevice()");
