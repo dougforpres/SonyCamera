@@ -15,6 +15,8 @@ unsigned long LibUSBKDevice::m_sequence = 0;
 LibUSBKDevice::LibUSBKDevice(KLST_DEVINFO_HANDLE deviceInfo, std::wstring DeviceId)
     : Device(DeviceId)
 {
+    LOGTRACE(L"In: LibUSBKDevice::LibUSBKDevice(deviceId='%s')", m_id.c_str());
+
     std::wostringstream builder;
 
     builder << deviceInfo->Mfg << L' ' << deviceInfo->DeviceDesc;
@@ -30,6 +32,8 @@ LibUSBKDevice::LibUSBKDevice(KLST_DEVINFO_HANDLE deviceInfo, std::wstring Device
 
     m_vid = deviceInfo->Common.Vid;
     m_pid = deviceInfo->Common.Pid;
+
+    LOGTRACE(L"Out: LibUSBKDevice::LibUSBKDevice(deviceId='%s')", DeviceId.c_str());
 }
 
 LibUSBKDevice::LibUSBKDevice(const LibUSBKDevice& rhs)
@@ -37,6 +41,8 @@ LibUSBKDevice::LibUSBKDevice(const LibUSBKDevice& rhs)
       m_vid(rhs.m_vid),
       m_pid(rhs.m_pid)
 {
+    LOGTRACE(L"In: LibUSBKDevice::LibUSBKDevice[copy](deviceId='%s')", m_id.c_str());
+    LOGTRACE(L"Out: LibUSBKDevice::LibUSBKDevice[copy](deviceId='%s')", m_id.c_str());
 }
 
 LibUSBKDevice::~LibUSBKDevice()

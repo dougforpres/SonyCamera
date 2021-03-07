@@ -79,6 +79,8 @@ Device::IsSupported()
     bool result = false;
     std::wostringstream builder;
 
+    LOGTRACE(L"In: Device(%s / %s)::IsSupported()", GetFriendlyName().c_str(), GetRegistryPath().c_str());
+
     builder << L"Cameras\\" << GetRegistryPath();
 
     registry.Open();
@@ -87,7 +89,7 @@ Device::IsSupported()
 
     registry.Close();
 
-    LOGINFO(L"Device(%s)::IsSupported = %d", GetFriendlyName().c_str(), result);
+    LOGINFO(L"Out: Device(%s / %s)::IsSupported() = %d", GetFriendlyName().c_str(), GetRegistryPath().c_str(), result);
 
     return result;
 }

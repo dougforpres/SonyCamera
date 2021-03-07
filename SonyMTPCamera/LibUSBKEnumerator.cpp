@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "LibUSBKEnumerator.h"
 #include "CameraException.h"
+#include "Logger.h"
 
 #define SONY_VENDOR_ID 0x054c
 
@@ -30,12 +31,16 @@ LibUSBKEnumerator::EnumerateDevices()
     // Get the number of devices contained in the device list.
     LstK_Count(m_deviceList, &count);
 
+    LOGINFO(L"%d libusbK devices found", count);
+
     if (count)
     {
         while (LstK_MoveNext(m_deviceList, &deviceInfo))
         {
             if (deviceInfo)
             {
+                LOGTRACE(L"Scanning libusbK device: VID=%04X, PID=%04X", deviceInfo->Common.Vid, deviceInfo->Common.Pid);
+
                 if (deviceInfo->Common.Vid == SONY_VENDOR_ID)
                 {
                     std::wostringstream builder;
@@ -66,10 +71,6 @@ LibUSBKEnumerator::EnumerateDevices()
         {
             // Error
         }
-    }
-    else
-    {
-        printf("No devices connected.\n");
     }
 
     return foundDevices;
