@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Message.h"
 #include "Utils.h"
+#include "Logger.h"
 
 Message::Message(WORD command)
     : m_command(command),
@@ -68,6 +69,11 @@ Message::AddData(BYTE* data, DWORD dataLen)
 {
     // This will ignore any data bigger than allocated size
     DWORD bytesToWrite = min(m_dataLen - m_writeOffset, dataLen);
+
+    if (dataLen > bytesToWrite)
+    {
+        LOGERROR(L"Attempt to write %d bytes when only %d will fit", dataLen, bytesToWrite);
+    }
 
     if (m_data && bytesToWrite > 0)
     {

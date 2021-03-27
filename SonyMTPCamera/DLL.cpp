@@ -291,6 +291,7 @@ GetDeviceInfo(DWORD deviceId, DEVICEINFO *info)
         info->exposureTimeStep = deviceInfo->GetExposureTimeStep();
         info->bayerXOffset = deviceInfo->GetBayerXOffset();
         info->bayerYOffset = deviceInfo->GetBayerYOffset();
+        info->cropMode = (DWORD)deviceInfo->GetCropMode();
 
         info->manufacturer = exportString(deviceInfo->GetManufacturer());
         info->model = exportString(deviceInfo->GetModel());
@@ -508,7 +509,9 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
 
             DeviceInfo* deviceInfo = camera->GetDeviceInfo(false);
 
-            if (deviceInfo->GetPreviewXResolution() == 0 || deviceInfo->GetPreviewYResolution() == 0 || deviceInfo->GetSensorXResolution() == 0 || deviceInfo->GetSensorYResolution() == 0)
+            if (deviceInfo->GetPreviewXResolution() == 0 || deviceInfo->GetPreviewYResolution() == 0
+                || deviceInfo->GetSensorXResolution() == 0 || deviceInfo->GetSensorYResolution() == 0
+                || deviceInfo->GetSensorXCroppedResolution() == 0 || deviceInfo->GetSensorYCroppedResolution() == 0)
             {
                 // Camera not fully specified
                 LOGINFO(L"GetCameraInfo for '%s' is missing image size info", deviceInfo->GetModel().c_str());
@@ -546,7 +549,8 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
                     }
 
                     // This flag allows us to fetch the info from the camera by changing settings and taking photos
-                    if (deviceInfo->GetSensorXResolution() == 0 || deviceInfo->GetSensorYResolution() == 0)
+                    if (deviceInfo->GetSensorXResolution() == 0 || deviceInfo->GetSensorYResolution() == 0
+                        || deviceInfo->GetSensorXCroppedResolution() == 0 || deviceInfo->GetSensorYCroppedResolution() == 0)
                     {
                         if (previewNeeded)
                         {
@@ -617,7 +621,7 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
                             switch (camera->GetCaptureStatus())
                             {
                             case CaptureStatus::Complete:
-                                LOGTRACE(L"  Capture complete...");
+                                LOGDEBUG(L"  Capture complete...");
 
                                 image = camera->GetCapturedImage();
                                 image->GetImageDataSize();

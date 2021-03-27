@@ -147,8 +147,8 @@ Camera::ProcessDeviceInfoOverrides()
     d->SetSensorPixelHeight(registry.GetDouble(cameraPath, L"Sensor Y Size um", d->GetSensorPixelHeight()));
     d->SetSensorXResolution(registry.GetDWORD(cameraPath, L"Sensor X Resolution", d->GetSensorXResolution()));
     d->SetSensorYResolution(registry.GetDWORD(cameraPath, L"Sensor Y Resolution", d->GetSensorYResolution()));
-    d->SetSensorXCroppedResolution(registry.GetDWORD(cameraPath, L"AutoCropped X Resolution", d->GetSensorXResolution()));
-    d->SetSensorYCroppedResolution(registry.GetDWORD(cameraPath, L"AutoCropped Y Resolution", d->GetSensorYResolution()));
+    d->SetSensorXCroppedResolution(registry.GetDWORD(cameraPath, L"AutoCropped X Resolution", d->GetSensorXCroppedResolution()));
+    d->SetSensorYCroppedResolution(registry.GetDWORD(cameraPath, L"AutoCropped Y Resolution", d->GetSensorYCroppedResolution()));
     d->SetPreviewXResolution(registry.GetDWORD(cameraPath, L"Preview X Resolution", d->GetPreviewXResolution()));
     d->SetPreviewYResolution(registry.GetDWORD(cameraPath, L"Preview Y Resolution", d->GetPreviewYResolution()));
     d->SetExposureTimeMin(registry.GetDouble(cameraPath, L"Exposure Time Min", d->GetExposureTimeMin()));

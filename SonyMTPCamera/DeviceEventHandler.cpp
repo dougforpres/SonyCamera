@@ -153,7 +153,7 @@ DeviceEventHandler::Release()
 HRESULT __stdcall 
 DeviceEventHandler::OnEvent(IPortableDeviceValues* pEventParameters)
 {
-//    LOGTRACE(L"DeviceEventHandler::OnEvent() - in");
+    LOGTRACE(L"DeviceEventHandler::OnEvent() - in");
     HRESULT hr = S_OK;
 
     if (pEventParameters != NULL)
@@ -245,7 +245,7 @@ DeviceEventHandler::OnEvent(IPortableDeviceValues* pEventParameters)
         //pdpvc->Release();
     }
 
-//    LOGTRACE(L"DeviceEventHandler::OnEvent() - out, returning %08x", hr);
+    LOGTRACE(L"DeviceEventHandler::OnEvent() - out, returning %08x", hr);
 
     return hr;
 }

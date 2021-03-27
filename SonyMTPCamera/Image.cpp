@@ -113,7 +113,7 @@ Image::InitializeLibRaw(bool process)
 
     if (r != LIBRAW_SUCCESS)
     {
-        LOGERROR(L"Error opening ARW data in libraw %s", LibRawErrorToString(libraw, r));
+        LOGERROR(L"Error opening ARW data in libraw %s", LibRawErrorToString(libraw, r).c_str());
 
         delete libraw;
 
@@ -133,7 +133,7 @@ Image::InitializeLibRaw(bool process)
 
     if (r != LIBRAW_SUCCESS)
     {
-        LOGERROR(L"LibRaw - problem unpacking data %s", LibRawErrorToString(libraw, r));
+        LOGERROR(L"LibRaw - problem unpacking data %s", LibRawErrorToString(libraw, r).c_str());
     }
 
     if (process)
@@ -142,7 +142,7 @@ Image::InitializeLibRaw(bool process)
 
         if (r != LIBRAW_SUCCESS)
         {
-            LOGERROR(L"Unable to dcraw_process %s", LibRawErrorToString(libraw, r));
+            LOGERROR(L"Unable to dcraw_process %s", LibRawErrorToString(libraw, r).c_str());
         }
     }
 
@@ -166,32 +166,40 @@ Image::ProcessARWData()
     case OutputMode::RGB:
         LOGINFO(L"Output mode RGB...");
         libraw = InitializeLibRaw(true);
-        processed = libraw->dcraw_make_mem_image(&r);
 
-        if (r != LIBRAW_SUCCESS)
+        if (libraw)
         {
-            LOGERROR(L"Unable to dcraw_make_mem_image %s", LibRawErrorToString(libraw, r));
+            processed = libraw->dcraw_make_mem_image(&r);
+
+            if (r != LIBRAW_SUCCESS)
+            {
+                LOGERROR(L"Unable to dcraw_make_mem_image %s", LibRawErrorToString(libraw, r).c_str());
+            }
+            else
+            {
+                if (processed)
+                {
+                    if (processed->data_size > 0)
+                    {
+                        m_pixelDataSize = processed->data_size;
+                        m_pixelData = new BYTE[m_pixelDataSize];
+                        memcpy(m_pixelData, processed->data, processed->data_size);
+                        m_info->SetWidth(libraw->imgdata.sizes.iwidth);
+                        m_info->SetHeight(libraw->imgdata.sizes.iheight);
+                    }
+                    else
+                    {
+                        LOGERROR(L"libraw failed to make memory image, BUT DIDN'T ERROR!");
+                    }
+
+                    LibRaw::dcraw_clear_mem(processed);
+                    processed = nullptr;
+                }
+            }
         }
         else
         {
-            if (processed)
-            {
-                if (processed->data_size > 0)
-                {
-                    m_pixelDataSize = processed->data_size;
-                    m_pixelData = new BYTE[m_pixelDataSize];
-                    memcpy(m_pixelData, processed->data, processed->data_size);
-                    m_info->SetWidth(libraw->imgdata.sizes.iwidth);
-                    m_info->SetHeight(libraw->imgdata.sizes.iheight);
-                }
-                else
-                {
-                    LOGERROR(L"libraw failed to make memory image, BUT DIDN'T ERROR!");
-                }
-
-                LibRaw::dcraw_clear_mem(processed);
-                processed = nullptr;
-            }
+            LOGERROR(L"Unable to open image using libraw");
         }
         break;
 
@@ -199,74 +207,81 @@ Image::ProcessARWData()
         LOGINFO(L"Output mode RGGB...");
         libraw = InitializeLibRaw(false);
 
-        r = libraw->raw2image();
-
-        if (r != LIBRAW_SUCCESS)
+        if (libraw)
         {
-            LOGERROR(L"Unable to raw2image %s", LibRawErrorToString(libraw, r));
-        }
+            r = libraw->raw2image();
 
-        m_rawWidth = libraw->imgdata.sizes.iwidth;
-        m_rawHeight = libraw->imgdata.sizes.iheight;
-        linesize = 4 * 2 * m_rawWidth;
-
-        {
-            std::string colorsStr = libraw->imgdata.idata.cdesc;
-            LOGINFO(L"RAW file color format = %S", colorsStr.c_str());
-
-            int xoffs = 0;
-            int yoffs = 0;
-
-            std::ostringstream builder;
-
-            builder << colorsStr[libraw->COLOR(0, 0)];
-            builder << colorsStr[libraw->COLOR(0, 1)];
-            builder << colorsStr[libraw->COLOR(1, 0)];
-            builder << colorsStr[libraw->COLOR(1, 1)];
-
-            LOGINFO(L"Raw data layout in form: %S", builder.str().c_str());
-
-            if (m_cropLeft < 0) {
-                LOGINFO(L"Crop Mode set to auto, using info from image");
-                m_cropLeft = libraw->imgdata.sizes.raw_crop.cleft * 2; // expressed in 2 pixel units because RGGB;
-                m_cropTop = libraw->imgdata.sizes.raw_crop.ctop * 2;
-                m_cropRight = 0;
-                m_cropBottom = 0;
-            }
-
-            m_croppedWidth = m_rawWidth - libraw->imgdata.sizes.raw_crop.cleft * 2;
-            m_croppedHeight = m_rawHeight - libraw->imgdata.sizes.raw_crop.ctop * 2;
-
-            ushort width = m_rawWidth - m_cropLeft - m_cropRight;
-            ushort height = m_rawHeight - m_cropTop - m_cropBottom;
-
-            LOGINFO(L"Raw size is %d x %d, crop (T,L,R,B) = %d, %d, %d, %d, result will be %d x %d", m_rawWidth, m_rawHeight, m_cropTop, m_cropLeft, m_cropBottom, m_cropRight, width, height);
-
-            m_pixelDataSize = width * height * sizeof(short);
-            m_pixelData = new BYTE[m_pixelDataSize];
-
-            for (int y = m_cropTop; y < (m_rawHeight - m_cropBottom); y++)
+            if (r != LIBRAW_SUCCESS)
             {
-                ushort* pds = (ushort*)m_pixelData;
-                int readOffset = y * m_rawWidth;
-                int writeOffset = (m_pixelDataSize / sizeof(short)) - (y - m_cropTop + 1) * width;
-
-                int i0 = libraw->COLOR(y, 0);
-                int i1 = libraw->COLOR(y, 1);
-
-                ushort* ptr = (ushort*)(libraw->imgdata.image + readOffset);
-
-                for (int x = 0; x < width; x += 2)
-                {
-                    pds[x + writeOffset] = *(ptr + i0);
-                    ptr += 4;
-                    pds[x + 1 + writeOffset] = *(ptr + i1);
-                    ptr += 4;
-                }
+                LOGERROR(L"Unable to raw2image %s", LibRawErrorToString(libraw, r).c_str());
             }
 
-            m_info->SetWidth(width);
-            m_info->SetHeight(height);
+            m_rawWidth = libraw->imgdata.sizes.iwidth;
+            m_rawHeight = libraw->imgdata.sizes.iheight;
+            linesize = 4 * 2 * m_rawWidth;
+
+            {
+                std::string colorsStr = libraw->imgdata.idata.cdesc;
+                LOGINFO(L"RAW file color format = %S", colorsStr.c_str());
+
+                int xoffs = 0;
+                int yoffs = 0;
+
+                std::ostringstream builder;
+
+                builder << colorsStr[libraw->COLOR(0, 0)];
+                builder << colorsStr[libraw->COLOR(0, 1)];
+                builder << colorsStr[libraw->COLOR(1, 0)];
+                builder << colorsStr[libraw->COLOR(1, 1)];
+
+                LOGINFO(L"Raw data layout in form: %S", builder.str().c_str());
+
+                if (m_cropLeft < 0) {
+                    LOGINFO(L"Crop Mode set to auto, using info from image");
+                    m_cropLeft = libraw->imgdata.sizes.raw_crop.cleft * 2; // expressed in 2 pixel units because RGGB;
+                    m_cropTop = libraw->imgdata.sizes.raw_crop.ctop * 2;
+                    m_cropRight = 0;
+                    m_cropBottom = 0;
+                }
+
+                m_croppedWidth = m_rawWidth - libraw->imgdata.sizes.raw_crop.cleft * 2;
+                m_croppedHeight = m_rawHeight - libraw->imgdata.sizes.raw_crop.ctop * 2;
+
+                ushort width = m_rawWidth - m_cropLeft - m_cropRight;
+                ushort height = m_rawHeight - m_cropTop - m_cropBottom;
+
+                LOGINFO(L"Raw size is %d x %d, crop (T,L,R,B) = %d, %d, %d, %d, result will be %d x %d", m_rawWidth, m_rawHeight, m_cropTop, m_cropLeft, m_cropBottom, m_cropRight, width, height);
+
+                m_pixelDataSize = width * height * sizeof(short);
+                m_pixelData = new BYTE[m_pixelDataSize];
+
+                for (int y = m_cropTop; y < (m_rawHeight - m_cropBottom); y++)
+                {
+                    ushort* pds = (ushort*)m_pixelData;
+                    int readOffset = y * m_rawWidth;
+                    int writeOffset = (m_pixelDataSize / sizeof(short)) - (y - m_cropTop + 1) * width;
+
+                    int i0 = libraw->COLOR(y, 0);
+                    int i1 = libraw->COLOR(y, 1);
+
+                    ushort* ptr = (ushort*)(libraw->imgdata.image + readOffset);
+
+                    for (int x = 0; x < width; x += 2)
+                    {
+                        pds[x + writeOffset] = *(ptr + i0);
+                        ptr += 4;
+                        pds[x + 1 + writeOffset] = *(ptr + i1);
+                        ptr += 4;
+                    }
+                }
+
+                m_info->SetWidth(width);
+                m_info->SetHeight(height);
+            }
+        }
+        else
+        {
+            LOGERROR(L"Unable to open image using libraw");
         }
         break;
 
@@ -522,7 +537,7 @@ Image::StringEndsWith(const std::wstring& mainStr, const std::wstring& toMatch)
 void
 Image::SaveFile(std::wstring path)
 {
-    LOGTRACE(L"In: Image::SaveFile('%s')", path.c_str());
+//    LOGTRACE(L"In: Image::SaveFile('%s')", path.c_str());
 
     if (path.empty())
     {
@@ -579,10 +594,10 @@ Image::SaveFile(std::wstring path)
     }
     else
     {
-        LOGWARN(L"Unable to save file, path not specified");
+        LOGINFO(L"Did not save file, path not specified");
     }
 
-    LOGTRACE(L"Out: Image::SaveFile('%s')", path.c_str());
+//    LOGTRACE(L"Out: Image::SaveFile('%s')", path.c_str());
 }
 
 void

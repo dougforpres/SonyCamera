@@ -25,6 +25,7 @@ typedef struct
     DWORD imageHeightCroppedPixels;
     DWORD bayerXOffset;
     DWORD bayerYOffset;
+    DWORD cropMode;
     double exposureTimeMin;
     double exposureTimeMax;
     double exposureTimeStep;

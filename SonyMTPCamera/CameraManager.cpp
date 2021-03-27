@@ -34,6 +34,7 @@ CameraManager::SetupSupportedDevices()
     std::wstring key = L"Cameras\\Sony Corporation\\ILCE-5000";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a5000");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 4.22);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 4.22);
@@ -51,6 +52,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\Sony Corporation\\ILCE-5100";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a5100");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 3.91);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.91);
@@ -70,6 +72,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\Sony Corporation\\ILCE-6400";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a6400");
     registry.SetStringDefault(key, L"Sensor Name", L"EXMOR");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 3.91);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.91);
@@ -89,6 +92,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\Sony Corporation\\ILCE-6000";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a6000");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 3.91);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.91);
@@ -108,6 +112,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\Sony Corporation\\ILCE-6100";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a6100");
     registry.SetStringDefault(key, L"Sensor Name", L"EXMOR");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 3.91);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.91);
@@ -127,6 +132,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\Sony Corporation\\ILCE-6300";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a6300");
     registry.SetStringDefault(key, L"Sensor Name", L"EXMOR");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 3.91);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.91);
@@ -146,6 +152,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\Sony Corporation\\ILCE-6500";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a6500");
     registry.SetStringDefault(key, L"Sensor Name", L"EXMOR");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 3.91);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.91);
@@ -165,6 +172,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\Sony Corporation\\ILCE-6600";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a6600");
     registry.SetStringDefault(key, L"Sensor Name", L"EXMOR");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 3.91);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.91);
@@ -184,6 +192,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\Sony Corporation\\ILCE-7";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a7");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 5.95);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 5.95);
@@ -203,6 +212,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\Sony Corporation\\ILCE-7M2";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a7 Mk II");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 5.95);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 5.95);
@@ -222,6 +232,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\Sony Corporation\\ILCE-7M3";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a7 Mk III");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 5.95);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 5.95);
@@ -241,6 +252,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\Sony Corporation\\ILCE-7R";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a7R");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 4.86);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 4.86);
@@ -258,6 +270,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\Sony Corporation\\ILCE-7RM2";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a7R Mk II");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 4.86);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 4.86);
@@ -275,6 +288,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\Sony Corporation\\ILCE-7RM3";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a7R Mk III");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 4.86);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 4.86);
@@ -292,6 +306,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\Sony Corporation\\ILCE-7RM4";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a7R Mk IV");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 3.73);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.72);
@@ -309,7 +324,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\VID_054C&PID_0CCC";
 
     registry.CreateKey(key);
-    registry.SetStringDefault(key, L"", L"A7R IV");
+    registry.SetStringDefault(key, L"", L"a7R Mk IV");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 3.73);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.72);
@@ -327,6 +342,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\Sony Corporation\\ILCE-7S";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a7S");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 8.31);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 8.31);
@@ -344,6 +360,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\Sony Corporation\\ILCE-7SM2";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a7S Mk II");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 8.31);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 8.31);
@@ -361,6 +378,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\Sony Corporation\\ILCE-7SM3";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a7S Mk III");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 8.31);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 8.31);
@@ -378,7 +396,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\VID_054C&PID_0D18";
 
     registry.CreateKey(key);
-    registry.SetStringDefault(key, L"", L"A7S III");
+    registry.SetStringDefault(key, L"", L"a7S Mk III");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 8.31);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 8.31);
@@ -395,6 +413,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\Sony Corporation\\ILCA-77M2";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a77 Mk II");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 3.91);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.91);
@@ -412,6 +431,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\Sony Corporation\\ILCA-99M2";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a99 Mk II");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 4.51);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 4.51);
@@ -429,6 +449,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\Sony Corporation\\SLT-A58";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"SLT-A58");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 4.27);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 4.27);
@@ -448,6 +469,7 @@ CameraManager::SetupSupportedDevices()
     key = L"Cameras\\Sony Corporation\\DSC-RX10M4";
 
     registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"RX10 Mk IV");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
     registry.SetDoubleDefault(key, L"Sensor X Size um", 2.40);
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 2.40);

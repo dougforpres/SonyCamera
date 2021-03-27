@@ -15,6 +15,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SonyCameraInfo", "SonyCamer
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SonySettingsMonitor", "SonySettingsMonitor\SonySettingsMonitor.vcxproj", "{1021208C-3C9E-47E1-89E4-211F52B8EDBD}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LetsGoHunting", "LetsGoHunting\LetsGoHunting.vcxproj", "{0ACB9407-C180-43F6-B51B-7521EAB4516A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -87,6 +89,16 @@ Global
 		{1021208C-3C9E-47E1-89E4-211F52B8EDBD}.Release|x64.Build.0 = Release|x64
 		{1021208C-3C9E-47E1-89E4-211F52B8EDBD}.Release|x86.ActiveCfg = Release|Win32
 		{1021208C-3C9E-47E1-89E4-211F52B8EDBD}.Release|x86.Build.0 = Release|Win32
+		{0ACB9407-C180-43F6-B51B-7521EAB4516A}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{0ACB9407-C180-43F6-B51B-7521EAB4516A}.Debug|x64.ActiveCfg = Debug|x64
+		{0ACB9407-C180-43F6-B51B-7521EAB4516A}.Debug|x64.Build.0 = Debug|x64
+		{0ACB9407-C180-43F6-B51B-7521EAB4516A}.Debug|x86.ActiveCfg = Debug|Win32
+		{0ACB9407-C180-43F6-B51B-7521EAB4516A}.Debug|x86.Build.0 = Debug|Win32
+		{0ACB9407-C180-43F6-B51B-7521EAB4516A}.Release|Any CPU.ActiveCfg = Release|Win32
+		{0ACB9407-C180-43F6-B51B-7521EAB4516A}.Release|x64.ActiveCfg = Release|x64
+		{0ACB9407-C180-43F6-B51B-7521EAB4516A}.Release|x64.Build.0 = Release|x64
+		{0ACB9407-C180-43F6-B51B-7521EAB4516A}.Release|x86.ActiveCfg = Release|Win32
+		{0ACB9407-C180-43F6-B51B-7521EAB4516A}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

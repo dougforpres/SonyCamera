@@ -1,4 +1,9 @@
 # Change Log
+## 1.0.0.23
+Enhanced "SonyCameraInfo" with extra abilities.  See "SonyCameraInfo.exe /h" for details.
+Updated camera detection to re-acquire test shots if crop info is not in registry.
+Added a couple of pieces of extra info in DEVICEINFO structure.  This will help other apps.
+
 ## 1.0.0.22
 Added code to check that logfile is working correctly in the "SonyCameraInfo.exe" utility.
 Added code to the logging system so that it will tack the process-id to the end of the logfile name.  This should avoid situations where some other app has locked the file.

@@ -57,7 +57,7 @@ MTPDevice::~MTPDevice()
         m_manager->Release();
     }
 
-    LOGTRACE(L"Out: MTPDevice::~Device()");
+    LOGTRACE(L"Out: MTPDevice::~MTPDevice()");
 }
 
 HANDLE
@@ -110,7 +110,7 @@ MTPDevice::Open()
             LOGERROR(L"! Failed to CoCreateInstance CLSID_PortableDeviceFTM, hr = x%lx", hr);
         }
 
-        StartNotifications();
+//        StartNotifications();
     }
     else
     {
@@ -135,7 +135,7 @@ MTPDevice::Close()
     {
         if (m_openCount == 1)
         {
-            StopNotifications();
+//            StopNotifications();
 
             HRESULT hr = m_device->Close();
 
@@ -148,7 +148,7 @@ MTPDevice::Close()
                 CloseHandle(m_handle);
                 m_handle = INVALID_HANDLE_VALUE;
 
-                LOGTRACE(L"Out: Device::Close - Closed()");
+                LOGINFO(L"Out: Device::Close - Closed()");
 
                 closed = true;
             }
@@ -163,7 +163,7 @@ MTPDevice::Close()
         }
     }
 
-    LOGWARN(L"Out: Device::Close (result = %d)", closed);
+    LOGTRACE(L"Out: Device::Close (result = %d)", closed);
 
     return closed;
 }
@@ -406,7 +406,7 @@ MTPDevice::CreateClientInformation()
 Message*
 MTPDevice::InternalSend(Device::Op kind, Message* out)
 {
-    LOGTRACE(L"In: MTPDevice::InternalSend");
+//    LOGTRACE(L"In: MTPDevice::InternalSend");
 
     HRESULT  hr = S_OK;
     IPortableDeviceValues* pDevValues;
@@ -416,17 +416,17 @@ MTPDevice::InternalSend(Device::Op kind, Message* out)
     switch (kind)
     {
     case Op::CommandOnly:
-        LOGTRACE(L"  Sending Command only, no send/receive data block");
+        LOGTRACE(L"Sending Command(x%04x) only, no send/receive data block", out->GetCommand());
         opType = WPD_COMMAND_MTP_EXT_EXECUTE_COMMAND_WITHOUT_DATA_PHASE;
         break;
 
     case Op::ReceiveData:
-        LOGTRACE(L"  Sending Command, expecting data in return");
+        LOGTRACE(L"Sending Command(x%04x), expecting data in return", out->GetCommand());
         opType = WPD_COMMAND_MTP_EXT_EXECUTE_COMMAND_WITH_DATA_TO_READ;
         break;
 
     case Op::SendData:
-        LOGTRACE(L"  Sending Command and data, not expecting data back");
+        LOGTRACE(L"Sending Command(x%04x) and data (%d bytes), not expecting data back", out->GetCommand(), out->GetDataLen());
         opType = WPD_COMMAND_MTP_EXT_EXECUTE_COMMAND_WITH_DATA_TO_WRITE;
         break;
     }
@@ -628,7 +628,7 @@ MTPDevice::InternalSend(Device::Op kind, Message* out)
         hr = spResults->GetUnsignedIntegerValue(WPD_PROPERTY_MTP_EXT_TRANSFER_TOTAL_DATA_SIZE,
             &cbReportedDataSize);
 
-        LOGTRACE(L"optimal data size = %d, reported data size = %d", cbOptimalDataSize, cbReportedDataSize);
+//        LOGTRACE(L"optimal data size = %d, reported data size = %d", cbOptimalDataSize, cbReportedDataSize);
 
         // Note: The driver provides an additional property, WPD_PROPERTY_MTP_EXT_OPTIMAL_TRANSFER_BUFFER_SIZE,
         // which suggests the chunk size that the date should be retrieved in. If your application will be 
@@ -663,7 +663,7 @@ MTPDevice::InternalSend(Device::Op kind, Message* out)
                 registry.Close();
 
                 ULONG bufferSize = maximumMemoryMode ? cbReportedDataSize : min(cbReportedDataSize, max(cbOptimalDataSize * 16, 2 ^ 23));
-                LOGTRACE(L"Using a transfer buffer of %d bytes (maxmum memory mode is %s)", bufferSize, maximumMemoryMode ? L"ON" : L"OFF");
+//                LOGTRACE(L"Using a transfer buffer of %d bytes (maxmum memory mode is %s)", bufferSize, maximumMemoryMode ? L"ON" : L"OFF");
 
                 BYTE* pbBufferIn = NULL;
                 if (IsSuccess(hr, L"SetStringValue(WPD_PROPERTY_MTP_EXT_TRANSFER_CONTEXT) (Read Data)"))
@@ -820,7 +820,7 @@ MTPDevice::InternalSend(Device::Op kind, Message* out)
     // device can handle the command and the data. Be aware that there is a distinction between the command
     // and the data being successfully sent to the device and the command and data being handled successfully 
     // by the device
-    DWORD dwResponseCode;
+    DWORD dwResponseCode = 0;
     if (IsSuccess(hr, L"Error Value (END)"))
     {
         hr = spResults->GetUnsignedIntegerValue(WPD_PROPERTY_MTP_EXT_RESPONSE_CODE, &dwResponseCode);
@@ -852,7 +852,7 @@ MTPDevice::InternalSend(Device::Op kind, Message* out)
         pDevValues = nullptr;
     }
 
-    LOGTRACE(L"Out: MTPDevice::InternalSend");
+//    LOGTRACE(L"Out: MTPDevice::InternalSend");
 
     return result;
 }
@@ -860,7 +860,7 @@ MTPDevice::InternalSend(Device::Op kind, Message* out)
 bool
 MTPDevice::Send(Message* out)
 {
-    LOGTRACE(L"In: MTPDevice::Send");
+//    LOGTRACE(L"In: MTPDevice::Send");
 
     Op method = Op::CommandOnly;
 
@@ -871,7 +871,7 @@ MTPDevice::Send(Message* out)
 
     InternalSend(method, out);
 
-    LOGTRACE(L"Out: MTPDevice::InternalSend");
+//    LOGTRACE(L"Out: MTPDevice::Send");
 
     return true;
 }
@@ -879,11 +879,11 @@ MTPDevice::Send(Message* out)
 Message*
 MTPDevice::Receive(Message* out)
 {
-    LOGTRACE(L"In: MTPDevice::Receive");
+//    LOGTRACE(L"In: MTPDevice::Receive");
 
     Message* result = InternalSend(Op::ReceiveData, out);
 
-    LOGTRACE(L"Out: MTPDevice::Receive");
+//    LOGTRACE(L"Out: MTPDevice::Receive");
 
     return result;
 }
