@@ -9,14 +9,14 @@
 
 DeviceManager::DeviceManager()
 {
-    m_libusbkEnumerator = new LibUSBKEnumerator();
+//    m_libusbkEnumerator = new LibUSBKEnumerator();
 }
 
 DeviceManager::~DeviceManager()
 {
     ClearDeviceList();
-    delete m_libusbkEnumerator;
-    m_libusbkEnumerator = nullptr;
+//    delete m_libusbkEnumerator;
+//    m_libusbkEnumerator = nullptr;
 }
 
 void
@@ -53,7 +53,7 @@ DeviceManager::RefreshDevices()
     MTPEnumerator* mtpEnumerator = new MTPEnumerator();
 
     std::list<Device*> foundDevices = mtpEnumerator->EnumerateDevices();
-    foundDevices.splice(foundDevices.end(), m_libusbkEnumerator->EnumerateDevices());
+//    foundDevices.splice(foundDevices.end(), m_libusbkEnumerator->EnumerateDevices());
 
     delete mtpEnumerator;
 
