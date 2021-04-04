@@ -19,12 +19,14 @@ public:
     void SetId(Property id);
     Property GetId();
     std::wstring GetName();
-    virtual std::wstring AsString();
+    std::wstring AsString();
+    virtual std::wstring AsString(PropertyValue *in);
     std::wstring ToString();
     DWORD Slurp(BYTE* data, DWORD dataLen);
     bool equals(const CameraProperty& rhs);
     PropertyInfo* GetInfo();
     PropertyValue* GetCurrentValue();
+    void SetCurrentValue(PropertyValue* current);
 
 protected:
     BYTE GetBYTE(BYTE* data, DWORD offset);
@@ -41,7 +43,7 @@ class ISOProperty : public CameraProperty
 public:
     ISOProperty();
 
-    std::wstring AsString();
+    std::wstring AsString(PropertyValue *in);
 };
 
 class ShutterTimingProperty : public CameraProperty
@@ -49,7 +51,7 @@ class ShutterTimingProperty : public CameraProperty
 public:
     ShutterTimingProperty();
 
-    std::wstring AsString();
+    std::wstring AsString(PropertyValue* in);
 };
 
 class Div10Property : public CameraProperty
@@ -57,7 +59,7 @@ class Div10Property : public CameraProperty
 public:
     Div10Property();
 
-    std::wstring AsString();
+    std::wstring AsString(PropertyValue* in);
 };
 
 class Div100Property : public CameraProperty
@@ -65,7 +67,7 @@ class Div100Property : public CameraProperty
 public:
     Div100Property();
 
-    std::wstring AsString();
+    std::wstring AsString(PropertyValue* in);
 };
 
 class Div1000Property : public CameraProperty
@@ -73,7 +75,7 @@ class Div1000Property : public CameraProperty
 public:
     Div1000Property();
 
-    std::wstring AsString();
+    std::wstring AsString(PropertyValue* in);
 };
 
 class PercentageProperty : public CameraProperty
@@ -81,7 +83,7 @@ class PercentageProperty : public CameraProperty
 public:
     PercentageProperty();
 
-    std::wstring AsString();
+    std::wstring AsString(PropertyValue* in);
 };
 
 class StringLookupProperty : public CameraProperty
@@ -89,7 +91,7 @@ class StringLookupProperty : public CameraProperty
 public:
     StringLookupProperty();
 
-    std::wstring AsString();
+    std::wstring AsString(PropertyValue* in);
 
 protected:
     void AddResource(Property property, WORD value, WORD resid);

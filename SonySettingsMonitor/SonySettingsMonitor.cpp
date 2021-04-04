@@ -5,33 +5,9 @@
 #include <Windows.h>
 #include "SonyMTPCamera.h"
 
-int main()
+void
+watchSettings(HANDLE h)
 {
-    HRESULT comhr = CoInitialize(nullptr);
-
-    int portableDeviceCount = GetPortableDeviceCount();
-
-    std::cout << portableDeviceCount << " portable devices found\n\n";
-    PORTABLEDEVICEINFO pdinfo;
-
-    for (int p = 0; p < portableDeviceCount; p++)
-    {
-        std::cout << "\nDevice #" << p + 1 << "\n";
-        memset(&pdinfo, 0, sizeof(pdinfo));
-
-        if (GetPortableDeviceInfo(p, &pdinfo) == ERROR_SUCCESS)
-        {
-            std::wcout << L"  Manufacturer: " << pdinfo.manufacturer << L"\n";
-            std::wcout << L"  Model:        " << pdinfo.model << L"\n";
-        }
-    }
-
-    DEVICEINFO info;
-
-    info.version = 1;
-    GetDeviceInfo(0, &info);
-
-    HANDLE h = OpenDevice(info.deviceName);
     DWORD count = 0;
     IMAGEINFO iinfo;
 
@@ -90,4 +66,182 @@ int main()
         pv2 = pv1;
         pv1 = new PROPERTYVALUE[count];
     }
+}
+
+void
+dumpExposureOptions(HANDLE h)
+{
+    PROPERTYVALUEOPTION* options = nullptr;
+    DWORD count = 0;
+
+    // Ask how many options there are
+    HRESULT hr = GetPropertyValueOptions(h, 0xffff, options, &count);
+
+    if (hr != ERROR_SUCCESS)
+    {
+        std::cerr << "Error reading number of options " << hr;
+    }
+
+    if (count > 0)
+    {
+        options = new PROPERTYVALUEOPTION[count];
+
+        hr = GetPropertyValueOptions(h, 0xffff, options, &count);
+
+        if (hr != ERROR_SUCCESS)
+        {
+            std::cerr << "Error reading number of options " << hr;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            PROPERTYVALUEOPTION opt = options[i];
+
+            std::wcout << "Option #" << i + 1 << " - '" << opt.name << "' (" << opt.value << ")" << std::endl;
+        }
+    }
+}
+
+void
+testExposure(HANDLE h)
+{
+    // Device is open
+    // Get exposure time info
+    PROPERTYDESCRIPTOR descriptor;
+    #define SHUTTERSPEED 0xd20d
+    HRESULT hr = GetPropertyDescriptor(h, SHUTTERSPEED, &descriptor);
+
+    if (hr != ERROR_SUCCESS)
+    {
+        std::cerr << "Error reading property descriptor " << hr;
+    }
+
+    PROPERTYVALUE value;
+    hr = GetSinglePropertyValue(h, SHUTTERSPEED, &value);
+
+    if (hr != ERROR_SUCCESS)
+    {
+        std::cerr << "Error reading property value " << hr;
+    }
+
+    std::wcout << "Shutter speed set to '" << value.text << "' (" << value.value << ")" << std::endl;
+
+    std::cout << "Setting shutter speed to 1/100..." << std::endl;
+
+    SetExposureTime(h, 0.01, &value);
+
+    if (hr != ERROR_SUCCESS)
+    {
+        std::cerr << "Error setting property value " << hr;
+    }
+
+    std::wcout << "Shutter speed now set to '" << value.text << "' (" << value.value << ")" << std::endl;
+
+    std::cout << "Setting shutter speed to 0.75..." << std::endl;
+
+    SetExposureTime(h, 0.75, &value);
+
+    if (hr != ERROR_SUCCESS)
+    {
+        std::cerr << "Error setting property value " << hr;
+    }
+
+    std::wcout << "Shutter speed now set to '" << value.text << "' (" << value.value << ")" << std::endl;
+
+    std::cout << "Setting shutter speed to 1/3..." << std::endl;
+
+    SetExposureTime(h, 0.333, &value);
+
+    if (hr != ERROR_SUCCESS)
+    {
+        std::cerr << "Error setting property value " << hr;
+    }
+
+    std::wcout << "Shutter speed now set to '" << value.text << "' (" << value.value << ")" << std::endl;
+
+    std::cout << "Setting shutter speed to 1/23..." << std::endl;
+
+    SetExposureTime(h, 1.0/23.0, &value);
+
+    if (hr != ERROR_SUCCESS)
+    {
+        std::cerr << "Error setting property value " << hr;
+    }
+
+    std::wcout << "Shutter speed now set to '" << value.text << "' (" << value.value << ")" << std::endl;
+
+    std::cout << "Setting shutter speed to 1/4001..." << std::endl;
+
+    SetExposureTime(h, 1.0/4001.0, &value);
+
+    if (hr != ERROR_SUCCESS)
+    {
+        std::cerr << "Error setting property value " << hr;
+    }
+
+    std::wcout << "Shutter speed now set to '" << value.text << "' (" << value.value << ")" << std::endl;
+
+
+    std::cout << "Setting shutter speed to 32..." << std::endl;
+
+    SetExposureTime(h, 32.0, &value);
+
+    if (hr != ERROR_SUCCESS)
+    {
+        std::cerr << "Error setting property value " << hr;
+    }
+
+    std::wcout << "Shutter speed now set to '" << value.text << "' (" << value.value << ")" << std::endl;
+
+    std::cout << "Setting shutter speed to BULB..." << std::endl;
+
+    SetExposureTime(h, 0, &value);
+
+    if (hr != ERROR_SUCCESS)
+    {
+        std::cerr << "Error setting property value " << hr;
+    }
+
+    std::wcout << "Shutter speed now set to '" << value.text << "' (" << value.value << ")" << std::endl;
+
+    std::cout << "Got it";
+}
+
+int main()
+{
+    HRESULT comhr = CoInitialize(nullptr);
+
+    int portableDeviceCount = GetPortableDeviceCount();
+
+    std::cout << portableDeviceCount << " portable devices found\n\n";
+    PORTABLEDEVICEINFO pdinfo;
+
+    for (int p = 0; p < portableDeviceCount; p++)
+    {
+        std::cout << "\nDevice #" << p + 1 << "\n";
+        memset(&pdinfo, 0, sizeof(pdinfo));
+
+        if (GetPortableDeviceInfo(p, &pdinfo) == ERROR_SUCCESS)
+        {
+            std::wcout << L"  Manufacturer: " << pdinfo.manufacturer << L"\n";
+            std::wcout << L"  Model:        " << pdinfo.model << L"\n";
+        }
+    }
+
+    DEVICEINFO info;
+
+    info.version = 1;
+    GetDeviceInfo(0, &info);
+
+    HANDLE h = OpenDevice(info.deviceName);
+
+    // Uncomment to just keep pulling settings looking for changes
+//    watchSettings(h);
+
+    // Uncomment to try state-machiney thing to change exposure time
+    testExposure(h);
+
+//    dumpExposureOptions(h);
+
+    CloseDevice(h);
 }

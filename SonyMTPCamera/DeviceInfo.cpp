@@ -422,3 +422,15 @@ DeviceInfo::SetButtonPropertiesInverted(bool invert)
 {
     m_buttonPropertiesInverted = invert;
 }
+
+std::list<DWORD>
+DeviceInfo::GetExposureTimes()
+{
+    return m_exposureTimes;
+}
+
+void
+DeviceInfo::SetExposureTimes(std::list<DWORD> exposureTimes)
+{
+    m_exposureTimes = exposureTimes;
+}

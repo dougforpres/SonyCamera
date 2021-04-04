@@ -75,6 +75,8 @@ public:
     void SetRightCrop(UINT16 crop);
     UINT16 GetTopCrop();
     void SetTopCrop(UINT16 crop);
+    std::list<DWORD> GetExposureTimes();
+    void SetExposureTimes(std::list<DWORD> exposureTimes);
 
     bool GetButtonPropertiesInverted();
     void SetButtonPropertiesInverted(bool invert);
@@ -123,5 +125,6 @@ private:
     double m_exposureTimeStep = 0.0;
     bool m_supportsLiveview = false;
     bool m_buttonPropertiesInverted = false;
+    std::list<DWORD> m_exposureTimes;
 };
 

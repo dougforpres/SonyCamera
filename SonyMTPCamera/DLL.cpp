@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "SonyMTPCamera.h"
 #include <Ole2.h>
+#include <algorithm>
 #include "DeviceManager.h"
 #include "CameraManager.h"
 #include "SonyCamera.h"
@@ -18,6 +19,8 @@
 #define MAX_DEVICE_NAME_SIZE    0x64
 
 #define MAX_CAPTURE_MUTEX_WAIT 20000
+
+#define MAX_EXPOSURE_SAME_COUNT 20
 
 static DeviceManager* deviceManager = nullptr;
 static CameraManager* cameraManager = nullptr;
@@ -491,6 +494,56 @@ CancelCapture(HANDLE hCamera, IMAGEINFO* info)
     return ERROR_SUCCESS;
 }
 
+std::list<DWORD>
+GetAvailableExposureTimes(HANDLE hCamera, Camera* camera)
+{
+
+    PROPERTYVALUE exposureValue;
+    std::list<DWORD> exposures;
+
+    SetExposureTime(hCamera, 0.0, &exposureValue);
+
+    exposures.push_back(exposureValue.value);
+
+    short repeatCount = 0;
+    bool done = false;
+    DWORD exposure = 0;
+    DWORD lastExposure = 0;
+
+    do
+    {
+        SetPropertyValue(hCamera, (DWORD)Property::ShutterSpeed, 1);
+        repeatCount = 0;
+
+        do
+        {
+            Sleep(50);
+            CameraSettings* cs = camera->GetSettings(true);
+            CameraProperty* p = cs->GetProperty(Property::ShutterSpeed);
+            exposure = p->GetCurrentValue()->GetUINT32();
+            repeatCount++;
+        } while (exposure == lastExposure && repeatCount < 50);
+
+        if (exposure == lastExposure)
+        {
+            done = true;
+        }
+        else
+        {
+            exposures.push_back(exposure);
+            lastExposure = exposure;
+        }
+    } while (!done);
+
+    // Print list of exposure times
+    for (std::list<DWORD>::iterator it = exposures.begin(); it != exposures.end(); it++)
+    {
+        LOGINFO(L"Got an exposure time of %d here", *it);
+    }
+
+    return exposures;
+}
+
 HRESULT
 GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
 {
@@ -508,6 +561,36 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
             result = ERROR_SUCCESS;
 
             DeviceInfo* deviceInfo = camera->GetDeviceInfo(false);
+            std::wostringstream builder;
+
+            builder << L"Cameras\\" << camera->GetDevice()->GetRegistryPath();
+
+            std::wstring cameraPath = builder.str();
+
+            registry.Open();
+
+            if (deviceInfo->GetExposureTimes().empty() && (flags & INFOFLAG_INCLUDE_EXPOSURE_TIMES))
+            {
+                std::list<DWORD> exposureTimes = GetAvailableExposureTimes(hCamera, camera);
+
+                // Generate a string with all values as CSV
+                std::wostringstream regString;
+
+                for (std::list<DWORD>::iterator it = exposureTimes.begin(); it != exposureTimes.end(); it++)
+                {
+                    regString << *it << L",";
+                }
+
+                // Trim off trailing ","
+                std::wstring v = regString.str();
+
+                if (v.back() == L',')
+                {
+                    v.pop_back();
+                }
+
+                registry.SetString(cameraPath, L"Exposure Times", v);
+            }
 
             if (deviceInfo->GetPreviewXResolution() == 0 || deviceInfo->GetPreviewYResolution() == 0
                 || deviceInfo->GetSensorXResolution() == 0 || deviceInfo->GetSensorYResolution() == 0
@@ -518,13 +601,7 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
 
                 if (flags & INFOFLAG_ACTIVE)
                 {
-                    std::wostringstream builder;
                     bool previewNeeded = deviceInfo->GetPreviewXResolution() == 0 || deviceInfo->GetPreviewYResolution() == 0;
-
-                    builder << L"Cameras\\" << camera->GetDevice()->GetRegistryPath();
-
-                    registry.Open();
-                    std::wstring cameraPath = builder.str();
 
                     if (previewNeeded)
                     {
@@ -563,55 +640,8 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
 
                         memset((BYTE*)&iinfo, 0, sizeof(iinfo));
 
-                        // Get current settings, so we can set exposure back after we're done
-                        CameraSettings* cs = camera->GetSettings(true);
-                        CameraProperty* p = cs->GetProperty(Property::ShutterSpeed);
-                        std::wstring saved = p->AsString();
-                        UINT32 exposure = p->GetCurrentValue()->GetUINT32();
-
-                        double exp;
-
-                        switch (exposure)
-                        {
-                        case 0x00000000:
-                            // BULB
-                        case 0xffffffff:
-                            // AUTO
-                            exp = 1.0;
-                            break;
-
-                        default:
-                            exp = ((exposure & 0xffff0000) >> 16) / (double)(exposure & 0x0000ffff);
-                            break;
-                        }
-
-                        UINT32 newExposure = exposure;
-
-                        // Only mess with exposure time if it is currently > 1 second
-                        if (exp > 5.0)
-                        {
-                            // Keep shortening exposure until we get to a point where it doesn't change
-                            bool done = false;
-
-                            LOGINFO(L"Setting exposure to no more than 2 seconds");
-
-                            do
-                            {
-                                camera->SetProperty(Property::ShutterSpeed, new PropertyValue((UINT32)0x00010001));
-                                Sleep(1000);
-                                CameraSettings* cs = camera->GetSettings(true);
-                                PropertyValue* pv = cs->GetPropertyValue(Property::ShutterSpeed);
-                                UINT32 exposure2 = pv->GetUINT32();
-                                double exp2 = exposure2 > 0 ? ((exposure2 & 0xffff0000) >> 16) / (double)(exposure2 & 0x0000ffff) : DBL_MIN;
-
-                                done = (exp2 <= 5.0);
-
-                                newExposure = exposure2;
-                            } while (!done);
-                        }
-
-                        // Take a shot
-                        camera->StartCapture(newExposure > 0 ? ((newExposure & 0xffff0000) >> 16) / (double)(newExposure & 0x0000ffff) : 0.0, OutputMode::RGGB, 0);
+                        // We should be on fastest exposure time, which is perfect for the test shot
+                        camera->StartCapture(0.1, OutputMode::RGGB, 0);
 
                         bool done = false;
                         Image* image = nullptr;
@@ -647,33 +677,15 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
                                 break;
                             }
                         }
-
-                        // Set exposure time back
-                        if (exposure != newExposure)
-                        {
-                            LOGINFO(L"Setting exposure to prior value - %s", saved.c_str());
-
-                            // Keep lengthening exposure until we get to a point where it matches the saved one
-                            bool done = false;
-
-                            do
-                            {
-                                camera->SetProperty(Property::ShutterSpeed, new PropertyValue((UINT32)0x0001ffff));
-                                Sleep(1000);
-                                CameraSettings* cs = camera->GetSettings(true);
-                                PropertyValue* pv = cs->GetPropertyValue(Property::ShutterSpeed);
-
-                                done = (pv->GetUINT32() == exposure);
-                            } while (!done);
-                        }
                     }
-
-                    registry.Close();
-
-                    // Fetch updated
-                    deviceInfo = camera->GetDeviceInfo(true);
                 }
             }
+
+            registry.Close();
+
+            // Fetch updated
+            deviceInfo = camera->GetDeviceInfo(true);
+            camera->GetSettings(true);
 
             info->flags = 0;
             info->flags |= deviceInfo->GetSupportsLiveview() ? CAMERAFLAGS_SUPPORTS_LIVEVIEW : 0;
@@ -782,6 +794,7 @@ RefreshPropertyList(HANDLE hCamera)
 
     return ERROR_SUCCESS;
 }
+
 HRESULT
 GetPropertyList(HANDLE hCamera, DWORD* list, DWORD* listSize)
 {
@@ -945,13 +958,15 @@ GetPropertyValueOptions(HANDLE hCamera, DWORD propertyId, PROPERTYVALUEOPTION* o
                         return ERROR_RETRY;
                     }
 
+                    CameraPropertyFactory f;
+                    CameraProperty* p = f.Create((Property)propertyId);
                     std::list<PropertyValue*> en = info->GetEnumeration();
                     PROPERTYVALUEOPTION* option = options;
 
                     for (std::list<PropertyValue*>::iterator it = en.begin(); it != en.end(); it++)
                     {
                         PropertyValue* v = *it;
-                        option->name = exportString(v->ToString());
+                        option->name = exportString(p->AsString(v));
 
                         switch (v->GetType())
                         {
@@ -986,6 +1001,8 @@ GetPropertyValueOptions(HANDLE hCamera, DWORD propertyId, PROPERTYVALUEOPTION* o
 
                         option++;
                     }
+
+                    delete p;
                 }
             }
 
@@ -1153,45 +1170,181 @@ GetAllPropertyValues(HANDLE hCamera, PROPERTYVALUE* values, DWORD* count)
     return ERROR_SUCCESS;
 }
 
+float
+ExposureDWORDToFloat(DWORD exposure, float bulbValue)
+{
+    DWORD num = 0;
+    DWORD den = 0;
+    float result = 0.0;
+
+    num = (exposure & 0xffff0000) >> 16;
+    den = exposure & 0x0000ffff;
+
+    switch (num)
+    {
+    case 0:
+        result = bulbValue;
+        break;
+
+    default:
+        result = (float)num / (float)den;
+        break;
+    }
+
+    return round(result * 100000) / 100000;
+}
+
+HRESULT
+SetExposureTime(HANDLE hCamera, float desired, PROPERTYVALUE* valueOut)
+{
+    Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
+    Property propertyId = Property::ShutterSpeed;
+
+    if (!camera)
+    {
+        return ERROR_INVALID_HANDLE;
+    }
+
+    try
+    {
+        Locker lock(camera);
+
+        CameraSettings* cs = nullptr;
+        CameraProperty* v = nullptr;
+        DWORD currentExposure = 0;
+        float lastRead = -9e9;
+        float current = 0.0;
+        std::list<DWORD> exposureTimes = camera->GetDeviceInfo(false)->GetExposureTimes();
+        short sameCount = 0;
+        float longestNonBulb = 0.0;
+
+        if (exposureTimes.empty())
+        {
+            longestNonBulb = 30.0;
+        }
+        else
+        {
+            std::list<DWORD>::iterator i = exposureTimes.begin();
+
+            i++;
+            longestNonBulb = ExposureDWORDToFloat(*i, 9e9);
+        }
+
+        desired = desired == 0.0 ? 9e9 : round(desired * 100000) / 100000;
+
+        if (desired > longestNonBulb)
+        {
+            desired = 9e9;
+        }
+
+        do
+        {
+            cs = camera->GetSettings(true);
+            v = cs->GetProperty(propertyId);
+
+            if (v)
+            {
+                RenderProperty(propertyId, v, valueOut);
+
+                currentExposure = valueOut->value;
+                current = ExposureDWORDToFloat(currentExposure, 9e9);
+
+                LOGINFO(L"Setting exposure time to %f, current = %f (%s)", desired, current, valueOut->text);
+
+                if (current == lastRead)
+                {
+                    sameCount++;
+                    LOGTRACE(L"Unchanged...");
+                    Sleep(100);
+                }
+                else
+                {
+                    LOGINFO(L"Changed from %f to %f", lastRead, current);
+
+                    sameCount = 0;
+                    lastRead = current;
+
+                    if (lastRead == desired)
+                    {
+                        // Already set
+                        LOGINFO(L"At desired exposure time");
+
+                        return ERROR_SUCCESS;
+                    }
+                    else
+                    {
+                        // Do we need to go faster or slower?
+                        DWORD direction = (lastRead > desired) ? 1 : -1;
+                        LOGINFO(L"Still need to tweak %d", direction);
+
+                        // If we jump to next value, will we be closer to desired value?
+                        // (this avoids situation where someone asks for 19.9" exposure and it jumps back and forth from 20" to 15"
+                        auto it = std::find(exposureTimes.begin(), exposureTimes.end(), currentExposure);
+
+                        float next = 0.0;
+
+                        if (!exposureTimes.empty())
+                        {
+                            if (direction == 1)
+                            {
+                                it++;
+                            }
+                            else
+                            {
+                                if (it == exposureTimes.begin())
+                                {
+                                    LOGINFO(L"At slowest exposure");
+
+                                    return ERROR_SUCCESS;
+                                }
+
+                                it--;
+                            }
+
+                            if (it == exposureTimes.end())
+                            {
+                                LOGINFO(L"At fastest exposure %f", lastRead);
+
+                                return ERROR_SUCCESS;
+                            }
+
+                            next = ExposureDWORDToFloat(*it, 9e9);
+                        }
+
+                        float nextDiff = abs(lastRead - next);
+                        float desiredDiff = abs(lastRead - desired);
+
+                        if (nextDiff > desiredDiff)
+                        {
+                            LOGINFO(L"As close as possible to %f (at %f)", desired, lastRead);
+
+                            return ERROR_SUCCESS;
+                        }
+
+                        SetPropertyValue(hCamera, (DWORD)propertyId, direction);
+                    }
+                }
+            }
+            else
+            {
+                return ERROR_NOT_FOUND;
+            }
+        } while (lastRead != desired && sameCount < MAX_EXPOSURE_SAME_COUNT);
+
+        return ERROR_SUCCESS;
+    }
+    catch (CameraException& gfe)
+    {
+        LOGERROR(L"Exception getting single property: %s", gfe.GetMessage().c_str());
+    }
+
+    return ERROR_CAN_NOT_COMPLETE;
+}
+
 HRESULT
 TestFunc(HANDLE hCamera)
 {
     LOGERROR(L"Test log file by writing an error");
 
-    /*
-//    LOGTRACE(L"In: TestFunc(x%08x)", hCamera);
-
-    Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
-//    static CameraSettings* last = nullptr;
-
-    CameraSettings* cs = camera->GetSettings(true);
-
-//    if (last)
-//    {
-        std::list<CameraProperty*> properties = cs->GetProperties();
-
-        for (std::list<CameraProperty*>::iterator it = properties.begin(); it != properties.end(); it++)
-        {
-            CameraProperty* curr = *it;
-//            CameraProperty* prev = last->GetProperty(curr->GetId());
-
-//            if (!curr->equals(*prev))
-//            {
-//                LOGTRACE(L"Property updated: %s ==> %s", prev->AsString().c_str(), curr->AsString().c_str());
-                LOGTRACE(L"%s", curr->ToString().c_str());
-                //            }
-        }
-//    }
-
-//    // For next time thru
-//    if (last)
-//    {
-//        delete last;
-//    }
-
-//    last = new CameraSettings(*cs);
-
-//    LOGTRACE(L"Out: TestFunc(x%08x)", hCamera);
-*/
     return ERROR_SUCCESS;
 }

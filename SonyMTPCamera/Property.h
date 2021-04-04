@@ -122,6 +122,8 @@ enum class Property {
     //Button                    = 0xd2d3,
     //Button                    = 0xd2d4,
     //Button                    = 0xd2d9, // ?? set AWBL?  (1 off, 2 on)
+
+    PossibleExposureTimes       = 0xffff,
 };
 
 // ObjectAdded

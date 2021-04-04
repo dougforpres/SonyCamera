@@ -3,6 +3,7 @@
 #include "Registry.h"
 #include "Logger.h"
 #include "CameraException.h"
+#include <iostream>
 
 #define THREAD_WAIT_EXIT_LOOPS 20
 #define THREAD_WAIT_EXIT_SLEEP 100
@@ -121,7 +122,47 @@ Camera::GetDeviceInfo(bool refresh)
 PropertyInfoMap
 Camera::GetSupportedProperties()
 {
-    return m_propertyInfos;
+    PropertyInfoMap result;
+
+    std::list<CameraProperty*> properties = m_settings->GetProperties();
+
+    for (std::list<CameraProperty*>::iterator it = properties.begin(); it != properties.end(); it++)
+    {
+        result.insert(std::pair<Property, PropertyInfo*>((*it)->GetId(), new PropertyInfo(*(*it)->GetInfo())));
+        LOGDEBUG(L"Added new property: %s", (*it)->ToString().c_str());
+    }
+
+    return result;
+}
+
+void
+Camera::LoadFakeProperties(CameraSettings* settings)
+{
+    // Add Magic infos
+    CameraPropertyFactory f;
+
+    CameraProperty* p = f.Create(Property::PossibleExposureTimes);
+
+    p->SetCurrentValue(new PropertyValue(0));
+
+    PropertyInfo* inf = p->GetInfo();
+
+    inf->SetDefault(new PropertyValue((UINT32)0));
+    inf->SetId(Property::PossibleExposureTimes);
+    inf->SetType(DataType::UINT32);
+    inf->SetFormMode(FormMode::ENUMERATION);
+
+    std::list<PropertyValue*> values;
+    std::list<DWORD> et = GetDeviceInfo(false)->GetExposureTimes();
+
+    for (std::list<DWORD>::iterator ei = et.begin(); ei != et.end(); ei++)
+    {
+        values.push_back(new PropertyValue((UINT32)*ei));
+    }
+
+    inf->SetEnumeration(values);
+
+    settings->AddProperty(p);
 }
 
 Device *
@@ -162,6 +203,16 @@ Camera::ProcessDeviceInfoOverrides()
     d->SetTopCrop(registry.GetDWORD(cameraPath, L"Crop Top", d->GetTopCrop()));
     d->SetBottomCrop(registry.GetDWORD(cameraPath, L"Crop Bottom", d->GetBottomCrop()));
     d->SetButtonPropertiesInverted((bool)registry.GetDWORD(cameraPath, L"Button Properties Inverted", d->GetButtonPropertiesInverted()));
+
+    std::wistringstream exposureTimes(registry.GetString(cameraPath, L"Exposure Times", L""));
+    std::list<DWORD> times;
+    std::wstring s;
+
+    while (std::getline(exposureTimes, s, L',')) {
+        times.push_back(_wtoi(s.c_str()));
+    }
+
+    d->SetExposureTimes(times);
 
     registry.Close();
 

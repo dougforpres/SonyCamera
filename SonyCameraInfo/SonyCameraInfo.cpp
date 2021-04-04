@@ -6,6 +6,8 @@
 #include <sstream>
 #include "SonyMTPCamera.h"
 
+typedef void (*F)(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int value);
+
 bool
 ensureShutterSpeed(HANDLE hCamera)
 {
@@ -249,294 +251,224 @@ checkLogging()
 }
 
 void
-checkCrop()
+checkCrop(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int value)
 {
-    std::cout << "Enumerating connected devices...";
+    DEVICEINFO deviceInfo;
 
-    HRESULT comhr = CoInitialize(nullptr);
+    memset(&deviceInfo, 0, sizeof(DEVICEINFO));
 
-    int portableDeviceCount = GetPortableDeviceCount();
+    deviceInfo.version = 1;
 
-    std::cout << portableDeviceCount << " portable devices found\n\n";
-    PORTABLEDEVICEINFO pdinfo;
+    HRESULT hr = GetDeviceInfo(deviceId, &deviceInfo);
 
-    for (int p = 0; p < portableDeviceCount; p++)
+    if (hr == ERROR_SUCCESS)
     {
-        std::cout << "--------------------------------------\nDevice #" << p + 1 << "\n";
-        memset(&pdinfo, 0, sizeof(pdinfo));
-
-        if (GetPortableDeviceInfo(p, &pdinfo) == ERROR_SUCCESS)
-        {
-            std::wcout << L"  Manufacturer: " << pdinfo.manufacturer << L"\n";
-            std::wcout << L"  Model:        " << pdinfo.model << L"\n";
-            std::wcout << L"  Connection:   ";
-
-            try
-            {
-                HANDLE hCamera = OpenDeviceEx(pdinfo.id, OPENDEVICEEX_OPEN_ANY_DEVICE);
-
-                if (hCamera != INVALID_HANDLE_VALUE)
-                {
-                    // If we were able to open the device that is a super great start
-                    std::wcout << L"Connected\n";
-
-                    DEVICEINFO deviceInfo;
-
-                    memset(&deviceInfo, 0, sizeof(DEVICEINFO));
-
-                    deviceInfo.version = 1;
-
-                    HRESULT hr = GetDeviceInfo(p, &deviceInfo);
-
-                    if (hr == ERROR_SUCCESS)
-                    {
-                        std::wcout << L"  Crop Mode:    " << deviceInfo.cropMode << "\n";
-                    }
-                    else
-                    {
-                        std::wcout << L"Failed getting device info - error " << hr << L"\n";
-                    }
-
-                    CloseDevice(hCamera);
-                }
-                else
-                {
-                    std::wcout << L"Unable to open device\n";
-                }
-            }
-            catch (...)
-            {
-                std::wcout << L"Failed connecting/negotiating with device\n";
-            }
-        }
+        std::wcout << L"  Crop Mode:    " << deviceInfo.cropMode << "\n";
     }
-
-    CoUninitialize();
+    else
+    {
+        std::wcout << L"Failed getting device info - error " << hr << L"\n";
+    }
 }
 
 void
-setCrop(short cropMode)
+setCrop(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int cropMode)
 {
-    std::cout << "Enumerating connected devices...";
+    DEVICEINFO deviceInfo;
 
-    HRESULT comhr = CoInitialize(nullptr);
+    memset(&deviceInfo, 0, sizeof(DEVICEINFO));
 
-    int portableDeviceCount = GetPortableDeviceCount();
+    deviceInfo.version = 1;
 
-    std::cout << portableDeviceCount << " portable devices found\n\n";
-    PORTABLEDEVICEINFO pdinfo;
+    HRESULT hr = GetDeviceInfo(deviceId, &deviceInfo);
 
-    for (int p = 0; p < portableDeviceCount; p++)
+    if (hr == ERROR_SUCCESS)
     {
-        std::cout << "--------------------------------------\nDevice #" << p + 1 << "\n";
-        memset(&pdinfo, 0, sizeof(pdinfo));
+        std::wcout << L"  Existing Crop Mode:   " << deviceInfo.cropMode << "\n";
 
-        if (GetPortableDeviceInfo(p, &pdinfo) == ERROR_SUCCESS)
+        if (deviceInfo.cropMode == (DWORD)cropMode)
         {
-            std::wcout << L"  Manufacturer:         " << pdinfo.manufacturer << L"\n";
-            std::wcout << L"  Model:                " << pdinfo.model << L"\n";
-            std::wcout << L"  Connection:           ";
+            std::wcout << L"  Not updating, already set to desired value\n";
+        }
+        else
+        {
+            HKEY key;
+            std::wostringstream builder;
 
-            try
+            builder << L"Software\\Retro.kiwi\\SonyMTPCamera.dll\\Cameras\\" << pdinfo->devicePath;
+
+            if (RegCreateKeyEx(HKEY_CURRENT_USER, builder.str().c_str(), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &key, NULL) == ERROR_SUCCESS)
             {
-                HANDLE hCamera = OpenDeviceEx(pdinfo.id, OPENDEVICEEX_OPEN_ANY_DEVICE);
+                // Set Log Level
+                DWORD dword = (DWORD)cropMode;
+                DWORD dataSize = sizeof(DWORD);
 
-                if (hCamera != INVALID_HANDLE_VALUE)
+                LSTATUS regresult = RegSetValueEx(key, L"Crop Mode", 0, REG_DWORD, (BYTE*)&dword, sizeof(DWORD));
+
+                if (regresult == ERROR_SUCCESS)
                 {
-                    // If we were able to open the device that is a super great start
-                    std::wcout << L"Connected\n";
-
-                    DEVICEINFO deviceInfo;
-
-                    memset(&deviceInfo, 0, sizeof(DEVICEINFO));
-
-                    deviceInfo.version = 1;
-
-                    HRESULT hr = GetDeviceInfo(p, &deviceInfo);
-
-                    if (hr == ERROR_SUCCESS)
-                    {
-                        std::wcout << L"  Existing Crop Mode:   " << deviceInfo.cropMode << "\n";
-
-                        if (deviceInfo.cropMode == (DWORD)cropMode)
-                        {
-                            std::wcout << L"  Not updating, already set to desired value\n";
-                        }
-                        else
-                        {
-                            HKEY key;
-                            std::wostringstream builder;
-
-                            builder << L"Software\\Retro.kiwi\\SonyMTPCamera.dll\\Cameras\\" << pdinfo.devicePath;
-
-                            if (RegCreateKeyEx(HKEY_CURRENT_USER, builder.str().c_str(), 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &key, NULL) == ERROR_SUCCESS)
-                            {
-                                // Set Log Level
-                                DWORD dword = (DWORD)cropMode;
-                                DWORD dataSize = sizeof(DWORD);
-
-                                LSTATUS regresult = RegSetValueEx(key, L"Crop Mode", 0, REG_DWORD, (BYTE*)&dword, sizeof(DWORD));
-
-                                if (regresult == ERROR_SUCCESS)
-                                {
-                                    std::wcout << L"  New Crop Mode:        " << dword << L"\n";
-                                }
-                                else
-                                {
-                                    std::wcerr << L"Debug level could not be set\n";
-                                }
-
-                                RegCloseKey(key);
-                            }
-                            else
-                            {
-                                std::wcerr << L"Unable to update crop mode\n";
-                            }
-                        }
-                    }
-                    else
-                    {
-                        std::wcout << L"Failed getting device info - error " << hr << L"\n";
-                    }
-
-                    CloseDevice(hCamera);
+                    std::wcout << L"  New Crop Mode:        " << dword << L"\n";
                 }
                 else
                 {
-                    std::wcout << L"Unable to open device\n";
+                    std::wcerr << L"Debug level could not be set\n";
                 }
+
+                RegCloseKey(key);
             }
-            catch (...)
+            else
             {
-                std::wcout << L"Failed connecting/negotiating with device\n";
+                std::wcerr << L"Unable to update crop mode\n";
             }
         }
     }
-
-    CoUninitialize();
+    else
+    {
+        std::wcout << L"Failed getting device info - error " << hr << L"\n";
+    }
 }
 
 void
 printHelp()
 {
-    std::wcout << L"\n/h        Print this help\n/s        Scan for connected cameras (default)\n/l        List supported cameras\n/d        Show debug setting (see /d[0-5] to set)\n/c        Show crop setting for connected cameras\n";
+    std::wcout << L"\n/h        Print this help\n/s        Scan for connected cameras (default)\n/l        List supported cameras\n/d        Show debug setting (see /d[0-5] to set)\n/c        Show crop setting for connected cameras\n/e        Show list of exposure times supported by device\n";
     std::wcout << L"/c[0-2]   Change crop-mode of images for connected cameras\n          0 = No Crop (all pixels)\n          1 = Auto Crop (To what image editing apps would see)\n          2 = User Crop (Manual, requires registry editing)\n";
     std::wcout << L"/d[0-5]   Change debug logging of driver\n          0 = Off (no logging)\n          1 = Log everything\n          ...\n          5 = Errors Only\n          Note that this option will write debugging to a file called\n          'sonycamera.txt' that will appear on your desktop\n";
 }
 
 void
-performScan()
+printExposureTimes(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortForm)
 {
-    std::cout << "Enumerating connected devices...";
+    PROPERTYVALUEOPTION* options = nullptr;
+    DWORD count = 0;
 
-    HRESULT comhr = CoInitialize(nullptr);
+    // Ask how many options there are
+    HRESULT hr = GetPropertyValueOptions(hCamera, 0xffff, options, &count);
 
-    int portableDeviceCount = GetPortableDeviceCount();
-
-    std::cout << portableDeviceCount << " portable devices found\n\n";
-    PORTABLEDEVICEINFO pdinfo;
-
-    for (int p = 0; p < portableDeviceCount; p++)
+    if (hr != ERROR_RETRY)
     {
-        std::cout << "--------------------------------------\nDevice #" << p + 1 << "\n";
-        memset(&pdinfo, 0, sizeof(pdinfo));
+        std::cerr << "Error reading number of options " << hr;
+    }
 
-        if (GetPortableDeviceInfo(p, &pdinfo) == ERROR_SUCCESS)
+    if (count > 0)
+    {
+        options = new PROPERTYVALUEOPTION[count];
+
+        hr = GetPropertyValueOptions(hCamera, 0xffff, options, &count);
+
+        if (hr != ERROR_SUCCESS)
         {
-            std::wcout << L"  Manufacturer: " << pdinfo.manufacturer << L"\n";
-            std::wcout << L"  Model:        " << pdinfo.model << L"\n";
-            std::wcout << L"  Connection:   ";
+            std::cerr << "Error reading number of options " << hr;
+        }
 
-            try
+        std::wcout << "   Available Exposure Times:" << std::endl;
+        
+        if (shortForm)
+        {
+            std::wcout << "     ";
+        }
+
+        int c = 0;
+
+        for (int i = 0; i < count; i++)
+        {
+            PROPERTYVALUEOPTION opt = options[i];
+
+            if (shortForm)
             {
-                HANDLE hCamera = OpenDeviceEx(pdinfo.id, OPENDEVICEEX_OPEN_ANY_DEVICE);
+                c++;
+                std::wcout << opt.value << L", ";
 
-                if (hCamera != INVALID_HANDLE_VALUE)
+                if (c > 9)
                 {
-                    // If we were able to open the device that is a super great start
-                    std::wcout << L"Connected\n";
-                    std::wcout << L"  Get Info:\n";
+                    std::wcout << std::endl << "     ";;
+                    c = 0;
+                }
+            }
+            else
+            {
+                std::wcout << L"    " << i + 1 << L" - " << opt.name << L" (" << opt.value << L")" << std::endl;
+            }
+        }
 
-                    CAMERAINFO cameraInfo;
-                    HRESULT hr = GetCameraInfo(hCamera, &cameraInfo, 0);
+        std::wcout << std::endl;
+    }
+}
 
-                    if (hr == ERROR_SUCCESS)
-                    {
-                        if (cameraInfo.imageWidthPixels == 0 || cameraInfo.imageHeightPixels == 0
-                            || cameraInfo.imageWidthCroppedPixels == 0 || cameraInfo.imageHeightCroppedPixels == 0
-                            || cameraInfo.previewWidthPixels == 0 || cameraInfo.previewHeightPixels == 0)
-                        {
-                            std::wcout << L" - attempt to determine image resolution...";
+void
+performScan(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortForm)
+{
+    std::wcout << L"  Get Info:\n";
+    std::wcout << L"  Note: This first part could take up to 1-2 minutes as I need to find out what exposure times\n  your camera supports.  This entails scanning from BULB mode to the fastest exposure available.\n";
+    std::wcout << L"  You may see the exposure time value on the camera changing during this time.\n";
+    std::wcout << L"\n  ** PLEASE DO NOT INTERACT WITH THE CAMERA UNTIL DONE **\n\n";
 
-                            bool shutterSpeedSet = ensureShutterSpeed(hCamera);
-                            bool storageModeOk = ensureStorageMode(hCamera);
+    CAMERAINFO cameraInfo;
+    HRESULT hr = GetCameraInfo(hCamera, &cameraInfo, INFOFLAG_INCLUDE_EXPOSURE_TIMES);
 
-                            if (shutterSpeedSet && storageModeOk)
-                            {
-                                std::wcout << L"\n    Asking camera to take test shots (1 x preview, 1 x full-resolution)...";
+    if (hr == ERROR_SUCCESS)
+    {
+        if (cameraInfo.imageWidthPixels == 0 || cameraInfo.imageHeightPixels == 0
+            || cameraInfo.imageWidthCroppedPixels == 0 || cameraInfo.imageHeightCroppedPixels == 0
+            || cameraInfo.previewWidthPixels == 0 || cameraInfo.previewHeightPixels == 0)
+        {
+            std::wcout << L" - attempt to determine image resolution...";
 
-                                hr = GetCameraInfo(hCamera, &cameraInfo, 1);
+            bool shutterSpeedSet = ensureShutterSpeed(hCamera);
+            bool storageModeOk = ensureStorageMode(hCamera);
 
-                                if (hr == ERROR_SUCCESS)
-                                {
-                                    std::wcout << L"\n\nPlease email the following info to: retrodotkiwi@gmail.com\n\n";
-                                    std::wcout << L"   Manufacturer:                     " << pdinfo.manufacturer << "\n";
-                                    std::wcout << L"   Model:                            " << pdinfo.model << "\n";
-                                    std::wcout << L"   Device Path:                      " << pdinfo.devicePath << "\n";
-                                    std::wcout << L"   Preview image width:              " << cameraInfo.previewWidthPixels << "px\n";
-                                    std::wcout << L"   Preview image height:             " << cameraInfo.previewHeightPixels << "px\n";
-                                    std::wcout << L"   Full-size image width:            " << cameraInfo.imageWidthPixels << "px\n";
-                                    std::wcout << L"   Full-size image height:           " << cameraInfo.imageHeightPixels << "px\n";
-                                    std::wcout << L"   Full-size image width (Cropped):  " << cameraInfo.imageWidthCroppedPixels << "px\n";
-                                    std::wcout << L"   Full-size image height (Cropped): " << cameraInfo.imageHeightCroppedPixels << "px\n";
-                                }
-                                else
-                                {
-                                    std::wcout << L"Error taking test photos - error " << hr << L"\n";
-                                }
-                            }
-                        }
-                        else
-                        {
-                            // Already detected
-                            if (cameraInfo.pixelWidth == 0.0 || cameraInfo.pixelHeight == 0.0)
-                            {
-                                std::wcout << L"Currently unknown device: ";
+            if (shutterSpeedSet && storageModeOk)
+            {
+                std::wcout << L"\n    Asking camera to take test shots (1 x preview, 1 x full-resolution)...";
 
-                                std::wcout << L"\n\nPlease email the following info to: retrodotkiwi@gmail.com\n\n";
-                            }
+                hr = GetCameraInfo(hCamera, &cameraInfo, 1);
 
-                            std::wcout << L"   Manufacturer:                     " << pdinfo.manufacturer << "\n";
-                            std::wcout << L"   Model:                            " << pdinfo.model << "\n";
-                            std::wcout << L"   Device Path:                      " << pdinfo.devicePath << "\n";
-                            std::wcout << L"   Preview image width:              " << cameraInfo.previewWidthPixels << "px\n";
-                            std::wcout << L"   Preview image height:             " << cameraInfo.previewHeightPixels << "px\n";
-                            std::wcout << L"   Full-size image width:            " << cameraInfo.imageWidthPixels << "px\n";
-                            std::wcout << L"   Full-size image height:           " << cameraInfo.imageHeightPixels << "px\n";
-                            std::wcout << L"   Full-size image width (Cropped):  " << cameraInfo.imageWidthCroppedPixels << "px\n";
-                            std::wcout << L"   Full-size image height (Cropped): " << cameraInfo.imageHeightCroppedPixels << "px\n";
-                        }
-                    }
-                    else
-                    {
-                        std::wcout << L"Failed getting camera info - error " << hr << L"\n";
-                    }
-
-                    CloseDevice(hCamera);
+                if (hr == ERROR_SUCCESS)
+                {
+                    std::wcout << L"\n\nPlease email the following info to: retrodotkiwi@gmail.com\n\n";
+                    std::wcout << L"   Manufacturer:                     " << pdinfo->manufacturer << "\n";
+                    std::wcout << L"   Model:                            " << pdinfo->model << "\n";
+                    std::wcout << L"   Device Path:                      " << pdinfo->devicePath << "\n";
+                    std::wcout << L"   Preview image width:              " << cameraInfo.previewWidthPixels << "px\n";
+                    std::wcout << L"   Preview image height:             " << cameraInfo.previewHeightPixels << "px\n";
+                    std::wcout << L"   Full-size image width:            " << cameraInfo.imageWidthPixels << "px\n";
+                    std::wcout << L"   Full-size image height:           " << cameraInfo.imageHeightPixels << "px\n";
+                    std::wcout << L"   Full-size image width (Cropped):  " << cameraInfo.imageWidthCroppedPixels << "px\n";
+                    std::wcout << L"   Full-size image height (Cropped): " << cameraInfo.imageHeightCroppedPixels << "px\n";
                 }
                 else
                 {
-                    std::wcout << L"Unable to open device\n";
+                    std::wcout << L"Error taking test photos - error " << hr << L"\n";
                 }
             }
-            catch (...)
+        }
+        else
+        {
+            // Already detected
+            if (cameraInfo.pixelWidth == 0.0 || cameraInfo.pixelHeight == 0.0)
             {
-                std::wcout << L"Failed connecting/negotiating with device\n";
+                std::wcout << L"Currently unknown device: ";
+
+                std::wcout << L"\n\nPlease email the following info to: retrodotkiwi@gmail.com\n\n";
             }
+
+            std::wcout << L"   Manufacturer:                     " << pdinfo->manufacturer << "\n";
+            std::wcout << L"   Model:                            " << pdinfo->model << "\n";
+            std::wcout << L"   Device Path:                      " << pdinfo->devicePath << "\n";
+            std::wcout << L"   Preview image width:              " << cameraInfo.previewWidthPixels << "px\n";
+            std::wcout << L"   Preview image height:             " << cameraInfo.previewHeightPixels << "px\n";
+            std::wcout << L"   Full-size image width:            " << cameraInfo.imageWidthPixels << "px\n";
+            std::wcout << L"   Full-size image height:           " << cameraInfo.imageHeightPixels << "px\n";
+            std::wcout << L"   Full-size image width (Cropped):  " << cameraInfo.imageWidthCroppedPixels << "px\n";
+            std::wcout << L"   Full-size image height (Cropped): " << cameraInfo.imageHeightCroppedPixels << "px\n";
         }
     }
+    else
+    {
+        std::wcout << L"Failed getting camera info - error " << hr << L"\n";
+    }
 
-    CoUninitialize();
+    printExposureTimes(deviceId, hCamera, pdinfo, 1);
 }
 
 void
@@ -632,10 +564,67 @@ listCameras()
 
             index++;
         } while (enumStatus == ERROR_SUCCESS);
-
     }
 
     RegCloseKey(key);
+}
+
+void
+iterateDevices(std::string message, F func, int value)
+{
+    std::wcout << message.c_str() << std::endl << std::endl;
+
+    HRESULT comhr = CoInitialize(nullptr);
+
+    int portableDeviceCount = GetPortableDeviceCount();
+
+    std::cout << portableDeviceCount << " portable devices found\n\n";
+    PORTABLEDEVICEINFO pdinfo;
+
+    for (int p = 0; p < portableDeviceCount; p++)
+    {
+        std::cout << "--------------------------------------\nDevice #" << p + 1 << "\n";
+        memset(&pdinfo, 0, sizeof(pdinfo));
+
+        if (GetPortableDeviceInfo(p, &pdinfo) == ERROR_SUCCESS)
+        {
+            std::wcout << L"  Manufacturer: " << pdinfo.manufacturer << L"\n";
+            std::wcout << L"  Model:        " << pdinfo.model << L"\n";
+            std::wcout << L"  Connection:   ";
+
+            try
+            {
+                HANDLE hCamera = OpenDeviceEx(pdinfo.id, OPENDEVICEEX_OPEN_ANY_DEVICE);
+
+                if (hCamera != INVALID_HANDLE_VALUE)
+                {
+                    // If we were able to open the device that is a super great start
+                    std::wcout << L"Connected\n";
+
+                    try
+                    {
+                        func(p, hCamera, &pdinfo, value);
+                    }
+                    catch (...)
+                    {
+                        std::wcerr << L"Problem executing task\n";
+                    }
+
+                    CloseDevice(hCamera);
+                }
+                else
+                {
+                    std::wcerr << L"Unable to open device\n";
+                }
+            }
+            catch (...)
+            {
+                std::wcerr << L"Failed connecting/negotiating with device\n";
+            }
+        }
+    }
+
+    CoUninitialize();
 }
 
 int
@@ -646,6 +635,7 @@ main(int argc, char* argv[])
     bool do_help = false;
     bool do_scan = false;
     bool do_list = false;
+    bool do_exposures = false;
     bool do_show_crop = false;
     bool do_show_debug = false;
     bool do_crop = false;
@@ -692,6 +682,12 @@ main(int argc, char* argv[])
                     // Show crop mode
                     option_specified = true;
                     do_show_crop = true;
+                    break;
+
+                case 'e':
+                    // Show exposure values
+                    option_specified = true;
+                    do_exposures = true;
                     break;
 
                 default:
@@ -769,7 +765,7 @@ main(int argc, char* argv[])
 
     if (do_scan)
     {
-        performScan();
+        iterateDevices("Scanning for Cameras", performScan, 0);
     }
 
     if (do_list)
@@ -791,12 +787,17 @@ main(int argc, char* argv[])
 
     if (do_show_crop)
     {
-        checkCrop();
+        iterateDevices("Getting Crop Settings", checkCrop, 0);
     }
 
     if (do_crop)
     {
-        setCrop(crop_option);
+        iterateDevices("Setting Crop", setCrop, crop_option);
+    }
+
+    if (do_exposures)
+    {
+        iterateDevices("Listing supported Exposure times", printExposureTimes, 0);
     }
 
     return ERROR_SUCCESS;

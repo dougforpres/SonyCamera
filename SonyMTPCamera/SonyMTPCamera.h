@@ -5,6 +5,7 @@
 
 #define INFOFLAG_PASSIVE                0x0000
 #define INFOFLAG_ACTIVE                 0x0001
+#define INFOFLAG_INCLUDE_EXPOSURE_TIMES 0x0002
 
 #define PROPERTYVALUE_TYPE_UINT16       0x0004
 #define PROPERTYVALUE_TYPE_UINT32       0x0006
@@ -134,6 +135,7 @@ extern "C" {
     IMPEXP HRESULT GetSinglePropertyValue(HANDLE hCamera, DWORD propertyId, PROPERTYVALUE* value);
     IMPEXP HRESULT GetAllPropertyValues(HANDLE hCamers, PROPERTYVALUE* values, DWORD* count);
     IMPEXP HRESULT SetPropertyValue(HANDLE hCamera, DWORD propertyId, DWORD value);
+    IMPEXP HRESULT SetExposureTime(HANDLE hCamera, float exposureTime, PROPERTYVALUE* valueOut);
 
     // General purpose test function
     IMPEXP HRESULT TestFunc(HANDLE hCamera);

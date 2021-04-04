@@ -15,7 +15,7 @@ CameraProperty::CameraProperty(const CameraProperty& rhs)
 
     if (rhs.m_current)
     {
-        m_current = new PropertyValue(*rhs.m_current);
+        SetCurrentValue(new PropertyValue(*rhs.m_current));
     }
 }
 
@@ -53,52 +53,58 @@ CameraProperty::GetName()
 }
 
 std::wstring
-CameraProperty::AsString()
+CameraProperty::AsString(PropertyValue* value)
 {
     std::wostringstream builder;
 
     switch (m_info->GetType())
     {
     case DataType::INT8:
-        builder << m_current->GetINT8();
+        builder << value->GetINT8();
         break;
 
     case DataType::UINT8:
-        builder << m_current->GetUINT8();
+        builder << value->GetUINT8();
         break;
 
     case DataType::INT16:
-        builder << m_current->GetINT16();
+        builder << value->GetINT16();
         break;
 
     case DataType::UINT16:
-        builder << m_current->GetUINT16();
+        builder << value->GetUINT16();
         break;
 
     case DataType::INT32:
-        builder << m_current->GetINT32();
+        builder << value->GetINT32();
         break;
 
     case DataType::UINT32:
-        builder << m_current->GetUINT32();
+        builder << value->GetUINT32();
         break;
-/*
-    case DataType::INT64:
-        builder << m_current->_INT64;
-        v << m_current->_INT64;
-        break;
+        /*
+            case DataType::INT64:
+                builder << value->_INT64;
+                v << value->_INT64;
+                break;
 
-    case DataType::UINT64:
-        builder << m_current->_UINT64;
-        v << m_current->_UINT64;
-        break;
-        */
+            case DataType::UINT64:
+                builder << value->_UINT64;
+                v << value->_UINT64;
+                break;
+                */
     case DataType::STR:
-        builder << m_current->GetString();
+        builder << value->GetString();
         break;
     }
 
     return builder.str();
+}
+
+std::wstring
+CameraProperty::AsString()
+{
+    return AsString(m_current);
 }
 
 // Debug info
@@ -335,6 +341,12 @@ CameraProperty::GetCurrentValue()
     return m_current;
 }
 
+void
+CameraProperty::SetCurrentValue(PropertyValue* current)
+{
+    m_current = current;
+}
+
 ISOProperty::ISOProperty()
     : CameraProperty()
 {
@@ -342,10 +354,10 @@ ISOProperty::ISOProperty()
 }
 
 std::wstring
-ISOProperty::AsString()
+ISOProperty::AsString(PropertyValue *in)
 {
     std::wostringstream builder;
-    UINT32 value = m_current->GetUINT32();
+    UINT32 value = in->GetUINT32();
 
     if (value != 0x00ffffff)
     {
@@ -366,10 +378,10 @@ ShutterTimingProperty::ShutterTimingProperty()
 }
 
 std::wstring
-ShutterTimingProperty::AsString()
+ShutterTimingProperty::AsString(PropertyValue *in)
 {
     std::wostringstream builder;
-    UINT32 value = m_current->GetUINT32();
+    UINT32 value = in->GetUINT32();
 
     // Shutter
     WORD numerator = (WORD)((value & 0xffff0000) >> 16);
@@ -401,10 +413,10 @@ Div10Property::Div10Property()
 }
 
 std::wstring
-Div10Property::AsString()
+Div10Property::AsString(PropertyValue *in)
 {
     std::wostringstream builder;
-    UINT16 value = m_current->GetUINT16();
+    UINT16 value = in->GetUINT16();
 
     builder << value / 10.0;
 
@@ -418,10 +430,10 @@ Div100Property::Div100Property()
 }
 
 std::wstring
-Div100Property::AsString()
+Div100Property::AsString(PropertyValue *in)
 {
     std::wostringstream builder;
-    UINT16 value = m_current->GetUINT16();
+    UINT16 value = in->GetUINT16();
 
     builder << value / 100.0;
 
@@ -435,10 +447,10 @@ Div1000Property::Div1000Property()
 }
 
 std::wstring
-Div1000Property::AsString()
+Div1000Property::AsString(PropertyValue *in)
 {
     std::wostringstream builder;
-    INT16 value = m_current->GetINT16();
+    INT16 value = in->GetINT16();
 
     builder << value / 1000.0;
 
@@ -452,11 +464,11 @@ PercentageProperty::PercentageProperty()
 }
 
 std::wstring
-PercentageProperty::AsString()
+PercentageProperty::AsString(PropertyValue *in)
 {
     std::wostringstream builder;
 
-    builder << m_current->GetINT8() << L"%";
+    builder << in->GetINT8() << L"%";
 
     return builder.str();
 }
@@ -639,7 +651,7 @@ StringLookupProperty::AddResource(Property property, WORD value, WORD resid)
 }
 
 std::wstring
-StringLookupProperty::AsString()
+StringLookupProperty::AsString(PropertyValue *in)
 {
     // Currently this only works for unsigned 8, 16, 32 bit values
     DWORD lookup = -1;
@@ -648,15 +660,15 @@ StringLookupProperty::AsString()
     switch (m_info->GetType())
     {
     case DataType::UINT8:
-        lookup = (DWORD)m_current->GetUINT8();
+        lookup = (DWORD)in->GetUINT8();
         break;
 
     case DataType::UINT16:
-        lookup = (DWORD)m_current->GetUINT16();
+        lookup = (DWORD)in->GetUINT16();
         break;
 
     case DataType::UINT32:
-        lookup = (DWORD)m_current->GetUINT32();
+        lookup = (DWORD)in->GetUINT32();
         break;
 
     default:
@@ -673,7 +685,7 @@ StringLookupProperty::AsString()
 
         if (result.empty())
         {
-            result = CameraProperty::AsString();
+            result = CameraProperty::AsString(in);
         }
     }
 
@@ -707,6 +719,7 @@ CameraPropertyFactory::CameraPropertyFactory()
     AddCreator(Property::FlashExposureLock, &pCreate<StringLookupProperty>);
     AddCreator(Property::AutoExposureLock, &pCreate<StringLookupProperty>);
     AddCreator(Property::AutoWhileBalanceLock, &pCreate<StringLookupProperty>);
+    AddCreator(Property::PossibleExposureTimes, &pCreate<ShutterTimingProperty>);
 }
 
 void

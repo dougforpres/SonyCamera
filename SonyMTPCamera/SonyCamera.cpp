@@ -148,16 +148,7 @@ SonyCamera::GetSettings(bool refresh)
 
             m_settings = cs;
 
-            if (cs && m_propertyInfos.empty())
-            {
-                std::list<CameraProperty*> properties = cs->GetProperties();
-
-                for (std::list<CameraProperty*>::iterator it = properties.begin(); it != properties.end(); it++)
-                {
-                    m_propertyInfos.insert(std::pair<Property, PropertyInfo*>((*it)->GetId(), new PropertyInfo(*(*it)->GetInfo())));
-                    LOGDEBUG(L"Added new property: %s", (*it)->ToString().c_str());
-                }
-            }
+            LoadFakeProperties(m_settings);
         }
         else
         {

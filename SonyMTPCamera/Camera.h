@@ -74,8 +74,6 @@ public:
         DWORD m_threadId = 0;
         CaptureStatus m_status = CaptureStatus::Created;
         bool m_cancelled = false;
-
-//        static DWORD pseudoHandle;
     };
 
     Camera(Device* device);
@@ -92,6 +90,7 @@ public:
     virtual bool Initialize() = 0;
     virtual Image* GetImage(DWORD imageId);
     virtual CameraSettings* GetSettings(bool refresh) = 0;
+    void LoadFakeProperties(CameraSettings* settings);
     virtual PropertyInfoMap GetSupportedProperties();
 
     bool StartCapture(double duration, OutputMode outputMode, DWORD flags);
@@ -109,7 +108,6 @@ protected:
     DeviceInfo* m_deviceInfo = nullptr;
     Device* m_device = nullptr;
     CameraSettings* m_settings = nullptr;
-    PropertyInfoMap m_propertyInfos;
     CameraSupportedProperties* m_supportedProperties = nullptr;
     CaptureThread* m_captureThread = nullptr;
 
@@ -123,4 +121,3 @@ private:
 //    DWORD m_handlerThreadId = 0;
     bool m_shutdown = false;
 };
-
