@@ -203,7 +203,17 @@ OpenDeviceEx(LPWSTR deviceName, DWORD flags)
             {
                 Locker lock(camera);
 
-                if (!camera->Initialize())
+                if (camera->Initialize())
+                {
+                    // It will be useful to dump a list of camera properties
+                    PropertyInfoMap supportedProperties = camera->GetSupportedProperties();
+
+                    for (std::unordered_map<Property, PropertyInfo*>::iterator it = supportedProperties.begin(); it != supportedProperties.end(); it++)
+                    {
+                        LOGDEBUG(L"Camera property: %s", (*it).second->ToString().c_str());
+                    }
+                }
+                else
                 {
                     LOGERROR(L"Unable to initialize camera");
                     result = INVALID_HANDLE_VALUE;
@@ -494,54 +504,188 @@ CancelCapture(HANDLE hCamera, IMAGEINFO* info)
     return ERROR_SUCCESS;
 }
 
-std::list<DWORD>
-GetAvailableExposureTimes(HANDLE hCamera, Camera* camera)
+bool NudgePropertyAndWait(Camera* camera, CameraProperty* desired, bool up, CameraProperty** inout, int* compareResult)
 {
+    PropertyValue* val = nullptr;;
+    DWORD value = up ? 1 : -1;
 
-    PROPERTYVALUE exposureValue;
-    std::list<DWORD> exposures;
+    // Try to just do it
+    switch (desired->GetInfo()->GetType())
+    {
+    case DataType::INT8:
+        val = new PropertyValue((INT8)value);
+        break;
 
-    SetExposureTime(hCamera, 0.0, &exposureValue);
+    case DataType::INT16:
+        val = new PropertyValue((INT16)value);
+        break;
 
-    exposures.push_back(exposureValue.value);
+    case DataType::INT32:
+        val = new PropertyValue((INT32)value);
+        break;
 
-    short repeatCount = 0;
-    bool done = false;
-    DWORD exposure = 0;
-    DWORD lastExposure = 0;
+    case DataType::UINT8:
+        val = new PropertyValue((UINT8)value);
+        break;
+
+    case DataType::UINT16:
+        val = new PropertyValue((UINT16)value);
+        break;
+
+    case DataType::UINT32:
+        val = new PropertyValue((UINT32)value);
+        break;
+
+    default:
+        throw CameraException(L"Unable to set property, only properties with int/uint 8/16/32 supported");
+    }
+
+    CameraProperty* current = camera->GetSettings(true)->GetProperty(desired->GetId())->Clone();
+
+    // This will nudge the property in hopefully the correct direction
+    camera->SetProperty(desired->GetId(), val);
+
+    // Now wait a bit to see if it updates - wait no more than 2 seconds
+    int count = 0;
+    int changed;
 
     do
     {
-        SetPropertyValue(hCamera, (DWORD)Property::ShutterSpeed, 1);
-        repeatCount = 0;
+        Sleep(50);
+        delete* inout;
+        *inout = camera->GetSettings(true)->GetProperty(desired->GetId())->Clone();
+        changed = (*inout)->Compare(*current);
+        count++;
+    } while (count < 40 && changed == 0);
 
-        do
-        {
-            Sleep(50);
-            CameraSettings* cs = camera->GetSettings(true);
-            CameraProperty* p = cs->GetProperty(Property::ShutterSpeed);
-            exposure = p->GetCurrentValue()->GetUINT32();
-            repeatCount++;
-        } while (exposure == lastExposure && repeatCount < 50);
+    delete current;
 
-        if (exposure == lastExposure)
-        {
-            done = true;
-        }
-        else
-        {
-            exposures.push_back(exposure);
-            lastExposure = exposure;
-        }
-    } while (!done);
+    *compareResult = (*inout)->Compare(*desired);
 
-    // Print list of exposure times
-    for (std::list<DWORD>::iterator it = exposures.begin(); it != exposures.end(); it++)
+    bool upIsBigger = desired->UpIsBigger();
+    bool result = changed != 0 && (changed == (up ? (upIsBigger ? 1 : -1) : (upIsBigger ? -1 : 1)));
+
+    LOGINFO(L"Nudge complete for property x%04x direction %s, compareResult=%d, nudged=%d", desired->GetId(), up ? L"UP" : L"DOWN", *compareResult, result);
+
+    return result;
+}
+
+std::list<DWORD>
+GetAvailablePropertyValues(HANDLE hCamera, Camera* camera, Property propertyId, DWORD startAt, DWORD stopAt)
+{
+    std::list<DWORD> values;
+    PropertyValue* val;
+    PropertyValue* desiredVal;
+    CameraProperty* current = camera->GetSettings(true)->GetProperty(propertyId)->Clone();
+    CameraProperty* desired = current->Clone();
+
+    switch (current->GetInfo()->GetType())
     {
-        LOGINFO(L"Got an exposure time of %d here", *it);
+    case DataType::INT8:
+        desiredVal = new PropertyValue((INT8)stopAt);
+        break;
+
+    case DataType::INT16:
+        desiredVal = new PropertyValue((INT16)stopAt);
+        break;
+
+    case DataType::INT32:
+        desiredVal = new PropertyValue((INT32)stopAt);
+        break;
+
+    case DataType::UINT8:
+        desiredVal = new PropertyValue((UINT8)stopAt);
+        break;
+
+    case DataType::UINT16:
+        desiredVal = new PropertyValue((UINT16)stopAt);
+        break;
+
+    case DataType::UINT32:
+        desiredVal = new PropertyValue((UINT32)stopAt);
+        break;
+
+    default:
+        throw CameraException(L"Unable to set property, only properties with int/uint 8/16/32 supported");
     }
 
-    return exposures;
+    delete current;
+
+    desired->SetCurrentValue(desiredVal);
+
+    // Moves to lowest possible value
+    SetPropertyValue(hCamera, (DWORD)propertyId, startAt);
+
+    current = camera->GetSettings(true)->GetProperty(propertyId)->Clone();
+
+    bool adjusted;
+    int expectedCompareResult = current->Compare(*desired);
+    int compareResult;
+    CameraProperty* inout = nullptr;
+
+    do
+    {
+        val = camera->GetSettings(false)->GetPropertyValue(propertyId);
+
+        switch (current->GetInfo()->GetType())
+        {
+        case DataType::INT8:
+            values.push_back(val->GetINT8());
+            break;
+
+        case DataType::INT16:
+            values.push_back(val->GetINT16());
+            break;
+
+        case DataType::INT32:
+            values.push_back(val->GetINT32());
+            break;
+
+        case DataType::UINT8:
+            values.push_back(val->GetUINT8());
+            break;
+
+        case DataType::UINT16:
+            values.push_back(val->GetUINT16());
+            break;
+
+        case DataType::UINT32:
+            values.push_back(val->GetUINT32());
+            break;
+
+        default:
+            throw CameraException(L"Unable to set property, only properties with int/uint 8/16/32 supported");
+        }
+
+        adjusted = NudgePropertyAndWait(camera, desired, true, &inout, &compareResult);
+    } while (adjusted && compareResult == expectedCompareResult);
+
+    delete current;
+    delete desired;
+
+    return values;
+}
+
+std::wstring
+ListToString(std::list<DWORD> list)
+{
+    // Generate a string with all values as CSV
+    std::wostringstream regString;
+
+    for (std::list<DWORD>::iterator it = list.begin(); it != list.end(); it++)
+    {
+        regString << *it << L",";
+    }
+
+    // Trim off trailing ","
+    std::wstring v = regString.str();
+
+    if (v.back() == L',')
+    {
+        v.pop_back();
+    }
+
+    return v;
 }
 
 HRESULT
@@ -556,7 +700,10 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
     {
         try
         {
-            Locker lock(camera);
+            // We try to lock the camera in the capture thread, which will block on this one
+            // since this method is (should) only be called in discovery, we can leave the lock
+            // out until it's more state-machiney
+//            Locker lock(camera);
 
             result = ERROR_SUCCESS;
 
@@ -569,27 +716,18 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
 
             registry.Open();
 
-            if (deviceInfo->GetExposureTimes().empty() && (flags & INFOFLAG_INCLUDE_EXPOSURE_TIMES))
+            if (deviceInfo->GetExposureTimes().empty() && (flags & INFOFLAG_INCLUDE_SETTINGS))
             {
-                std::list<DWORD> exposureTimes = GetAvailableExposureTimes(hCamera, camera);
+                std::list<DWORD> list = GetAvailablePropertyValues(hCamera, camera, Property::ShutterSpeed, 0, 0x0001ffff);
 
-                // Generate a string with all values as CSV
-                std::wostringstream regString;
+                registry.SetString(cameraPath, L"Exposure Times", ListToString(list));
+            }
 
-                for (std::list<DWORD>::iterator it = exposureTimes.begin(); it != exposureTimes.end(); it++)
-                {
-                    regString << *it << L",";
-                }
+            if (deviceInfo->GetISOs().empty() && (flags & INFOFLAG_INCLUDE_SETTINGS))
+            {
+                std::list<DWORD> list = GetAvailablePropertyValues(hCamera, camera, Property::ISO, 0, 0x0001ffff);
 
-                // Trim off trailing ","
-                std::wstring v = regString.str();
-
-                if (v.back() == L',')
-                {
-                    v.pop_back();
-                }
-
-                registry.SetString(cameraPath, L"Exposure Times", v);
+                registry.SetString(cameraPath, L"ISOs", ListToString(list));
             }
 
             if (deviceInfo->GetPreviewXResolution() == 0 || deviceInfo->GetPreviewYResolution() == 0
@@ -851,20 +989,22 @@ GetPropertyList(HANDLE hCamera, DWORD* list, DWORD* listSize)
 HRESULT
 GetPropertyDescriptor(HANDLE hCamera, DWORD propertyId, PROPERTYDESCRIPTOR* descriptor)
 {
-    LOGTRACE(L"In: GetPropertyDescriptor(x%p, x%04d, ...)");
+#ifdef DEBUG
+    LOGTRACE(L"In: GetPropertyDescriptor(x%p, x%04x, ...)", hCamera, propertyId);
+#endif // DEBUG
 
     Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
 
     if (!camera)
     {
-        LOGWARN(L"Out: GetPropertyDescriptor(x%p, x%04d, ...) - unable to find camera");
+        LOGWARN(L"Out: GetPropertyDescriptor(x%p, x%04x, ...) - unable to find camera", hCamera, propertyId);
 
         return ERROR_INVALID_HANDLE;
     }
 
     if (!descriptor)
     {
-        LOGWARN(L"Out: GetPropertyDescriptor(x%p, x%04d, ...) - no descriptor pointer provided");
+        LOGWARN(L"Out: GetPropertyDescriptor(x%p, x%04x, ...) - no descriptor pointer provided", hCamera, propertyId);
 
         return ERROR_INVALID_PARAMETER;
     }
@@ -885,14 +1025,17 @@ GetPropertyDescriptor(HANDLE hCamera, DWORD propertyId, PROPERTYDESCRIPTOR* desc
             descriptor->type = (WORD)info->GetType();
             descriptor->flags = (WORD)((WORD)info->GetAccess() || ((WORD)info->GetSonySpare() << 8));
             descriptor->name = exportString(name.empty() ? L"?" : name);
+            descriptor->valueCount = info->GetFormMode() == FormMode::ENUMERATION ? info->GetEnumeration().size() : 0;
 
-            LOGTRACE(L"Out: GetPropertyDescriptor(x%p, x%04d, ...)");
+            #ifdef DEBUG
+                LOGTRACE(L"Out: GetPropertyDescriptor(x%p, x%04x, ...)", hCamera, propertyId);
+            #endif
 
             return ERROR_SUCCESS;
         }
         else
         {
-            LOGWARN(L"Out: GetPropertyDescriptor(x%p, x%04d, ...) - property not found");
+            LOGWARN(L"Out: GetPropertyDescriptor(x%p, x%04x, ...) - property not found", hCamera, propertyId);
 
             return ERROR_NOT_FOUND;
         }
@@ -906,24 +1049,19 @@ GetPropertyDescriptor(HANDLE hCamera, DWORD propertyId, PROPERTYDESCRIPTOR* desc
 }
 
 HRESULT
-GetPropertyValueOptions(HANDLE hCamera, DWORD propertyId, PROPERTYVALUEOPTION* options, DWORD* count)
+GetPropertyValueOption(HANDLE hCamera, DWORD propertyId, PROPERTYVALUEOPTION* option, DWORD index)
 {
-    LOGTRACE(L"In: GetPropertyValueOptions(x%p, x%04d, ...)");
+#ifdef DEBUG
+    LOGTRACE(L"In: GetPropertyValueOption(x%p, x%04x, x%p, %d)", hCamera, propertyId, option, index);
+#endif
 
     Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
 
     if (!camera)
     {
-        LOGWARN(L"Out: GetPropertyValueOptions(x%p, x%04d, ...) - unable to find camera");
+        LOGWARN(L"Out: GetPropertyValueOption(x%p, x%04x, x%p, %d) - unable to find camera", hCamera, propertyId, option, index);
 
         return ERROR_INVALID_HANDLE;
-    }
-
-    if (!count)
-    {
-        LOGWARN(L"Out: GetPropertyValueOptions(x%p, x%04d, ...) - pointer to count not provided");
-
-        return ERROR_INVALID_PARAMETER;
     }
 
     try
@@ -939,87 +1077,83 @@ GetPropertyValueOptions(HANDLE hCamera, DWORD propertyId, PROPERTYVALUEOPTION* o
 
             if (info->GetFormMode() == FormMode::ENUMERATION)
             {
-                if (!options)
+                if (index < 0 || index >= info->GetEnumeration().size())
                 {
-                    *count = info->GetEnumeration().size();
+                    LOGWARN(L"Out: GetPropertyValueOption(x%p, x%04x, x%p, %d) - invalid index", hCamera, propertyId, option, index);
 
-                    LOGTRACE(L"Out: GetPropertyValueOptions(x%p, x%04d, ...) - count set, retry");
-
-                    return ERROR_RETRY;
+                    return ERROR_INVALID_PARAMETER;
                 }
-                else
+
+                if (!option)
                 {
-                    if (*count < info->GetEnumeration().size())
-                    {
-                        *count = info->GetEnumeration().size();
+                    LOGWARN(L"Out: GetPropertyValueOption(x%p, x%04x, x%p, %d) - missing output value", hCamera, propertyId, option, index);
 
-                        LOGWARN(L"Out: GetPropertyValueOptions(x%p, x%04d, ...) - count was set too low, retry");
-
-                        return ERROR_RETRY;
-                    }
-
-                    CameraPropertyFactory f;
-                    CameraProperty* p = f.Create((Property)propertyId);
-                    std::list<PropertyValue*> en = info->GetEnumeration();
-                    PROPERTYVALUEOPTION* option = options;
-
-                    for (std::list<PropertyValue*>::iterator it = en.begin(); it != en.end(); it++)
-                    {
-                        PropertyValue* v = *it;
-                        option->name = exportString(p->AsString(v));
-
-                        switch (v->GetType())
-                        {
-                        case DataType::UINT8:
-                            option->value = (DWORD)v->GetUINT8();
-                            break;
-
-                        case DataType::UINT16:
-                            option->value = (DWORD)v->GetUINT16();
-                            break;
-
-                        case DataType::UINT32:
-                            option->value = (DWORD)v->GetUINT32();
-                            break;
-
-                        case DataType::INT8:
-                            option->value = (DWORD)v->GetINT8();
-                            break;
-
-                        case DataType::INT16:
-                            option->value = (DWORD)v->GetINT16();
-                            break;
-
-                        case DataType::INT32:
-                            option->value = (DWORD)v->GetINT32();
-                            break;
-
-                        default:
-                            option->value = 0xffffffff;
-                            break;
-                        }
-
-                        option++;
-                    }
-
-                    delete p;
+                    return ERROR_INVALID_PARAMETER;
                 }
+
+                CameraPropertyFactory f;
+                CameraProperty* p = f.Create((Property)propertyId);
+
+                p->SetInfo(info);
+
+                std::list<PropertyValue*> values = info->GetEnumeration();
+                std::list<PropertyValue*>::iterator it = values.begin();
+                std::advance(it, index);
+
+                PropertyValue* v = *it;
+                option->name = exportString(p->AsString(v));
+
+                switch (v->GetType())
+                {
+                case DataType::UINT8:
+                    option->value = (DWORD)v->GetUINT8();
+                    break;
+
+                case DataType::UINT16:
+                    option->value = (DWORD)v->GetUINT16();
+                    break;
+
+                case DataType::UINT32:
+                    option->value = (DWORD)v->GetUINT32();
+                    break;
+
+                case DataType::INT8:
+                    option->value = (DWORD)v->GetINT8();
+                    break;
+
+                case DataType::INT16:
+                    option->value = (DWORD)v->GetINT16();
+                    break;
+
+                case DataType::INT32:
+                    option->value = (DWORD)v->GetINT32();
+                    break;
+
+                default:
+                    option->value = 0xffffffff;
+                    break;
+                }
+
+                delete p;
             }
 
-            LOGTRACE(L"Out: GetPropertyValueOptions(x%p, x%04d, ...)");
+
+#ifdef DEBUG
+            LOGTRACE(L"Out: GetPropertyValueOption(x%p, x%04x, x%p, %d)", hCamera, propertyId, option, index);
+#endif
 
             return ERROR_SUCCESS;
         }
         else
         {
-            LOGWARN(L"Out: GetPropertyValueOptions(x%p, x%04d, ...) - unable to find property");
+            LOGWARN(L"Out: GetPropertyValueOption(x%p, x%04x, x%p, %d) - unable to find property", hCamera, propertyId, option, index);
 
             return ERROR_NOT_FOUND;
         }
     }
     catch (CameraException & gfe)
     {
-        LOGERROR(L"Exception getting property value options: %s", gfe.GetMessage().c_str());
+        LOGERROR(L"Exception getting property value option: %s", gfe.GetMessage().c_str());
     }
 
     return ERROR_CAN_NOT_COMPLETE;
@@ -1028,6 +1162,10 @@ GetPropertyValueOptions(HANDLE hCamera, DWORD propertyId, PROPERTYVALUEOPTION* o
 HRESULT
 SetPropertyValue(HANDLE hCamera, DWORD propertyId, DWORD value)
 {
+//#ifdef DEBUG
+    LOGTRACE(L"In: SetPropertyValue(x%p, x%04x, %d)", hCamera, propertyId, value);
+//#endif
+
     Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
 
     if (!camera)
@@ -1039,13 +1177,13 @@ SetPropertyValue(HANDLE hCamera, DWORD propertyId, DWORD value)
     {
         Locker lock(camera);
 
-        CameraSettings* cs = camera->GetSettings(false);
+        CameraSettings* cs = camera->GetSettings(true);
         CameraProperty* v = cs->GetProperty((Property)propertyId);
-
         PropertyValue* val = nullptr;
 
         if (v)
         {
+            // Try to just do it
             switch (v->GetInfo()->GetType())
             {
             case DataType::INT8:
@@ -1076,7 +1214,58 @@ SetPropertyValue(HANDLE hCamera, DWORD propertyId, DWORD value)
                 throw CameraException(L"Unable to set property, only properties with int/uint 8/16/32 supported");
             }
 
-            camera->SetProperty((Property)propertyId, val);
+            if (v->GetInfo()->GetSonySpare() == 0)
+            {
+                camera->SetProperty((Property)propertyId, val);
+            }
+            else
+            {
+                // Seems sony properties are just up/down even if they have enums (yay)
+                // Figure out if the current value is higher or lower than we want
+                // and keep moving in that direction until we hit or skip-over (if a
+                // non-supported value is given) the target
+                CameraProperty* target = v->Clone();
+
+                target->SetCurrentValue(val);
+
+                int compare = v->Compare(*target);
+
+                if (compare == 0)
+                {
+                    // Already set to what we want
+                }
+                else
+                {
+                    bool up;
+                    bool adjusted;
+                    int compareResult;
+//                    int expectedCompareResult;
+
+                    if (v->UpIsBigger())
+                    {
+                        up = compare < 0;
+//                        expectedCompareResult = compare < 0 ? 1 : -1;
+                    }
+                    else
+                    {
+                        up = compare > 0;
+//                        expectedCompareResult = compare > 0 ? 1 : -1;
+                    }
+
+                    CameraProperty* inout = nullptr;
+
+                    do
+                    {
+                        adjusted = NudgePropertyAndWait(camera, target, up, &inout, &compareResult);
+                    } while (adjusted && compareResult == compare);
+
+                    delete inout;
+                }
+
+                delete target;
+            }
+
+            LOGTRACE(L"Out: SetPropertyValue(x%p, x%04x, %d)", hCamera, propertyId, value);
 
             return ERROR_SUCCESS;
         }
@@ -1205,6 +1394,7 @@ SetExposureTime(HANDLE hCamera, float desired, PROPERTYVALUE* valueOut)
         return ERROR_INVALID_HANDLE;
     }
 
+
     try
     {
         Locker lock(camera);
@@ -1220,118 +1410,66 @@ SetExposureTime(HANDLE hCamera, float desired, PROPERTYVALUE* valueOut)
 
         if (exposureTimes.empty())
         {
-            longestNonBulb = 30.0;
+            return ERROR_NOT_SUPPORTED;
         }
-        else
-        {
-            std::list<DWORD>::iterator i = exposureTimes.begin();
 
-            i++;
-            longestNonBulb = ExposureDWORDToFloat(*i, 9e9);
-        }
+        std::list<DWORD>::iterator i = exposureTimes.begin();
+
+        i++;
+        longestNonBulb = ExposureDWORDToFloat(*i, 9e9);
 
         desired = desired == 0.0 ? 9e9 : round(desired * 100000) / 100000;
+
+        DWORD setting = 0xffffffff;  // Invalid value
 
         if (desired > longestNonBulb)
         {
             desired = 9e9;
+            setting = *exposureTimes.begin();
         }
 
-        do
+        // Find the best option
+        // i already points to the longest non-bulb exposure
+        // if desired is < i, then we compare the closeness to i, and i++
+        // if closer to i++ move there and try again
+        DWORD test1, test2;
+        float fTest1, fTest2;
+        float fDiff1, fDiff2;
+
+        while (setting == 0xffffffff && i != exposureTimes.end())
         {
-            cs = camera->GetSettings(true);
-            v = cs->GetProperty(propertyId);
+            test1 = *i;
+            fTest1 = ExposureDWORDToFloat(test1, 9e9);
 
-            if (v)
+            if (fTest1 < desired)
             {
-                RenderProperty(propertyId, v, valueOut);
+                setting = *i;
+            }
 
-                currentExposure = valueOut->value;
-                current = ExposureDWORDToFloat(currentExposure, 9e9);
+            i++;
 
-                LOGINFO(L"Setting exposure time to %f, current = %f (%s)", desired, current, valueOut->text);
-
-                if (current == lastRead)
-                {
-                    sameCount++;
-                    LOGTRACE(L"Unchanged...");
-                    Sleep(100);
-                }
-                else
-                {
-                    LOGINFO(L"Changed from %f to %f", lastRead, current);
-
-                    sameCount = 0;
-                    lastRead = current;
-
-                    if (lastRead == desired)
-                    {
-                        // Already set
-                        LOGINFO(L"At desired exposure time");
-
-                        return ERROR_SUCCESS;
-                    }
-                    else
-                    {
-                        // Do we need to go faster or slower?
-                        DWORD direction = (lastRead > desired) ? 1 : -1;
-                        LOGINFO(L"Still need to tweak %d", direction);
-
-                        // If we jump to next value, will we be closer to desired value?
-                        // (this avoids situation where someone asks for 19.9" exposure and it jumps back and forth from 20" to 15"
-                        auto it = std::find(exposureTimes.begin(), exposureTimes.end(), currentExposure);
-
-                        float next = 0.0;
-
-                        if (!exposureTimes.empty())
-                        {
-                            if (direction == 1)
-                            {
-                                it++;
-                            }
-                            else
-                            {
-                                if (it == exposureTimes.begin())
-                                {
-                                    LOGINFO(L"At slowest exposure");
-
-                                    return ERROR_SUCCESS;
-                                }
-
-                                it--;
-                            }
-
-                            if (it == exposureTimes.end())
-                            {
-                                LOGINFO(L"At fastest exposure %f", lastRead);
-
-                                return ERROR_SUCCESS;
-                            }
-
-                            next = ExposureDWORDToFloat(*it, 9e9);
-                        }
-
-                        float nextDiff = abs(lastRead - next);
-                        float desiredDiff = abs(lastRead - desired);
-
-                        if (nextDiff > desiredDiff)
-                        {
-                            LOGINFO(L"As close as possible to %f (at %f)", desired, lastRead);
-
-                            return ERROR_SUCCESS;
-                        }
-
-                        SetPropertyValue(hCamera, (DWORD)propertyId, direction);
-                    }
-                }
+            if (i == exposureTimes.end())
+            {
+                setting = test1;
             }
             else
             {
-                return ERROR_NOT_FOUND;
-            }
-        } while (lastRead != desired && sameCount < MAX_EXPOSURE_SAME_COUNT);
+                test2 = *i;
+                fTest2 = ExposureDWORDToFloat(test2, 9e9);
 
-        return ERROR_SUCCESS;
+                fDiff1 = abs(desired - fTest1);
+                fDiff2 = abs(desired - fTest2);
+
+                if (fDiff1 < fDiff2)
+                {
+                    setting = test1;
+                }
+            }
+        }
+
+        LOGINFO(L"I think x%08x is best option", setting);
+
+        return SetPropertyValue(hCamera, (DWORD)propertyId, setting);
     }
     catch (CameraException& gfe)
     {

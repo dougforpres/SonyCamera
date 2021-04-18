@@ -34,6 +34,17 @@ CameraProperty::~CameraProperty()
     }
 }
 
+CameraProperty*
+CameraProperty::Clone()
+{
+    CameraProperty* clone = new CameraProperty();
+
+    clone->SetCurrentValue(new PropertyValue(*m_current));
+    clone->SetInfo(m_info);
+
+    return clone;
+}
+
 void
 CameraProperty::SetId(Property id)
 {
@@ -50,6 +61,12 @@ std::wstring
 CameraProperty::GetName()
 {
     return ResourceLoader::GetString((UINT)GetId());
+}
+
+bool
+CameraProperty::UpIsBigger()
+{
+    return true;
 }
 
 std::wstring
@@ -122,6 +139,56 @@ PropertyInfo*
 CameraProperty::GetInfo()
 {
     return m_info;
+}
+
+void
+CameraProperty::SetInfo(PropertyInfo* info)
+{
+    delete m_info;
+    m_info = new PropertyInfo(*info);
+}
+
+int
+CameraProperty::Compare(const CameraProperty& rhs)
+{
+    // This only compares values
+    // Default is to just compare the two values
+    // Override to be smarter
+    // Assumption is both types are the same
+    int result;
+
+    switch (m_info->GetType())
+    {
+    case DataType::INT8:
+        result = m_current->GetINT8() == rhs.m_current->GetINT8() ? 0 : m_current->GetINT8() < rhs.m_current->GetINT8() ? -1 : 1;
+        break;
+
+    case DataType::UINT8:
+        result = m_current->GetUINT8() == rhs.m_current->GetUINT8() ? 0 : m_current->GetUINT8() < rhs.m_current->GetUINT8() ? -1 : 1;
+        break;
+
+    case DataType::INT16:
+        result = m_current->GetINT16() == rhs.m_current->GetINT16() ? 0 : m_current->GetINT16() < rhs.m_current->GetINT16() ? -1 : 1;
+        break;
+
+    case DataType::UINT16:
+        result = m_current->GetUINT16() == rhs.m_current->GetUINT16() ? 0 : m_current->GetUINT16() < rhs.m_current->GetUINT16() ? -1 : 1;
+        break;
+
+    case DataType::INT32:
+        result = m_current->GetINT32() == rhs.m_current->GetINT32() ? 0 : m_current->GetINT32() < rhs.m_current->GetINT32() ? -1 : 1;
+        break;
+
+    case DataType::UINT32:
+        result = m_current->GetUINT32() == rhs.m_current->GetUINT32() ? 0 : m_current->GetUINT32() < rhs.m_current->GetUINT32() ? -1 : 1;
+        break;
+
+    default:
+        result = 0;
+        break;
+    }
+
+    return result;
 }
 
 bool
@@ -336,7 +403,7 @@ CameraProperty::ReadData(BYTE* data, DWORD &offset, DataType type)
 }
 
 PropertyValue *
-CameraProperty::GetCurrentValue()
+CameraProperty::GetCurrentValue() const
 {
     return m_current;
 }
@@ -351,6 +418,17 @@ ISOProperty::ISOProperty()
     : CameraProperty()
 {
 
+}
+
+CameraProperty*
+ISOProperty::Clone()
+{
+    ISOProperty* clone = new ISOProperty();
+
+    clone->SetCurrentValue(new PropertyValue(*m_current));
+    clone->SetInfo(m_info);
+
+    return clone;
 }
 
 std::wstring
@@ -371,10 +449,46 @@ ISOProperty::AsString(PropertyValue *in)
     return builder.str();
 }
 
+int
+ISOProperty::Compare(const CameraProperty& rhs)
+{
+    UINT32 lhsValue = m_current->GetUINT32();
+    UINT32 rhsValue = rhs.GetCurrentValue()->GetUINT32();
+
+    if (lhsValue == 0x00ffffff)
+    {
+        lhsValue = 0;
+    }
+
+    if (rhsValue == 0x00ffffff)
+    {
+        rhsValue = 0;
+    }
+
+    return lhsValue == rhsValue ? 0 : lhsValue < rhsValue ? -1 : 1;
+}
+
 ShutterTimingProperty::ShutterTimingProperty()
     : CameraProperty()
 {
 
+}
+
+CameraProperty*
+ShutterTimingProperty::Clone()
+{
+    ShutterTimingProperty* clone = new ShutterTimingProperty();
+
+    clone->SetCurrentValue(new PropertyValue(*m_current));
+    clone->SetInfo(m_info);
+
+    return clone;
+}
+
+bool
+ShutterTimingProperty::UpIsBigger()
+{
+    return false;
 }
 
 std::wstring
@@ -404,6 +518,34 @@ ShutterTimingProperty::AsString(PropertyValue *in)
     }
 
     return builder.str();
+}
+
+int
+ShutterTimingProperty::Compare(const CameraProperty& rhs)
+{
+    UINT32 lhsValue = m_current->GetUINT32();
+    UINT32 rhsValue = rhs.GetCurrentValue()->GetUINT32();
+
+    if (lhsValue == rhsValue)
+    {
+        return 0;
+    }
+
+    if (lhsValue == 0) // BULB
+    {
+        return 1;
+    }
+
+    if (rhsValue == 0) // BULB
+    {
+        return -1;
+    }
+
+    // Shutter
+    float lhsFloat = (float)((lhsValue & 0xffff0000) >> 16) / (float)(lhsValue & 0x0000ffff);
+    float rhsFloat = (float)((rhsValue & 0xffff0000) >> 16) / (float)(rhsValue & 0x0000ffff);
+
+    return lhsFloat == rhsFloat ? 0 : lhsFloat < rhsFloat ? -1 : 1;
 }
 
 Div10Property::Div10Property()
@@ -720,6 +862,7 @@ CameraPropertyFactory::CameraPropertyFactory()
     AddCreator(Property::AutoExposureLock, &pCreate<StringLookupProperty>);
     AddCreator(Property::AutoWhileBalanceLock, &pCreate<StringLookupProperty>);
     AddCreator(Property::PossibleExposureTimes, &pCreate<ShutterTimingProperty>);
+    AddCreator(Property::PossibleISOs, &pCreate<ISOProperty>);
 }
 
 void

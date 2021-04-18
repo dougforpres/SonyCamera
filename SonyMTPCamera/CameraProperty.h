@@ -14,18 +14,22 @@ class CameraProperty
 public:
     CameraProperty();
     CameraProperty(const CameraProperty& rhs);
-    ~CameraProperty();
+    virtual ~CameraProperty();
 
+    virtual CameraProperty* Clone();
     void SetId(Property id);
     Property GetId();
     std::wstring GetName();
+    virtual bool UpIsBigger();
     std::wstring AsString();
     virtual std::wstring AsString(PropertyValue *in);
     std::wstring ToString();
     DWORD Slurp(BYTE* data, DWORD dataLen);
-    bool equals(const CameraProperty& rhs);
+    virtual bool equals(const CameraProperty& rhs);
+    virtual int Compare(const CameraProperty& rhs);
     PropertyInfo* GetInfo();
-    PropertyValue* GetCurrentValue();
+    void SetInfo(PropertyInfo* info);
+    PropertyValue* GetCurrentValue() const;
     void SetCurrentValue(PropertyValue* current);
 
 protected:
@@ -38,20 +42,25 @@ protected:
     PropertyValue* m_current = nullptr;
 };
 
-class ISOProperty : public CameraProperty
+class ISOProperty : virtual public CameraProperty
 {
 public:
     ISOProperty();
 
+    CameraProperty* Clone();
     std::wstring AsString(PropertyValue *in);
+    int Compare(const CameraProperty& rhs);
 };
 
-class ShutterTimingProperty : public CameraProperty
+class ShutterTimingProperty : virtual public CameraProperty
 {
 public:
     ShutterTimingProperty();
 
+    CameraProperty* Clone();
+    bool UpIsBigger();
     std::wstring AsString(PropertyValue* in);
+    int Compare(const CameraProperty& rhs);
 };
 
 class Div10Property : public CameraProperty

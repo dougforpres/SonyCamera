@@ -434,3 +434,15 @@ DeviceInfo::SetExposureTimes(std::list<DWORD> exposureTimes)
 {
     m_exposureTimes = exposureTimes;
 }
+
+std::list<DWORD>
+DeviceInfo::GetISOs()
+{
+    return m_isos;
+}
+
+void
+DeviceInfo::SetISOs(std::list<DWORD> isos)
+{
+    m_isos = isos;
+}

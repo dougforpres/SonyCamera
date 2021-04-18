@@ -71,34 +71,27 @@ watchSettings(HANDLE h)
 void
 dumpExposureOptions(HANDLE h)
 {
-    PROPERTYVALUEOPTION* options = nullptr;
+    PROPERTYDESCRIPTOR descriptor;
+    PROPERTYVALUEOPTION option;
     DWORD count = 0;
 
+//    GetPropertyValueOption(h, 0xd24e, &option, 0);
+
     // Ask how many options there are
-    HRESULT hr = GetPropertyValueOptions(h, 0xffff, options, &count);
+    HRESULT hr = GetPropertyDescriptor(h, 0xffff, &descriptor);
 
-    if (hr != ERROR_SUCCESS)
+    count = descriptor.valueCount;
+
+    for (int i = 0; i < count; i++)
     {
-        std::cerr << "Error reading number of options " << hr;
-    }
-
-    if (count > 0)
-    {
-        options = new PROPERTYVALUEOPTION[count];
-
-        hr = GetPropertyValueOptions(h, 0xffff, options, &count);
+        hr = GetPropertyValueOption(h, 0xffff, &option, i);
 
         if (hr != ERROR_SUCCESS)
         {
             std::cerr << "Error reading number of options " << hr;
         }
 
-        for (int i = 0; i < count; i++)
-        {
-            PROPERTYVALUEOPTION opt = options[i];
-
-            std::wcout << "Option #" << i + 1 << " - '" << opt.name << "' (" << opt.value << ")" << std::endl;
-        }
+        std::wcout << "Option #" << i + 1 << " - '" << option.name << "' (" << option.value << ")" << std::endl;
     }
 }
 
@@ -207,6 +200,12 @@ testExposure(HANDLE h)
     std::cout << "Got it";
 }
 
+void
+testSetISO(HANDLE h)
+{
+    SetPropertyValue(h, 0xd21e, 640);
+}
+
 int main()
 {
     HRESULT comhr = CoInitialize(nullptr);
@@ -240,7 +239,7 @@ int main()
 
     // Uncomment to try state-machiney thing to change exposure time
     testExposure(h);
-
+//    testSetISO(h);
 //    dumpExposureOptions(h);
 
     CloseDevice(h);

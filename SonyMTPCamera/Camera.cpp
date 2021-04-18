@@ -129,7 +129,6 @@ Camera::GetSupportedProperties()
     for (std::list<CameraProperty*>::iterator it = properties.begin(); it != properties.end(); it++)
     {
         result.insert(std::pair<Property, PropertyInfo*>((*it)->GetId(), new PropertyInfo(*(*it)->GetInfo())));
-        LOGDEBUG(L"Added new property: %s", (*it)->ToString().c_str());
     }
 
     return result;
@@ -154,6 +153,30 @@ Camera::LoadFakeProperties(CameraSettings* settings)
 
     std::list<PropertyValue*> values;
     std::list<DWORD> et = GetDeviceInfo(false)->GetExposureTimes();
+
+    for (std::list<DWORD>::iterator ei = et.begin(); ei != et.end(); ei++)
+    {
+        values.push_back(new PropertyValue((UINT32)*ei));
+    }
+
+    inf->SetEnumeration(values);
+
+    settings->AddProperty(p);
+
+    p = f.Create(Property::PossibleISOs);
+
+    p->SetCurrentValue(new PropertyValue(0));
+
+    inf = p->GetInfo();
+
+    inf->SetDefault(new PropertyValue((UINT32)0));
+    inf->SetId(Property::PossibleISOs);
+    inf->SetType(DataType::UINT32);
+    inf->SetFormMode(FormMode::ENUMERATION);
+
+    values.clear();
+
+    et = GetDeviceInfo(false)->GetISOs();
 
     for (std::list<DWORD>::iterator ei = et.begin(); ei != et.end(); ei++)
     {
@@ -213,6 +236,15 @@ Camera::ProcessDeviceInfoOverrides()
     }
 
     d->SetExposureTimes(times);
+
+    std::wistringstream isos(registry.GetString(cameraPath, L"ISOs", L""));
+    std::list<DWORD> iso;
+
+    while (std::getline(isos, s, L',')) {
+        iso.push_back(_wtoi(s.c_str()));
+    }
+
+    d->SetISOs(iso);
 
     registry.Close();
 

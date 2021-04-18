@@ -120,14 +120,18 @@ Image::InitializeLibRaw(bool process)
         return nullptr;
     }
 
-    libraw->imgdata.params.use_camera_wb = 0;
+    registry.Open();
+
+    // These settings appear to be used by libraw when decoding to RGB and during testing had no effect on the RAW data
+    libraw->imgdata.params.use_camera_wb = registry.GetDWORD(L"libraw", L"use_camera_wb", libraw->imgdata.params.use_camera_wb);
     libraw->imgdata.params.output_bps = 16;
-    libraw->imgdata.params.output_color = process ? 1 : 0;
-    libraw->imgdata.params.gamm[0] = 1;
-    libraw->imgdata.params.gamm[1] = 1;
-    libraw->imgdata.params.highlight = 0;
-    libraw->imgdata.params.no_auto_bright = 1;
-    libraw->imgdata.params.user_qual = 0;
+    libraw->imgdata.params.gamm[0] = registry.GetDouble(L"libraw", L"gamm0", libraw->imgdata.params.gamm[0]);
+    libraw->imgdata.params.gamm[1] = registry.GetDouble(L"libraw", L"gamm1", libraw->imgdata.params.gamm[1]);
+    libraw->imgdata.params.no_auto_bright = registry.GetDWORD(L"libraw", L"no_auto_bright", libraw->imgdata.params.no_auto_bright);
+    libraw->imgdata.params.user_qual = registry.GetDWORD(L"libraw", L"user_qual", libraw->imgdata.params.user_qual);
+    libraw->imgdata.params.user_flip = registry.GetDWORD(L"libraw", L"user_flip", libraw->imgdata.params.user_flip);
+
+    registry.Close();
 
     r = libraw->unpack();
 

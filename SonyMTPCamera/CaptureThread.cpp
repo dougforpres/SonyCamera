@@ -3,6 +3,7 @@
 #include "CameraException.h"
 #include "Logger.h"
 #include "Registry.h"
+#include "Locker.h"
 
 #define IMAGE_WAIT_READY_SLEEP  250
 #define IMAGE_WAIT_READY_LOOPS  100
@@ -188,32 +189,41 @@ Camera::CaptureThread::Run()
     LOGTRACE(L"In: CaptureThread::Run");
     PropertyValue up((WORD)(m_camera->GetDeviceInfo(false)->GetButtonPropertiesInverted() ? 2 : 1));
     PropertyValue down((WORD)(m_camera->GetDeviceInfo(false)->GetButtonPropertiesInverted() ? 1: 2));
+    CameraSettings* settings;
+    BYTE compressionSetting;
 
-    CameraSettings* settings = m_camera->GetSettings(true);
-
-    // If auto-focus is enabled, we should add a short pause between 1/2 down and full down to let it
-    // do its thing
-    bool isManualFocus = settings->GetProperty(Property::FocusMode)->GetCurrentValue()->GetUINT16() == 1;
-    SetStatus(CaptureStatus::Capturing);
-
-    LOGINFO(L"Step 1: Shutter button down");
-    m_camera->SetProperty(Property::ShutterHalfDown, &down);
-
-    if (!isManualFocus)
     {
-        LOGINFO(L"Step 1a: Pausing to allow auto-focus... why is it on?");
-        Sleep(500);
+        Locker lock(m_camera);
+
+        settings = m_camera->GetSettings(true);
+
+        // If auto-focus is enabled, we should add a short pause between 1/2 down and full down to let it
+        // do its thing
+        bool isManualFocus = settings->GetProperty(Property::FocusMode)->GetCurrentValue()->GetUINT16() == 1;
+        SetStatus(CaptureStatus::Capturing);
+
+        LOGINFO(L"Step 1: Shutter button down");
+        m_camera->SetProperty(Property::ShutterHalfDown, &down);
+
+        if (!isManualFocus)
+        {
+            LOGINFO(L"Step 1a: Pausing to allow auto-focus... why is it on?");
+            Sleep(500);
+        }
+
+        m_camera->SetProperty(Property::ShutterFullDown, &down);
+
+        WaitForSingleObject(m_hWakeupEvent, (DWORD)(m_duration * 1000));
+
+        m_camera->SetProperty(Property::ShutterFullDown, &up);
+        m_camera->SetProperty(Property::ShutterHalfDown, &up);
+        LOGINFO(L"Step 2: Shutter button up");
+
+        SetStatus(CaptureStatus::Reading);
+
+        // Check to see if we're in RAW+JPEG mode... if so we need to pull 2 images from camera
+        compressionSetting = settings->GetPropertyValue(Property::CompressionSetting)->GetUINT8();
     }
-
-    m_camera->SetProperty(Property::ShutterFullDown, &down);
-
-    WaitForSingleObject(m_hWakeupEvent, (DWORD)(m_duration * 1000));
-
-    m_camera->SetProperty(Property::ShutterFullDown, &up);
-    m_camera->SetProperty(Property::ShutterHalfDown, &up);
-    LOGINFO(L"Step 2: Shutter button up");
-
-    SetStatus(CaptureStatus::Reading);
 
     // Wait for settings to signal there is an image ready
     LOGINFO(L"Step 3: Wait for camera to indicate image ready");
@@ -223,8 +233,12 @@ Camera::CaptureThread::Run()
     // Wait up to 10 seconds for camera to report the image is ready for download
     do
     {
-        settings = m_camera->GetSettings(true);
-        imageReady = this->ImageReady(settings);
+        {
+            Locker lock(m_camera);
+
+            settings = m_camera->GetSettings(true);
+            imageReady = this->ImageReady(settings);
+        }
 
         if (!imageReady)
         {
@@ -234,15 +248,18 @@ Camera::CaptureThread::Run()
 
     int imageCount = 0;
 
-    // Check to see if we're in RAW+JPEG mode... if so we need to pull 2 images from camera
-    BYTE compressionSetting = settings->GetPropertyValue(Property::CompressionSetting)->GetUINT8();
-
     // Slurp all images in until there aren't any more
     while (imageReady)
     {
         LOGINFO(L"Step 4: Retrieve image #%d", imageCount + 1);
 
-        Image* image = m_camera->GetImage(FULL_IMAGE);
+        Image* image;
+
+        {
+            Locker lock(m_camera);
+
+            image = m_camera->GetImage(FULL_IMAGE);
+        }
 
         if (image)
         {
@@ -261,8 +278,12 @@ Camera::CaptureThread::Run()
 
             imageCount++;
 
-            settings = m_camera->GetSettings(true);
-            imageReady = this->ImageReady(settings);
+            {
+                Locker lock(m_camera);
+
+                settings = m_camera->GetSettings(true);
+                imageReady = this->ImageReady(settings);
+            }
         }
     }
 

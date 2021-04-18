@@ -39,6 +39,11 @@ enum class DataType {
     STR         = 0xffff,
 };
 
+// SonySpare interpretation
+// 0x00 - possibly directly settable (assuming writable)
+// 0x01 - responds to up/down to cycle thru values (1 to choose higher indexes, -1 for lower)
+// 0x02 - is a button, needs to go to from status 1 to 2 and back to 1 (some cameras require force reset to 1 before starting button press)
+
 enum class Property {
     Undefined                   = 0x5000,
     BatteryLevel                = 0x5001,
@@ -123,6 +128,8 @@ enum class Property {
     //Button                    = 0xd2d4,
     //Button                    = 0xd2d9, // ?? set AWBL?  (1 off, 2 on)
 
+    // Pseudo-properties added by driver
+    PossibleISOs                = 0xfffe,
     PossibleExposureTimes       = 0xffff,
 };
 

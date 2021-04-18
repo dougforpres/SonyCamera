@@ -9,58 +9,42 @@
 typedef void (*F)(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int value);
 
 bool
-ensureShutterSpeed(HANDLE hCamera)
+ensureExposureMode(HANDLE hCamera)
 {
     // Get settings...
     HRESULT hr = ERROR_SUCCESS;
     PROPERTYVALUE pv;
-    double speed = 10000.0;
-    bool speedOk = false;
-    std::wstring shutterSpeed;
+    bool modeOk = false;
+    std::wstring smode;
 
-    while (!speedOk && hr == ERROR_SUCCESS)
+    while (!modeOk && hr == ERROR_SUCCESS)
     {
-        hr = GetSinglePropertyValue(hCamera, 0xd20d, &pv);
+        RefreshPropertyList(hCamera);
+        hr = GetSinglePropertyValue(hCamera, 0x500e, &pv);
 
         if (hr == ERROR_SUCCESS)
         {
-            shutterSpeed = pv.text;
+            smode = pv.text;
 
-            switch (pv.value)
+            if (smode == L"M")
             {
-            case 0x00000000:
-                // BULB
-                // This is ok, as code will take 1 sec exposure
-                // Fall thru
-
-            case 0xffffffff:
-                // AUTO
-                speed = DBL_MIN;
-                break;
-
-            default:
-                speed = (pv.value & 0xffff0000 >> 16) / (double)(pv.value & 0x0000ffff);
-            }
-
-            if (speed <= 5.0)
-            {
-                speedOk = true;
+                modeOk = true;
             }
             else
             {
-                std::wcout << L"\n    Shutter speed currently set to " << pv.text << L", please set to a value less than 5 seconds";
+                std::wcout << L"\n    Exposure mode currently set to '" << pv.text << L"', please set to 'M'";
                 Sleep(2500);
             }
         }
         else
         {
-            std::wcout << L"Error getting shutter speed from camera - error " << hr << L"\n";
+            std::wcout << L"Error getting exposure mode from camera - error " << hr << L"\n";
         }
     }
 
-    std::wcout << "\n    Shutter speed set to: " << shutterSpeed.c_str();
+    std::wcout << "\n  Exposure mode set to:  " << smode.c_str();
 
-    return speedOk;
+    return modeOk;
 }
 
 bool
@@ -74,6 +58,7 @@ ensureStorageMode(HANDLE hCamera)
 
     while (!modeOk && hr == ERROR_SUCCESS)
     {
+        RefreshPropertyList(hCamera);
         hr = GetSinglePropertyValue(hCamera, 0x5004, &pv);
 
         if (hr == ERROR_SUCCESS)
@@ -96,7 +81,7 @@ ensureStorageMode(HANDLE hCamera)
         }
     }
 
-    std::wcout << "\n    Storage mode set to:  " << smode.c_str();
+    std::wcout << "\n  Storage mode set to:   " << smode.c_str();
 
     return modeOk;
 }
@@ -274,6 +259,23 @@ checkCrop(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int value)
 void
 setCrop(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int cropMode)
 {
+    if (cropMode == 1)
+    {
+        CAMERAINFO cameraInfo;
+        HRESULT hr = GetCameraInfo(hCamera, &cameraInfo, 0);
+
+        if (hr == ERROR_SUCCESS)
+        {
+            if (cameraInfo.imageWidthCroppedPixels == 0 || cameraInfo.imageHeightCroppedPixels == 0)
+            {
+                std::wcerr << L"Cannot change crop mode to AUTO until crop image size is known." << std::endl;
+                std::wcerr << L"please re-run this tool with '/s' flag first (or no flags at all)." << std::endl;
+
+                return;
+            }
+        }
+    }
+
     DEVICEINFO deviceInfo;
 
     memset(&deviceInfo, 0, sizeof(DEVICEINFO));
@@ -339,27 +341,13 @@ printHelp()
 void
 printExposureTimes(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortForm)
 {
-    PROPERTYVALUEOPTION* options = nullptr;
-    DWORD count = 0;
+    PROPERTYDESCRIPTOR descriptor;
 
-    // Ask how many options there are
-    HRESULT hr = GetPropertyValueOptions(hCamera, 0xffff, options, &count);
+    HRESULT hr = GetPropertyDescriptor(hCamera, 0xffff, &descriptor);
 
-    if (hr != ERROR_RETRY)
+    if (descriptor.valueCount > 0)
     {
-        std::cerr << "Error reading number of options " << hr;
-    }
-
-    if (count > 0)
-    {
-        options = new PROPERTYVALUEOPTION[count];
-
-        hr = GetPropertyValueOptions(hCamera, 0xffff, options, &count);
-
-        if (hr != ERROR_SUCCESS)
-        {
-            std::cerr << "Error reading number of options " << hr;
-        }
+        PROPERTYVALUEOPTION option;
 
         std::wcout << "   Available Exposure Times:" << std::endl;
         
@@ -370,14 +358,14 @@ printExposureTimes(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int
 
         int c = 0;
 
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < descriptor.valueCount; i++)
         {
-            PROPERTYVALUEOPTION opt = options[i];
+            hr = GetPropertyValueOption(hCamera, 0xffff, &option, i);
 
             if (shortForm)
             {
                 c++;
-                std::wcout << opt.value << L", ";
+                std::wcout << option.value << L", ";
 
                 if (c > 9)
                 {
@@ -387,7 +375,52 @@ printExposureTimes(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int
             }
             else
             {
-                std::wcout << L"    " << i + 1 << L" - " << opt.name << L" (" << opt.value << L")" << std::endl;
+                std::wcout << L"    " << i + 1 << L" - " << option.name << L" (" << option.value << L")" << std::endl;
+            }
+        }
+
+        std::wcout << std::endl;
+    }
+}
+
+void
+printISOs(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortForm)
+{
+    PROPERTYDESCRIPTOR descriptor;
+
+    HRESULT hr = GetPropertyDescriptor(hCamera, 0xfffe, &descriptor);
+
+    if (descriptor.valueCount > 0)
+    {
+        PROPERTYVALUEOPTION option;
+
+        std::wcout << "   Available ISO Values:" << std::endl;
+
+        if (shortForm)
+        {
+            std::wcout << "     ";
+        }
+
+        int c = 0;
+
+        for (int i = 0; i < descriptor.valueCount; i++)
+        {
+            hr = GetPropertyValueOption(hCamera, 0xfffe, &option, i);
+
+            if (shortForm)
+            {
+                c++;
+                std::wcout << option.value << L", ";
+
+                if (c > 9)
+                {
+                    std::wcout << std::endl << "     ";;
+                    c = 0;
+                }
+            }
+            else
+            {
+                std::wcout << L"    " << i + 1 << L" - " << option.name << L" (" << option.value << L")" << std::endl;
             }
         }
 
@@ -399,47 +432,77 @@ void
 performScan(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortForm)
 {
     std::wcout << L"  Get Info:\n";
-    std::wcout << L"  Note: This first part could take up to 1-2 minutes as I need to find out what exposure times\n  your camera supports.  This entails scanning from BULB mode to the fastest exposure available.\n";
-    std::wcout << L"  You may see the exposure time value on the camera changing during this time.\n";
-    std::wcout << L"\n  ** PLEASE DO NOT INTERACT WITH THE CAMERA UNTIL DONE **\n\n";
 
     CAMERAINFO cameraInfo;
-    HRESULT hr = GetCameraInfo(hCamera, &cameraInfo, INFOFLAG_INCLUDE_EXPOSURE_TIMES);
+    HRESULT hr = GetCameraInfo(hCamera, &cameraInfo, 0);
 
     if (hr == ERROR_SUCCESS)
     {
-        if (cameraInfo.imageWidthPixels == 0 || cameraInfo.imageHeightPixels == 0
-            || cameraInfo.imageWidthCroppedPixels == 0 || cameraInfo.imageHeightCroppedPixels == 0
-            || cameraInfo.previewWidthPixels == 0 || cameraInfo.previewHeightPixels == 0)
+        // Check ISO and exposure times have > 0 items
+        bool exposureTimesOk;
+        bool isosOk;
+        bool previewOk = cameraInfo.previewWidthPixels != 0 && cameraInfo.previewHeightPixels != 0;
+        bool fullImageOk = cameraInfo.imageWidthPixels != 0 && cameraInfo.imageHeightPixels != 0;
+        bool croppedImageOk = cameraInfo.imageWidthCroppedPixels != 0 && cameraInfo.imageHeightCroppedPixels != 0;
+
+        PROPERTYDESCRIPTOR descriptor;
+        HRESULT hr = GetPropertyDescriptor(hCamera, 0xffff, &descriptor);
+
+        exposureTimesOk = (descriptor.valueCount > 0);
+        hr = GetPropertyDescriptor(hCamera, 0xfffe, &descriptor);
+        isosOk = (descriptor.valueCount > 0);
+
+
+        if (!previewOk || !fullImageOk || !croppedImageOk || !exposureTimesOk || !isosOk)
         {
-            std::wcout << L" - attempt to determine image resolution...";
+            ensureExposureMode(hCamera);
+            ensureStorageMode(hCamera);
 
-            bool shutterSpeedSet = ensureShutterSpeed(hCamera);
-            bool storageModeOk = ensureStorageMode(hCamera);
+            std::wcout << std::endl << std::endl << L"Performing the following actions." << std::endl;
 
-            if (shutterSpeedSet && storageModeOk)
+            if (!exposureTimesOk)
             {
-                std::wcout << L"\n    Asking camera to take test shots (1 x preview, 1 x full-resolution)...";
+                std::wcout << L" - Detect camera supported exposure times (30-45 seconds)" << std::endl;
+                std::wcout << L"   During this time, you will see the exposure time changing on your camera" << std::endl;
+            }
 
-                hr = GetCameraInfo(hCamera, &cameraInfo, 1);
+            if (!isosOk)
+            {
+                std::wcout << L" - Detect camera supported ISO values (30-45 seconds)" << std::endl;
+                std::wcout << L"   During this time, you will see the ISO value changing on your camera" << std::endl;
+            }
 
-                if (hr == ERROR_SUCCESS)
-                {
-                    std::wcout << L"\n\nPlease email the following info to: retrodotkiwi@gmail.com\n\n";
-                    std::wcout << L"   Manufacturer:                     " << pdinfo->manufacturer << "\n";
-                    std::wcout << L"   Model:                            " << pdinfo->model << "\n";
-                    std::wcout << L"   Device Path:                      " << pdinfo->devicePath << "\n";
-                    std::wcout << L"   Preview image width:              " << cameraInfo.previewWidthPixels << "px\n";
-                    std::wcout << L"   Preview image height:             " << cameraInfo.previewHeightPixels << "px\n";
-                    std::wcout << L"   Full-size image width:            " << cameraInfo.imageWidthPixels << "px\n";
-                    std::wcout << L"   Full-size image height:           " << cameraInfo.imageHeightPixels << "px\n";
-                    std::wcout << L"   Full-size image width (Cropped):  " << cameraInfo.imageWidthCroppedPixels << "px\n";
-                    std::wcout << L"   Full-size image height (Cropped): " << cameraInfo.imageHeightCroppedPixels << "px\n";
-                }
-                else
-                {
-                    std::wcout << L"Error taking test photos - error " << hr << L"\n";
-                }
+            if (!previewOk)
+            {
+                std::wcout << L" - Detect preview support & resolution (less than 1 second)" << std::endl;
+            }
+
+            if (!fullImageOk || !croppedImageOk)
+            {
+                std::wcout << L" - Detect full (uncropped and cropped) image size (2-3 seconds)" << std::endl;
+                std::wcout << L"   Your camera will take a photo" << std::endl;
+            }
+
+            std::wcout << std::endl << L"  ** PLEASE DO NOT INTERACT WITH THE CAMERA UNTIL DONE **" << std::endl << std::endl;
+
+            hr = GetCameraInfo(hCamera, &cameraInfo, INFOFLAG_ACTIVE | INFOFLAG_INCLUDE_SETTINGS);
+
+            if (hr == ERROR_SUCCESS)
+            {
+                std::wcout << L"\n\nPlease email the following info to: retrodotkiwi@gmail.com\n\n";
+                std::wcout << L"   Manufacturer:                     " << pdinfo->manufacturer << "\n";
+                std::wcout << L"   Model:                            " << pdinfo->model << "\n";
+                std::wcout << L"   Device Path:                      " << pdinfo->devicePath << "\n";
+                std::wcout << L"   Preview image width:              " << cameraInfo.previewWidthPixels << "px\n";
+                std::wcout << L"   Preview image height:             " << cameraInfo.previewHeightPixels << "px\n";
+                std::wcout << L"   Full-size image width:            " << cameraInfo.imageWidthPixels << "px\n";
+                std::wcout << L"   Full-size image height:           " << cameraInfo.imageHeightPixels << "px\n";
+                std::wcout << L"   Full-size image width (Cropped):  " << cameraInfo.imageWidthCroppedPixels << "px\n";
+                std::wcout << L"   Full-size image height (Cropped): " << cameraInfo.imageHeightCroppedPixels << "px\n";
+            }
+            else
+            {
+                std::wcout << L"Error taking test photos - error " << hr << L"\n";
             }
         }
         else
@@ -469,6 +532,7 @@ performScan(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortF
     }
 
     printExposureTimes(deviceId, hCamera, pdinfo, 1);
+    printISOs(deviceId, hCamera, pdinfo, 1);
 }
 
 void
@@ -636,6 +700,7 @@ main(int argc, char* argv[])
     bool do_scan = false;
     bool do_list = false;
     bool do_exposures = false;
+    bool do_isos = false;
     bool do_show_crop = false;
     bool do_show_debug = false;
     bool do_crop = false;
@@ -688,6 +753,12 @@ main(int argc, char* argv[])
                     // Show exposure values
                     option_specified = true;
                     do_exposures = true;
+                    break;
+
+                case 'i':
+                    // Show iso values
+                    option_specified = true;
+                    do_isos = true;
                     break;
 
                 default:
@@ -798,6 +869,11 @@ main(int argc, char* argv[])
     if (do_exposures)
     {
         iterateDevices("Listing supported Exposure times", printExposureTimes, 0);
+    }
+
+    if (do_isos)
+    {
+        iterateDevices("Listing supported ISO values", printISOs, 0);
     }
 
     return ERROR_SUCCESS;

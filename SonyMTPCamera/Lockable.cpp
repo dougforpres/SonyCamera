@@ -22,7 +22,9 @@ Lockable::Lock(DWORD timeout)
     switch (mutexResult)
     {
     case WAIT_OBJECT_0:
+#ifdef DEBUG
         LOGTRACE(L"(x%08p) Locked", this);
+#endif
         result = true;
         break;
 
@@ -45,6 +47,8 @@ Lockable::Lock(DWORD timeout)
 void
 Lockable::Unlock()
 {
+#ifdef DEBUG
     LOGTRACE(L"(x%08p) Unlocked", this);
+#endif
     ReleaseMutex(m_hLock);
 }
