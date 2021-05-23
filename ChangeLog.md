@@ -1,4 +1,10 @@
 # Change Log
+## 1.0.0.27
+* SonyCameraInfo.exe will now try to load each of the required DLL's separately and connect to all the needed methods.  Info about the success/failure is displayed at startup.  Additionally, a new command-line option (/v) has been added that will dump info on ALL DLL's loaded directly or indirectly by the driver.
+* Added ISO info for A7S III.
+* Added a bypass for RefreshPropertyList method when a photo is being taken.  NINA will call this method (which is locked) during exposures, and generate an error if it takes too long to respond when a long exposure is occurring.
+* Temporarily removed loading of libusbK library
+
 ## 1.0.0.26
 * SonyCameraInfo.exe updated to detect ISO values.
 * Added support for changing ISO setting.  Note that the available ISO values reported by the camera (at least for my a6400) are not valid.  The list includes many ISO values that the camera does not support.  As a result the driver utility now scans the available ISO values when the camera is detected and these are stored.

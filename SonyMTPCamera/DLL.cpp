@@ -917,15 +917,27 @@ RefreshPropertyList(HANDLE hCamera)
         return ERROR_INVALID_HANDLE;
     }
 
-    try
-    {
-        Locker lock(camera);
+    // If the camera is currently taking a picture this will block, potentially causing issues
+    // with apps like NINA that like to scan camera settings while other things are happening
+    // so if we're taking a photo, this bit will be skipped.
+    CaptureStatus status = camera->GetCaptureStatus();
 
-        camera->GetSettings(true);
-    }
-    catch (CameraException & gfe)
+    if (status != CaptureStatus::Capturing)
     {
-        LOGERROR(L"Exception refreshing property list: %s", gfe.GetMessage().c_str());
+        try
+        {
+            Locker lock(camera);
+
+            camera->GetSettings(true);
+        }
+        catch (CameraException& gfe)
+        {
+            LOGERROR(L"Exception refreshing property list: %s", gfe.GetMessage().c_str());
+        }
+    }
+    else
+    {
+        LOGINFO(L"Skipping property refresh as camera is busy taking a photo");
     }
 
     LOGTRACE(L"Out: RefreshPropertyList(x%p)", hCamera);

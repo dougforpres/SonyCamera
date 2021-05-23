@@ -172,7 +172,6 @@
     <ClInclude Include="dll.h" />
     <ClInclude Include="DummyDevice.h" />
     <ClInclude Include="CameraException.h" />
-    <ClInclude Include="LibUSBKDevice.h" />
     <ClInclude Include="Image.h" />
     <ClInclude Include="libjpeg\jconfig.h" />
     <ClInclude Include="libjpeg\jerror.h" />
@@ -186,7 +185,6 @@
     <ClInclude Include="libraw\libraw_internal.h" />
     <ClInclude Include="libraw\libraw_types.h" />
     <ClInclude Include="libraw\libraw_version.h" />
-    <ClInclude Include="LibUSBKEnumerator.h" />
     <ClInclude Include="libusbK\libusbk.h" />
     <ClInclude Include="libusbK\lusbk_shared.h" />
     <ClInclude Include="Lockable.h" />
@@ -229,7 +227,6 @@
     <ClCompile Include="DummyDevice.cpp" />
     <ClCompile Include="CameraException.cpp" />
     <ClCompile Include="Image.cpp" />
-    <ClCompile Include="LibUSBKEnumerator.cpp" />
     <ClCompile Include="Lockable.cpp" />
     <ClCompile Include="Locker.cpp" />
     <ClCompile Include="Logger.cpp" />
@@ -251,7 +248,6 @@
     <ClCompile Include="Registry.cpp" />
     <ClCompile Include="ResourceLoader.cpp" />
     <ClCompile Include="SonyCamera.cpp" />
-    <ClCompile Include="LibUSBKDevice.cpp" />
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="Version.cpp" />
   </ItemGroup>
@@ -264,8 +260,6 @@
     <Library Include="..\..\..\..\..\..\LibRaw-0.19.5-Win64\LibRaw-0.19.5\lib\libraw.lib" />
     <Library Include="libjpeg\turbojpeg.lib" />
     <Library Include="libraw\libraw.lib" />
-    <Library Include="libusbK\libusbK.lib" />
-    <Library Include="libusbK\x64\libusbK.lib" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\ChangeLog.md" />

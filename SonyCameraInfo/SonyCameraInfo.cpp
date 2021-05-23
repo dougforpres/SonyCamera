@@ -4,9 +4,300 @@
 #include <Windows.h>
 #include <string>
 #include <sstream>
-#include "SonyMTPCamera.h"
+#include <psapi.h>
+#include "vector"
+
+#define INFOFLAG_ACTIVE                 0x0001
+#define INFOFLAG_INCLUDE_SETTINGS       0x0002
+
+#define PROPERTYVALUE_FLAG_WRITABLE     0x0002
+
+#define OPENDEVICEEX_OPEN_ANY_DEVICE    0x0001
+
+//#pragma pack(push, 1)
+typedef struct
+{
+    DWORD version;
+    DWORD imageWidthPixels;
+    DWORD imageHeightPixels;
+    DWORD imageWidthCroppedPixels;
+    DWORD imageHeightCroppedPixels;
+    DWORD bayerXOffset;
+    DWORD bayerYOffset;
+    DWORD cropMode;
+    double exposureTimeMin;
+    double exposureTimeMax;
+    double exposureTimeStep;
+    double pixelWidth;
+    double pixelHeight;
+
+    LPWSTR manufacturer;
+    LPWSTR model;
+    LPWSTR serialNumber;
+    LPWSTR deviceName;
+    LPWSTR sensorName;
+    LPWSTR deviceVersion;
+} DEVICEINFO;
+
+typedef struct
+{
+    DWORD flags;
+    DWORD imageWidthPixels;
+    DWORD imageHeightPixels;
+    DWORD imageWidthCroppedPixels;
+    DWORD imageHeightCroppedPixels;
+    DWORD previewWidthPixels;
+    DWORD previewHeightPixels;
+    DWORD bayerXOffset;
+    DWORD bayerYOffset;
+    double pixelWidth;
+    double pixelHeight;
+} CAMERAINFO;
+
+typedef struct
+{
+    DWORD size;
+    BYTE* data;
+    DWORD status;
+    DWORD imageMode;
+    DWORD width;
+    DWORD height;
+    DWORD flags;
+    double duration;
+} IMAGEINFO;
+
+typedef struct
+{
+    DWORD value;
+    LPWSTR name;
+} PROPERTYVALUEOPTION;
+
+typedef struct
+{
+    DWORD id;
+    DWORD value;
+    LPWSTR text;
+} PROPERTYVALUE;
+
+typedef struct
+{
+    DWORD id;
+    WORD type;
+    WORD flags;
+    LPWSTR name;
+    DWORD valueCount;
+} PROPERTYDESCRIPTOR;
+
+typedef struct
+{
+    LPWSTR id;
+    LPWSTR manufacturer;
+    LPWSTR model;
+    LPWSTR devicePath;
+} PORTABLEDEVICEINFO;
+//#pragma pack(pop)
 
 typedef void (*F)(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int value);
+
+//typedef DWORD (*PGETDEVICECOUNT)();
+typedef DWORD (*PGETPORTABLEDEVICECOUNT)();
+typedef HRESULT (*PGETPORTABLEDEVICEINFO)(DWORD offset, PORTABLEDEVICEINFO* pdInfo);
+typedef HANDLE (*POPENDEVICEEX)(LPWSTR cameraName, DWORD flags);
+typedef void (*PCLOSEDEVICE)(HANDLE hCamera);
+typedef HRESULT (*PGETCAMERAINFO)(HANDLE hCamera, CAMERAINFO* info, DWORD flags);
+typedef HRESULT (*PGETDEVICEINFO)(DWORD cameraId, DEVICEINFO* info);
+typedef HRESULT (*PGETPROPERTYDESCRIPTOR)(HANDLE hCamera, DWORD propertyId, PROPERTYDESCRIPTOR* descriptor);
+typedef HRESULT (*PGETPROPERTYVALUEOPTION)(HANDLE hCamera, DWORD propertyId, PROPERTYVALUEOPTION* option, DWORD index);
+typedef HRESULT (*PGETSINGLEPROPERTYVALUE)(HANDLE hCamera, DWORD propertyId, PROPERTYVALUE* value);
+typedef HRESULT (*PREFRESHPROPERTYLIST)(HANDLE hCamera);
+typedef HRESULT (*PTESTFUNC)(HANDLE hCamera);
+
+//PGETDEVICECOUNT fGetDeviceCount;
+PGETPORTABLEDEVICECOUNT fGetPortableDeviceCount;
+PGETPORTABLEDEVICEINFO fGetPortableDeviceInfo;
+POPENDEVICEEX fOpenDeviceEx;
+PCLOSEDEVICE fCloseDevice;
+PGETCAMERAINFO fGetCameraInfo;
+PGETDEVICEINFO fGetDeviceInfo;
+PGETPROPERTYDESCRIPTOR fGetPropertyDescriptor;
+PGETPROPERTYVALUEOPTION fGetPropertyValueOption;
+PGETSINGLEPROPERTYVALUE fGetSinglePropertyValue;
+PREFRESHPROPERTYLIST fRefreshPropertyList;
+PTESTFUNC fTestFunc;
+
+
+HMODULE
+loadModule(std::wstring moduleName)
+{
+    HMODULE hModule = LoadLibrary(moduleName.c_str());
+
+    if (hModule)
+    {
+        TCHAR szModName[1024];
+
+        if (GetModuleFileName(hModule, szModName,
+            sizeof(szModName) / sizeof(TCHAR)))
+        {
+            // Print the module name and handle value.
+            std::wcout << L"Loaded '" << moduleName.c_str() << L"' from '" << szModName << L"'" << std::endl;
+
+            // allocate a block of memory for the version info
+            DWORD dummy;
+            DWORD dwSize = GetFileVersionInfoSize(szModName, &dummy);
+
+            if (dwSize > 0)
+            {
+                std::vector<BYTE> data(dwSize);
+
+                // load the version info
+                if (!GetFileVersionInfo(szModName, NULL, dwSize, &data[0]))
+                {
+                    std::wcout << L"  Error getting version info" << std::endl;
+                }
+                else
+                {
+                    // get the name and version strings
+                    LPVOID pvProductName = NULL;
+                    unsigned int iProductNameLen = 0;
+                    LPVOID pvProductVersion = NULL;
+                    unsigned int iProductVersionLen = 0;
+
+                    // replace "040904e4" with the language ID of your resources
+                    if (VerQueryValue(&data[0], L"\\StringFileInfo\\040904b0\\ProductName", &pvProductName, &iProductNameLen))
+                    {
+                        std::wcout << L"  Product Name:    " << (PTCHAR)pvProductName << std::endl;
+                    }
+
+                    if (VerQueryValue(&data[0], L"\\StringFileInfo\\040904b0\\ProductVersion", &pvProductVersion, &iProductVersionLen))
+                    {
+                        std::wcout << L"  Product Version: " << (PTCHAR)pvProductVersion << std::endl;
+                    }
+                }
+            }
+        }
+        else
+        {
+            std::wcout << L"Unable to get module name for " << moduleName.c_str();
+        }
+    }
+    else
+    {
+        std::wcerr << L"Unable to load '" << moduleName.c_str() << "' - error " << GetLastError();
+    }
+
+    return hModule;
+}
+
+void
+printModuleInfo()
+{
+    HMODULE hMods[1024];
+    HANDLE hProcess;
+    DWORD cbNeeded;
+    unsigned int i;
+
+    // Get a handle to the process.
+
+    hProcess = GetCurrentProcess();
+
+    // Get a list of all the modules in this process.
+    if (EnumProcessModules(hProcess, hMods, sizeof(hMods), &cbNeeded))
+    {
+        for (i = 0; i < (cbNeeded / sizeof(HMODULE)); i++)
+        {
+            TCHAR szModName[MAX_PATH];
+
+            // Get the full path to the module's file.
+
+            if (GetModuleFileNameEx(hProcess, hMods[i], szModName,
+                sizeof(szModName) / sizeof(TCHAR)))
+            {
+                // Print the module name and handle value.
+                std::wcout << szModName << L"\t";
+
+                // allocate a block of memory for the version info
+                DWORD dummy;
+                DWORD dwSize = GetFileVersionInfoSize(szModName, &dummy);
+
+                if (dwSize == 0)
+                {
+                    std::wcout << L"Unable to get version info";
+                }
+                else
+                {
+                    std::vector<BYTE> data(dwSize);
+
+                    // load the version info
+                    if (!GetFileVersionInfo(szModName, NULL, dwSize, &data[0]))
+                    {
+                        std::wcout << L"Error getting version info";
+                    }
+                    else
+                    {
+                        // get the name and version strings
+                        LPVOID pvProductName = NULL;
+                        unsigned int iProductNameLen = 0;
+                        LPVOID pvProductVersion = NULL;
+                        unsigned int iProductVersionLen = 0;
+
+                        // replace "040904e4" with the language ID of your resources
+                        if (VerQueryValue(&data[0], L"\\StringFileInfo\\040904b0\\ProductName", &pvProductName, &iProductNameLen))
+                        {
+                            std::wcout << (PTCHAR)pvProductName << L"\t";
+                        }
+
+                        if (VerQueryValue(&data[0], L"\\StringFileInfo\\040904b0\\ProductVersion", &pvProductVersion, &iProductVersionLen))
+                        {
+                            std::wcout << (PTCHAR)pvProductVersion;
+                        }
+                    }
+                }
+
+                std::wcout << std::endl;
+            }
+        }
+    }
+}
+
+int
+loadDLLs()
+{
+    // Try to load the "dependencies" first
+//    HMODULE hLibUSBk = loadModule(L"libusbk.dll");
+    HMODULE hTurboJPEG = loadModule(L"turbojpeg.dll");
+    HMODULE hLibRaw = loadModule(L"libraw.dll");
+    HMODULE hSonyCamera = nullptr;
+
+    if (/*hLibUSBk && */hTurboJPEG && hLibRaw)
+    {
+        // Now try to load the driver dll
+        hSonyCamera = loadModule(L"SonyMTPCamera.dll");
+        printModuleInfo();
+        std::cout << "-----\n";
+
+        // If we were able to load the sony dll, attempt to set up the methods we want to call
+        if (hSonyCamera)
+        {
+//            fGetDeviceCount = (PGETDEVICECOUNT)GetProcAddress(hSonyCamera, "GetDeviceCount");
+            fGetCameraInfo = (PGETCAMERAINFO)GetProcAddress(hSonyCamera, "GetCameraInfo");
+            fGetDeviceInfo = (PGETDEVICEINFO)GetProcAddress(hSonyCamera, "GetDeviceInfo");
+            fGetPropertyDescriptor = (PGETPROPERTYDESCRIPTOR)GetProcAddress(hSonyCamera, "GetPropertyDescriptor");
+            fGetPropertyValueOption = (PGETPROPERTYVALUEOPTION)GetProcAddress(hSonyCamera, "GetPropertyValueOption");
+            fGetSinglePropertyValue = (PGETSINGLEPROPERTYVALUE)GetProcAddress(hSonyCamera, "GetSinglePropertyValue");
+            fRefreshPropertyList = (PREFRESHPROPERTYLIST)GetProcAddress(hSonyCamera, "RefreshPropertyList");
+            fTestFunc = (PTESTFUNC)GetProcAddress(hSonyCamera, "TestFunc");
+            fCloseDevice = (PCLOSEDEVICE)GetProcAddress(hSonyCamera, "CloseDevice");
+            fGetPortableDeviceCount = (PGETPORTABLEDEVICECOUNT)GetProcAddress(hSonyCamera, "GetPortableDeviceCount");
+            fGetPortableDeviceInfo = (PGETPORTABLEDEVICEINFO)GetProcAddress(hSonyCamera, "GetPortableDeviceInfo");
+            fOpenDeviceEx = (POPENDEVICEEX)GetProcAddress(hSonyCamera, "OpenDeviceEx");
+
+//            fOpenDevice = (POPENDEVICE)GetProcAddress(hSonyCamera, "OpenDevice");
+        }
+    }
+
+    return (/*hLibUSBk != nullptr && */hTurboJPEG != nullptr
+        && hLibRaw != nullptr && hSonyCamera != nullptr) ? 1 : 0;
+}
 
 bool
 ensureExposureMode(HANDLE hCamera)
@@ -19,8 +310,8 @@ ensureExposureMode(HANDLE hCamera)
 
     while (!modeOk && hr == ERROR_SUCCESS)
     {
-        RefreshPropertyList(hCamera);
-        hr = GetSinglePropertyValue(hCamera, 0x500e, &pv);
+        fRefreshPropertyList(hCamera);
+        hr = fGetSinglePropertyValue(hCamera, 0x500e, &pv);
 
         if (hr == ERROR_SUCCESS)
         {
@@ -58,8 +349,8 @@ ensureStorageMode(HANDLE hCamera)
 
     while (!modeOk && hr == ERROR_SUCCESS)
     {
-        RefreshPropertyList(hCamera);
-        hr = GetSinglePropertyValue(hCamera, 0x5004, &pv);
+        fRefreshPropertyList(hCamera);
+        hr = fGetSinglePropertyValue(hCamera, 0x5004, &pv);
 
         if (hr == ERROR_SUCCESS)
         {
@@ -179,7 +470,7 @@ checkLogging()
             {
                 DWORD sizeLow = GetFileSize(hLog, nullptr);
 
-                TestFunc(nullptr);
+                fTestFunc(nullptr);
 
                 DWORD biggerSizeLow = GetFileSize(hLog, nullptr);
 
@@ -244,7 +535,7 @@ checkCrop(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int value)
 
     deviceInfo.version = 1;
 
-    HRESULT hr = GetDeviceInfo(deviceId, &deviceInfo);
+    HRESULT hr = fGetDeviceInfo(deviceId, &deviceInfo);
 
     if (hr == ERROR_SUCCESS)
     {
@@ -262,7 +553,7 @@ setCrop(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int cropMode)
     if (cropMode == 1)
     {
         CAMERAINFO cameraInfo;
-        HRESULT hr = GetCameraInfo(hCamera, &cameraInfo, 0);
+        HRESULT hr = fGetCameraInfo(hCamera, &cameraInfo, 0);
 
         if (hr == ERROR_SUCCESS)
         {
@@ -282,7 +573,7 @@ setCrop(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int cropMode)
 
     deviceInfo.version = 1;
 
-    HRESULT hr = GetDeviceInfo(deviceId, &deviceInfo);
+    HRESULT hr = fGetDeviceInfo(deviceId, &deviceInfo);
 
     if (hr == ERROR_SUCCESS)
     {
@@ -336,6 +627,7 @@ printHelp()
     std::wcout << L"\n/h        Print this help\n/s        Scan for connected cameras (default)\n/l        List supported cameras\n/d        Show debug setting (see /d[0-5] to set)\n/c        Show crop setting for connected cameras\n/e        Show list of exposure times supported by device\n";
     std::wcout << L"/c[0-2]   Change crop-mode of images for connected cameras\n          0 = No Crop (all pixels)\n          1 = Auto Crop (To what image editing apps would see)\n          2 = User Crop (Manual, requires registry editing)\n";
     std::wcout << L"/d[0-5]   Change debug logging of driver\n          0 = Off (no logging)\n          1 = Log everything\n          ...\n          5 = Errors Only\n          Note that this option will write debugging to a file called\n          'sonycamera.txt' that will appear on your desktop\n";
+    std::wcout << L"/v        Dump version information for every DLL loaded by this driver\n          Note that this will include other DLL's that come with windows\n";
 }
 
 void
@@ -343,7 +635,7 @@ printExposureTimes(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int
 {
     PROPERTYDESCRIPTOR descriptor;
 
-    HRESULT hr = GetPropertyDescriptor(hCamera, 0xffff, &descriptor);
+    HRESULT hr = fGetPropertyDescriptor(hCamera, 0xffff, &descriptor);
 
     if (descriptor.valueCount > 0)
     {
@@ -360,7 +652,7 @@ printExposureTimes(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int
 
         for (int i = 0; i < descriptor.valueCount; i++)
         {
-            hr = GetPropertyValueOption(hCamera, 0xffff, &option, i);
+            hr = fGetPropertyValueOption(hCamera, 0xffff, &option, i);
 
             if (shortForm)
             {
@@ -388,7 +680,7 @@ printISOs(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortFor
 {
     PROPERTYDESCRIPTOR descriptor;
 
-    HRESULT hr = GetPropertyDescriptor(hCamera, 0xfffe, &descriptor);
+    HRESULT hr = fGetPropertyDescriptor(hCamera, 0xfffe, &descriptor);
 
     if (descriptor.valueCount > 0)
     {
@@ -405,7 +697,7 @@ printISOs(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortFor
 
         for (int i = 0; i < descriptor.valueCount; i++)
         {
-            hr = GetPropertyValueOption(hCamera, 0xfffe, &option, i);
+            hr = fGetPropertyValueOption(hCamera, 0xfffe, &option, i);
 
             if (shortForm)
             {
@@ -434,7 +726,7 @@ performScan(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortF
     std::wcout << L"  Get Info:\n";
 
     CAMERAINFO cameraInfo;
-    HRESULT hr = GetCameraInfo(hCamera, &cameraInfo, 0);
+    HRESULT hr = fGetCameraInfo(hCamera, &cameraInfo, 0);
 
     if (hr == ERROR_SUCCESS)
     {
@@ -446,10 +738,10 @@ performScan(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortF
         bool croppedImageOk = cameraInfo.imageWidthCroppedPixels != 0 && cameraInfo.imageHeightCroppedPixels != 0;
 
         PROPERTYDESCRIPTOR descriptor;
-        HRESULT hr = GetPropertyDescriptor(hCamera, 0xffff, &descriptor);
+        HRESULT hr = fGetPropertyDescriptor(hCamera, 0xffff, &descriptor);
 
         exposureTimesOk = (descriptor.valueCount > 0);
-        hr = GetPropertyDescriptor(hCamera, 0xfffe, &descriptor);
+        hr = fGetPropertyDescriptor(hCamera, 0xfffe, &descriptor);
         isosOk = (descriptor.valueCount > 0);
 
 
@@ -485,7 +777,7 @@ performScan(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortF
 
             std::wcout << std::endl << L"  ** PLEASE DO NOT INTERACT WITH THE CAMERA UNTIL DONE **" << std::endl << std::endl;
 
-            hr = GetCameraInfo(hCamera, &cameraInfo, INFOFLAG_ACTIVE | INFOFLAG_INCLUDE_SETTINGS);
+            hr = fGetCameraInfo(hCamera, &cameraInfo, INFOFLAG_ACTIVE | INFOFLAG_INCLUDE_SETTINGS);
 
             if (hr == ERROR_SUCCESS)
             {
@@ -640,7 +932,7 @@ iterateDevices(std::string message, F func, int value)
 
     HRESULT comhr = CoInitialize(nullptr);
 
-    int portableDeviceCount = GetPortableDeviceCount();
+    int portableDeviceCount = fGetPortableDeviceCount();
 
     std::cout << portableDeviceCount << " portable devices found\n\n";
     PORTABLEDEVICEINFO pdinfo;
@@ -650,7 +942,7 @@ iterateDevices(std::string message, F func, int value)
         std::cout << "--------------------------------------\nDevice #" << p + 1 << "\n";
         memset(&pdinfo, 0, sizeof(pdinfo));
 
-        if (GetPortableDeviceInfo(p, &pdinfo) == ERROR_SUCCESS)
+        if (fGetPortableDeviceInfo(p, &pdinfo) == ERROR_SUCCESS)
         {
             std::wcout << L"  Manufacturer: " << pdinfo.manufacturer << L"\n";
             std::wcout << L"  Model:        " << pdinfo.model << L"\n";
@@ -658,7 +950,7 @@ iterateDevices(std::string message, F func, int value)
 
             try
             {
-                HANDLE hCamera = OpenDeviceEx(pdinfo.id, OPENDEVICEEX_OPEN_ANY_DEVICE);
+                HANDLE hCamera = fOpenDeviceEx(pdinfo.id, OPENDEVICEEX_OPEN_ANY_DEVICE);
 
                 if (hCamera != INVALID_HANDLE_VALUE)
                 {
@@ -674,7 +966,7 @@ iterateDevices(std::string message, F func, int value)
                         std::wcerr << L"Problem executing task\n";
                     }
 
-                    CloseDevice(hCamera);
+                    fCloseDevice(hCamera);
                 }
                 else
                 {
@@ -707,6 +999,7 @@ main(int argc, char* argv[])
     short crop_option = 0;
     bool do_debug = false;
     short debug_option = 0;
+    bool do_versions = false;
 
     for (int i = 1; i < argc; i++)
     {
@@ -759,6 +1052,12 @@ main(int argc, char* argv[])
                     // Show iso values
                     option_specified = true;
                     do_isos = true;
+                    break;
+
+                case 'v':
+                    // Dump module version info
+                    option_specified = true;
+                    do_versions = true;
                     break;
 
                 default:
@@ -822,6 +1121,15 @@ main(int argc, char* argv[])
 
     std::cout << "Sony Camera Info\n~~~~~~~~~~~~~~~~\n\n";
 
+    if (!loadDLLs())
+    {
+        std::wcerr << L"Problem loading dlls" << std::endl;
+
+        return ERROR_NOT_FOUND;
+    }
+
+    std::wcout << std::endl;
+
     if (error || do_help)
     {
         printHelp();
@@ -832,6 +1140,11 @@ main(int argc, char* argv[])
     if (!option_specified)
     {
         do_scan = true;
+    }
+
+    if (do_versions)
+    {
+        printModuleInfo();
     }
 
     if (do_scan)

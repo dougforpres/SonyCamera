@@ -193,6 +193,8 @@ Camera::CaptureThread::Run()
     BYTE compressionSetting;
 
     {
+        // We don't want anyone messing with the camera while we're taking a photo
+        // So this will lock the DLL for the duration.
         Locker lock(m_camera);
 
         settings = m_camera->GetSettings(true);

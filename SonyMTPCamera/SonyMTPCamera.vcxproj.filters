@@ -165,9 +165,6 @@
     <ClInclude Include="MTPDevice.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="LibUSBKDevice.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="libusbK\libusbk.h">
       <Filter>Header Files\libUSBK</Filter>
     </ClInclude>
@@ -178,9 +175,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="DeviceEnumerator.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="LibUSBKEnumerator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Utils.h">
@@ -284,16 +278,10 @@
     <ClCompile Include="MTPDevice.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="LibUSBKDevice.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="DeviceEnumerator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MTPEnumerator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="LibUSBKEnumerator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Utils.cpp">
@@ -319,12 +307,6 @@
       <Filter>Libraries\x64</Filter>
     </Library>
     <Library Include="..\..\..\..\..\..\LibRaw-0.19.5-Win64\LibRaw-0.19.5\lib\libraw.lib">
-      <Filter>Libraries\x64</Filter>
-    </Library>
-    <Library Include="libusbK\libusbK.lib">
-      <Filter>Libraries</Filter>
-    </Library>
-    <Library Include="libusbK\x64\libusbK.lib">
       <Filter>Libraries\x64</Filter>
     </Library>
   </ItemGroup>
