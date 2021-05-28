@@ -920,7 +920,18 @@ RefreshPropertyList(HANDLE hCamera)
     // If the camera is currently taking a picture this will block, potentially causing issues
     // with apps like NINA that like to scan camera settings while other things are happening
     // so if we're taking a photo, this bit will be skipped.
-    CaptureStatus status = camera->GetCaptureStatus();
+    CaptureStatus status;
+
+    try
+    {
+        status = camera->GetCaptureStatus();
+    }
+    catch (CameraException& gfe)
+    {
+        // This is ok, it just means there is no capture
+        LOGDEBUG(L"No capture exists, using Cancelled as placeholder for capture status");
+        status = CaptureStatus::Cancelled;
+    }
 
     if (status != CaptureStatus::Capturing)
     {

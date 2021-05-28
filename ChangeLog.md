@@ -1,4 +1,11 @@
 # Change Log
+## 1.0.0.28
+* Fixed problem with NINA support that caused driver to fail when connecting to camera.
+* Fixed problem with NINA support where the wrong error would be sent to NINA if ISO/Gain was disabled/unavailable.
+* (ASCOM Driver) Added warning popups to a couple of settings, requesting user visit Wiki.
+* (ASCOM Driver) Added links to setup dialog pages providing direct access to Wiki.
+* Updated SonyCameraInfo.exe to not dump all loaded DLL's at start unless requested.
+
 ## 1.0.0.27
 * SonyCameraInfo.exe will now try to load each of the required DLL's separately and connect to all the needed methods.  Info about the success/failure is displayed at startup.  Additionally, a new command-line option (/v) has been added that will dump info on ALL DLL's loaded directly or indirectly by the driver.
 * Added ISO info for A7S III.

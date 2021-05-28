@@ -272,8 +272,6 @@ loadDLLs()
     {
         // Now try to load the driver dll
         hSonyCamera = loadModule(L"SonyMTPCamera.dll");
-        printModuleInfo();
-        std::cout << "-----\n";
 
         // If we were able to load the sony dll, attempt to set up the methods we want to call
         if (hSonyCamera)
