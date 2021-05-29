@@ -101,6 +101,8 @@ public:
 
     static DWORD WINAPI _runHandlerThread(LPVOID lpParameter);
 
+    Lockable settingsLock;
+
 protected:
     virtual ObjectInfo* GetImageInfo(DWORD imageId);
     bool ProcessDeviceInfoOverrides();

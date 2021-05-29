@@ -2,6 +2,7 @@
 #include "SonyCamera.h"
 #include "Logger.h"
 #include "CameraException.h"
+#include "Locker.h"
 
 SonyCamera::SonyCamera(Device* device)
     : Camera(device)
@@ -135,6 +136,8 @@ SonyCamera::GetSettings(bool refresh)
 
         if (rx->IsSuccess())
         {
+            Locker lock(settingsLock);
+
             CameraSettings* cs = new CameraSettings(rx);
 
             delete tx;
@@ -143,7 +146,6 @@ SonyCamera::GetSettings(bool refresh)
             if (m_settings)
             {
                 delete m_settings;
-                m_settings = nullptr;
             }
 
             m_settings = cs;
@@ -177,6 +179,7 @@ SonyCamera::SetProperty(Property id, PropertyValue* value)
 
     if (prop)
     {
+        Locker lock(settingsLock);
         DWORD messageType;
         PropertyInfo* info = prop->GetInfo();
 

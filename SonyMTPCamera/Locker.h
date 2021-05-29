@@ -7,6 +7,7 @@ class Locker
 {
 public:
     Locker(Lockable* lockable, DWORD timeout = DEFAULT_LOCK_WAIT);
+    Locker(Lockable& lockable, DWORD timeout = DEFAULT_LOCK_WAIT);
     ~Locker();
 
 private:

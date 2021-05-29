@@ -445,14 +445,13 @@ GetCaptureStatus(HANDLE hCamera, IMAGEINFO* info)
 
     try
     {
-        Locker lock(camera);
-
         CaptureStatus status = camera->GetCaptureStatus();
 
         info->status = (DWORD)status;
 
         if (status == CaptureStatus::Complete)
         {
+            Locker lock(camera);
             Image* image = camera->GetCapturedImage();
 
             info->size = image->GetImageDataSize();
@@ -933,7 +932,7 @@ RefreshPropertyList(HANDLE hCamera)
         status = CaptureStatus::Cancelled;
     }
 
-    if (status != CaptureStatus::Capturing)
+    if (status != CaptureStatus::Capturing && status != CaptureStatus::Starting)
     {
         try
         {
@@ -1262,17 +1261,14 @@ SetPropertyValue(HANDLE hCamera, DWORD propertyId, DWORD value)
                     bool up;
                     bool adjusted;
                     int compareResult;
-//                    int expectedCompareResult;
 
                     if (v->UpIsBigger())
                     {
                         up = compare < 0;
-//                        expectedCompareResult = compare < 0 ? 1 : -1;
                     }
                     else
                     {
                         up = compare > 0;
-//                        expectedCompareResult = compare > 0 ? 1 : -1;
                     }
 
                     CameraProperty* inout = nullptr;

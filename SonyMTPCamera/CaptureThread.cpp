@@ -195,7 +195,7 @@ Camera::CaptureThread::Run()
     {
         // We don't want anyone messing with the camera while we're taking a photo
         // So this will lock the DLL for the duration.
-        Locker lock(m_camera);
+        Locker lock(m_camera->settingsLock);
 
         settings = m_camera->GetSettings(true);
 
@@ -235,12 +235,8 @@ Camera::CaptureThread::Run()
     // Wait up to 10 seconds for camera to report the image is ready for download
     do
     {
-        {
-            Locker lock(m_camera);
-
-            settings = m_camera->GetSettings(true);
-            imageReady = this->ImageReady(settings);
-        }
+        settings = m_camera->GetSettings(true);
+        imageReady = this->ImageReady(settings);
 
         if (!imageReady)
         {
@@ -255,13 +251,7 @@ Camera::CaptureThread::Run()
     {
         LOGINFO(L"Step 4: Retrieve image #%d", imageCount + 1);
 
-        Image* image;
-
-        {
-            Locker lock(m_camera);
-
-            image = m_camera->GetImage(FULL_IMAGE);
-        }
+        Image* image = m_camera->GetImage(FULL_IMAGE);
 
         if (image)
         {
@@ -280,12 +270,8 @@ Camera::CaptureThread::Run()
 
             imageCount++;
 
-            {
-                Locker lock(m_camera);
-
-                settings = m_camera->GetSettings(true);
-                imageReady = this->ImageReady(settings);
-            }
+            settings = m_camera->GetSettings(true);
+            imageReady = this->ImageReady(settings);
         }
     }
 
