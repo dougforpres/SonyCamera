@@ -3,7 +3,7 @@
 * More fixes to support NINA.
 * Changed the lock when taking an image to only lock direct control/update of camera settings.  Tested a number of longer images using NINA with no issue.
 * Removed a little old code that had previously been commented out.
-* 
+
 ## 1.0.0.28
 * Fixed problem with NINA support that caused driver to fail when connecting to camera.
 * Fixed problem with NINA support where the wrong error would be sent to NINA if ISO/Gain was disabled/unavailable.
