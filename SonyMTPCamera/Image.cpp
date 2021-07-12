@@ -240,16 +240,35 @@ Image::ProcessARWData()
 
                 LOGINFO(L"Raw data layout in form: %S", builder.str().c_str());
 
-                if (m_cropLeft < 0) {
-                    LOGINFO(L"Crop Mode set to auto, using info from image");
-                    m_cropLeft = libraw->imgdata.sizes.raw_crop.cleft * 2; // expressed in 2 pixel units because RGGB;
-                    m_cropTop = libraw->imgdata.sizes.raw_crop.ctop * 2;
-                    m_cropRight = 0;
-                    m_cropBottom = 0;
+                ushort rawCropLeft   = libraw->imgdata.sizes.raw_crop.cleft;
+                ushort rawCropTop    = libraw->imgdata.sizes.raw_crop.ctop;
+
+                m_croppedHeight = libraw->imgdata.sizes.raw_crop.cheight;
+                m_croppedWidth  = libraw->imgdata.sizes.raw_crop.cwidth;
+
+                // libraw sets top/left to be 0xffff if they're 0
+                if (rawCropLeft > m_rawWidth)
+                {
+                    LOGDEBUG(L"Camera didn't set left-crop value, assuming 0");
+                    rawCropLeft = 0;
                 }
 
-                m_croppedWidth = m_rawWidth - libraw->imgdata.sizes.raw_crop.cleft * 2;
-                m_croppedHeight = m_rawHeight - libraw->imgdata.sizes.raw_crop.ctop * 2;
+                if (rawCropTop > m_rawHeight)
+                {
+                    LOGDEBUG(L"Camera didn't set top-crop value, assuming 0");
+                    rawCropTop = 0;
+                }
+
+                m_croppedWidth = libraw->imgdata.sizes.raw_crop.cwidth;
+                m_croppedHeight = libraw->imgdata.sizes.raw_crop.cheight;
+
+                if (m_cropLeft < 0) {
+                    LOGINFO(L"Crop Mode set to auto, using info from image");
+                    m_cropLeft = rawCropLeft * 2; // expressed in 2 pixel units because RGGB;
+                    m_cropTop = rawCropTop * 2;
+                    m_cropRight = m_rawWidth - m_croppedWidth - m_cropLeft;
+                    m_cropBottom = m_rawHeight - m_croppedHeight - m_cropTop;
+                }
 
                 ushort width = m_rawWidth - m_cropLeft - m_cropRight;
                 ushort height = m_rawHeight - m_cropTop - m_cropBottom;
