@@ -1,4 +1,9 @@
 # Change Log
+## 1.0.0.30
+* SonyCameraInfo.exe can now be run (in basic scan mode) from Windows Explorer (it will wait for \<enter> key to be pressed before exiting).
+* Finally figured out how libraw deals with crop info.  Thanks to a user with an A58 who sent me a sample image.
+* (ASCOM Driver) Deal with APT not supporting get/set of Gain using index mode.  Driver will now try to find a matching gain and use it.
+
 ## 1.0.0.29
 * More fixes to support NINA.
 * Changed the lock when taking an image to only lock direct control/update of camera settings.  Tested a number of longer images using NINA with no issue.
