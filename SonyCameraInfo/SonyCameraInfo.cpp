@@ -458,60 +458,67 @@ checkLogging()
                 str = buffer;
             }
 
-            std::wcout << L"Driver DLL IS configured to log to a file (" << str << L")\n";
-
-            // We cannot write to the file as the driver dll will have it locked for writing, but we can get its size and call a method that will write to the log
-            // Attempt to get size of the file, then write to it, and finally get size again and see if it got bigger
-            HANDLE hLog = CreateFile(str, 0, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-
-            if (hLog != INVALID_HANDLE_VALUE)
+            if (wcslen(str) > 0)
             {
-                DWORD sizeLow = GetFileSize(hLog, nullptr);
+                std::wcout << L"Driver DLL IS configured to log to a file (" << str << L")\n";
 
-                fTestFunc(nullptr);
+                // We cannot write to the file as the driver dll will have it locked for writing, but we can get its size and call a method that will write to the log
+                // Attempt to get size of the file, then write to it, and finally get size again and see if it got bigger
+                HANDLE hLog = CreateFile(str, 0, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 
-                DWORD biggerSizeLow = GetFileSize(hLog, nullptr);
-
-                if (biggerSizeLow == sizeLow)
+                if (hLog != INVALID_HANDLE_VALUE)
                 {
-                    std::wcerr << L"Unable to write to the log file (error = " << GetLastError() << ")\n";
-                }
+                    DWORD sizeLow = GetFileSize(hLog, nullptr);
 
-                CloseHandle(hLog);
+                    fTestFunc(nullptr);
+
+                    DWORD biggerSizeLow = GetFileSize(hLog, nullptr);
+
+                    if (biggerSizeLow == sizeLow)
+                    {
+                        std::wcerr << L"Unable to write to the log file (error = " << GetLastError() << ")\n";
+                    }
+
+                    CloseHandle(hLog);
+                }
+                else
+                {
+                    DWORD err = GetLastError();
+
+                    std::wcerr << L"Unable to open the log file";
+
+                    switch (err)
+                    {
+                    case ERROR_PATH_NOT_FOUND:
+                        std::wcerr << L" - Cannot find the directory\n";
+                        break;
+
+                    case ERROR_FILE_NOT_FOUND:
+                        std::wcerr << L" - File cannot be found\n";
+                        break;
+
+                    case ERROR_FILE_READ_ONLY:
+                        std::wcerr << L" - File is marked READ-ONLY\n";
+                        break;
+
+                    case ERROR_SHARING_VIOLATION:
+                        std::wcerr << L" - Another program is preventing the file from being written to\n";
+                        break;
+
+                    default:
+                        std::wcerr << L" (error = " << GetLastError() << L")\n";
+                        break;
+                    }
+                }
             }
             else
             {
-                DWORD err = GetLastError();
-
-                std::wcerr << L"Unable to open the log file";
-
-                switch (err)
-                {
-                case ERROR_PATH_NOT_FOUND:
-                    std::wcerr << L" - Cannot find the directory\n";
-                    break;
-
-                case ERROR_FILE_NOT_FOUND:
-                    std::wcerr << L" - File cannot be found\n";
-                    break;
-
-                case ERROR_FILE_READ_ONLY:
-                    std::wcerr << L" - File is marked READ-ONLY\n";
-                    break;
-
-                case ERROR_SHARING_VIOLATION:
-                    std::wcerr << L" - Another program is preventing the file from being written to\n";
-                    break;
-
-                default:
-                    std::wcerr << L" (error = " << GetLastError() << L")\n";
-                    break;
-                }
+                std::wcout << L"Driver DLL IS NOT configured to log to a file (clear)\n";
             }
         }
         else
         {
-            std::wcout << L"Driver DLL IS NOT configured to log to a file\n";
+            std::wcout << L"Driver DLL IS NOT configured to log to a file (not set)\n";
         }
 
         RegCloseKey(key);
@@ -622,7 +629,7 @@ setCrop(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int cropMode)
 void
 printHelp()
 {
-    std::wcout << L"\n/h        Print this help\n/s        Scan for connected cameras (default)\n/l        List supported cameras\n/d        Show debug setting (see /d[0-5] to set)\n/c        Show crop setting for connected cameras\n/e        Show list of exposure times supported by device\n";
+    std::wcout << L"\n/h        Print this help\n/s        Scan for connected cameras (default)\n/l        List supported cameras\n/d        Show debug setting (see /d[0-5] to set)\n/c        Show crop setting for connected cameras\n/e        Show list of exposure times supported by device\n/i        Show list of ISO values supported by device\n";
     std::wcout << L"/c[0-2]   Change crop-mode of images for connected cameras\n          0 = No Crop (all pixels)\n          1 = Auto Crop (To what image editing apps would see)\n          2 = User Crop (Manual, requires registry editing)\n";
     std::wcout << L"/d[0-5]   Change debug logging of driver\n          0 = Off (no logging)\n          1 = Log everything\n          ...\n          5 = Errors Only\n          Note that this option will write debugging to a file called\n          'sonycamera.txt' that will appear on your desktop\n";
     std::wcout << L"/v        Dump version information for every DLL loaded by this driver\n          Note that this will include other DLL's that come with windows\n";
@@ -874,7 +881,7 @@ listCameras()
     }
 
     RegCloseKey(key);
-
+    /*
     if (RegCreateKeyEx(HKEY_CURRENT_USER, L"Software\\Retro.kiwi\\SonyMTPCamera.dll\\Cameras", 0, NULL, REG_OPTION_NON_VOLATILE, KEY_READ, NULL, &key, NULL) == ERROR_SUCCESS)
     {
         // List libuskK Cameras next
@@ -920,7 +927,7 @@ listCameras()
         } while (enumStatus == ERROR_SUCCESS);
     }
 
-    RegCloseKey(key);
+    RegCloseKey(key);*/
 }
 
 void
@@ -981,6 +988,24 @@ iterateDevices(std::string message, F func, int value)
     CoUninitialize();
 }
 
+// returns TRUE if program is in its own console (cursor at 0,0) or
+// FALSE if it was launched from an existing console.
+// See http://support.microsoft.com/kb/99115
+bool
+separate_console(void)
+{
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+
+    if (!GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi))
+    {
+        printf("GetConsoleScreenBufferInfo failed: %lu\n", GetLastError());
+        return FALSE;
+    }
+
+    // if cursor position is (0,0) then we were launched in a separate console
+    return ((!csbi.dwCursorPosition.X) && (!csbi.dwCursorPosition.Y));
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -998,6 +1023,7 @@ main(int argc, char* argv[])
     bool do_debug = false;
     short debug_option = 0;
     bool do_versions = false;
+    bool needKeyToExit = separate_console();
 
     for (int i = 1; i < argc; i++)
     {
@@ -1186,6 +1212,14 @@ main(int argc, char* argv[])
     {
         iterateDevices("Listing supported ISO values", printISOs, 0);
     }
+
+    if (needKeyToExit)
+    {
+        std::wcout << L"\nPress <ENTER> to exit";
+        getchar();
+    }
+
+    FreeConsole();
 
     return ERROR_SUCCESS;
 }
