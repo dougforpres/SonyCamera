@@ -1,4 +1,10 @@
 # Change Log
+## 1.0.0.31
+* ILCE-A7S (A7S): Updated to include Cropped Image Size, Exposure, and ISO
+* ILCE-A7C (A7C): Added
+* SLT-A99V (Alpha 99): Added
+* ILCE-6000 (a6000): Updated to include ISO
+
 ## 1.0.0.30
 * SonyCameraInfo.exe can now be run (in basic scan mode) from Windows Explorer (it will wait for \<enter> key to be pressed before exiting).
 * Finally figured out how libraw deals with crop info.  Thanks to a user with an A58 who sent me a sample image.
