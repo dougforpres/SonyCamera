@@ -111,7 +111,7 @@ extern "C" {
     IMPEXP HANDLE  OpenDevice(LPWSTR cameraName);
     IMPEXP HANDLE  OpenDeviceEx(LPWSTR cameraName, DWORD flags);
     IMPEXP void    CloseDevice(HANDLE hCamera);
-    IMPEXP HRESULT GetDeviceInfo(DWORD cameraId, DEVICEINFO* info);
+    IMPEXP HRESULT GetDeviceInfo(HANDLE hCamera, DEVICEINFO* info);
     IMPEXP HRESULT GetPreviewImage(HANDLE hCamera, IMAGEINFO* info);
     IMPEXP HRESULT StartCapture(HANDLE hCamera, IMAGEINFO* info);
     IMPEXP HRESULT GetCaptureStatus(HANDLE hCamera, IMAGEINFO* info);

@@ -97,22 +97,20 @@ typedef struct
 } PORTABLEDEVICEINFO;
 //#pragma pack(pop)
 
-typedef void (*F)(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int value);
+typedef void (*F)(HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int value);
 
-//typedef DWORD (*PGETDEVICECOUNT)();
 typedef DWORD (*PGETPORTABLEDEVICECOUNT)();
 typedef HRESULT (*PGETPORTABLEDEVICEINFO)(DWORD offset, PORTABLEDEVICEINFO* pdInfo);
 typedef HANDLE (*POPENDEVICEEX)(LPWSTR cameraName, DWORD flags);
 typedef void (*PCLOSEDEVICE)(HANDLE hCamera);
 typedef HRESULT (*PGETCAMERAINFO)(HANDLE hCamera, CAMERAINFO* info, DWORD flags);
-typedef HRESULT (*PGETDEVICEINFO)(DWORD cameraId, DEVICEINFO* info);
+typedef HRESULT (*PGETDEVICEINFO)(HANDLE hCamera, DEVICEINFO* info);
 typedef HRESULT (*PGETPROPERTYDESCRIPTOR)(HANDLE hCamera, DWORD propertyId, PROPERTYDESCRIPTOR* descriptor);
 typedef HRESULT (*PGETPROPERTYVALUEOPTION)(HANDLE hCamera, DWORD propertyId, PROPERTYVALUEOPTION* option, DWORD index);
 typedef HRESULT (*PGETSINGLEPROPERTYVALUE)(HANDLE hCamera, DWORD propertyId, PROPERTYVALUE* value);
 typedef HRESULT (*PREFRESHPROPERTYLIST)(HANDLE hCamera);
 typedef HRESULT (*PTESTFUNC)(HANDLE hCamera);
 
-//PGETDEVICECOUNT fGetDeviceCount;
 PGETPORTABLEDEVICECOUNT fGetPortableDeviceCount;
 PGETPORTABLEDEVICEINFO fGetPortableDeviceInfo;
 POPENDEVICEEX fOpenDeviceEx;
@@ -276,7 +274,6 @@ loadDLLs()
         // If we were able to load the sony dll, attempt to set up the methods we want to call
         if (hSonyCamera)
         {
-//            fGetDeviceCount = (PGETDEVICECOUNT)GetProcAddress(hSonyCamera, "GetDeviceCount");
             fGetCameraInfo = (PGETCAMERAINFO)GetProcAddress(hSonyCamera, "GetCameraInfo");
             fGetDeviceInfo = (PGETDEVICEINFO)GetProcAddress(hSonyCamera, "GetDeviceInfo");
             fGetPropertyDescriptor = (PGETPROPERTYDESCRIPTOR)GetProcAddress(hSonyCamera, "GetPropertyDescriptor");
@@ -288,8 +285,6 @@ loadDLLs()
             fGetPortableDeviceCount = (PGETPORTABLEDEVICECOUNT)GetProcAddress(hSonyCamera, "GetPortableDeviceCount");
             fGetPortableDeviceInfo = (PGETPORTABLEDEVICEINFO)GetProcAddress(hSonyCamera, "GetPortableDeviceInfo");
             fOpenDeviceEx = (POPENDEVICEEX)GetProcAddress(hSonyCamera, "OpenDeviceEx");
-
-//            fOpenDevice = (POPENDEVICE)GetProcAddress(hSonyCamera, "OpenDevice");
         }
     }
 
@@ -532,7 +527,7 @@ checkLogging()
 }
 
 void
-checkCrop(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int value)
+checkCrop(HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int value)
 {
     DEVICEINFO deviceInfo;
 
@@ -540,7 +535,7 @@ checkCrop(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int value)
 
     deviceInfo.version = 1;
 
-    HRESULT hr = fGetDeviceInfo(deviceId, &deviceInfo);
+    HRESULT hr = fGetDeviceInfo(hCamera, &deviceInfo);
 
     if (hr == ERROR_SUCCESS)
     {
@@ -553,7 +548,7 @@ checkCrop(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int value)
 }
 
 void
-setCrop(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int cropMode)
+setCrop(HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int cropMode)
 {
     if (cropMode == 1)
     {
@@ -578,7 +573,7 @@ setCrop(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int cropMode)
 
     deviceInfo.version = 1;
 
-    HRESULT hr = fGetDeviceInfo(deviceId, &deviceInfo);
+    HRESULT hr = fGetDeviceInfo(hCamera, &deviceInfo);
 
     if (hr == ERROR_SUCCESS)
     {
@@ -636,7 +631,7 @@ printHelp()
 }
 
 void
-printExposureTimes(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortForm)
+printExposureTimes(HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortForm)
 {
     PROPERTYDESCRIPTOR descriptor;
 
@@ -681,7 +676,7 @@ printExposureTimes(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int
 }
 
 void
-printISOs(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortForm)
+printISOs(HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortForm)
 {
     PROPERTYDESCRIPTOR descriptor;
 
@@ -726,7 +721,7 @@ printISOs(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortFor
 }
 
 void
-performScan(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortForm)
+performScan(HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortForm)
 {
     std::wcout << L"  Get Info:\n";
 
@@ -748,7 +743,6 @@ performScan(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortF
         exposureTimesOk = (descriptor.valueCount > 0);
         hr = fGetPropertyDescriptor(hCamera, 0xfffe, &descriptor);
         isosOk = (descriptor.valueCount > 0);
-
 
         if (!previewOk || !fullImageOk || !croppedImageOk || !exposureTimesOk || !isosOk)
         {
@@ -828,8 +822,8 @@ performScan(int deviceId, HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortF
         std::wcout << L"Failed getting camera info - error " << hr << L"\n";
     }
 
-    printExposureTimes(deviceId, hCamera, pdinfo, 1);
-    printISOs(deviceId, hCamera, pdinfo, 1);
+    printExposureTimes(hCamera, pdinfo, 1);
+    printISOs(hCamera, pdinfo, 1);
 }
 
 void
@@ -964,7 +958,7 @@ iterateDevices(std::string message, F func, int value)
 
                     try
                     {
-                        func(p, hCamera, &pdinfo, value);
+                        func(hCamera, &pdinfo, value);
                     }
                     catch (...)
                     {

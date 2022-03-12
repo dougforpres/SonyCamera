@@ -58,9 +58,11 @@ int main()
 
     memset(&info, 0, sizeof(info));
     info.version = 1;
-    GetDeviceInfo(0, &info);
+    GetPortableDeviceInfo(0, &pdinfo);
 
-    HANDLE h = OpenDevice(info.deviceName);
+    HANDLE h = OpenDevice(pdinfo.id);
+
+    RefreshPropertyList(h);
 
     // Try to close device, then reopen it
     CloseDevice(h);

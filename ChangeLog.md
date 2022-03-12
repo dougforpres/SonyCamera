@@ -1,9 +1,19 @@
 # Change Log
+## 1.0.0.32
+* Updated GetDeviceInfo method to use device handle like all other methods (as opposed to deviceId).
+* ICLE-7R (A7R): Updated to include Auto-Crop resolution, Exposure, and ISO info.
+* ICLE-7M2 (A7 Mk II): Updated to include Exposure and ISO info.
+* ICLE-5100 (a5100): Updated to include Exposure and ISO info.
+* ICLE-6300 (a6300): Updated to include ISO info.
+* Updated SonyCameraInfo.exe to use new GetDeviceInfo method.  The older implementation was causing issues when non-cameras (like USB Drives) were connected with lower device ID's than the camera.
+* Removed live status info from ASCOM Setup Dialog - started crashing after install of NINA 2.0 beta (no idea why).
+* Updated auto learn of Exposure Time and ISO so they hopefully work a little more reliably.  They will attempt to nudge the settings up/down by one setting before starting the detection.  It is possible the virtual button might be a little sticky :).
+
 ## 1.0.0.31
-* ILCE-A7S (A7S): Updated to include Cropped Image Size, Exposure, and ISO
-* ILCE-A7C (A7C): Added
-* SLT-A99V (Alpha 99): Added
-* ILCE-6000 (a6000): Updated to include ISO
+* ILCE-A7S (A7S): Updated to include Cropped Image Size, Exposure, and ISO.
+* ILCE-A7C (A7C): Added.
+* SLT-A99V (Alpha 99): Added.
+* ILCE-6000 (a6000): Updated to include ISO.
 
 ## 1.0.0.30
 * SonyCameraInfo.exe can now be run (in basic scan mode) from Windows Explorer (it will wait for \<enter> key to be pressed before exiting).

@@ -6,7 +6,7 @@
 #include "SonyMTPCamera.h"
 
 void
-watchSettings(HANDLE h)
+watchSettings(HANDLE h, bool loop)
 {
     DWORD count = 0;
     IMAGEINFO iinfo;
@@ -30,41 +30,44 @@ watchSettings(HANDLE h)
         printf("x%04x (%S), type = x%04x, flags = x%04x, value = x%04x (%S)\n", v->id, d.name, d.type, d.flags, v->value, v->text);
     }
 
-    pv2 = pv1;
-
-    for (int i = 0; i < 120; i++)
+    if (loop)
     {
-        printf("---\n");
-        Sleep(500);
+        pv2 = pv1;
 
-        RefreshPropertyList(h);
-        GetAllPropertyValues(h, pv1, &count);
-
-        if (pv2)
+        for (int i = 0; i < 120; i++)
         {
-            // Compare
-            for (int i = 0; i < count; i++)
-            {
-                PROPERTYVALUE* t1 = (pv1 + i);
-                PROPERTYVALUE* t2 = (pv2 + i);
+            printf("---\n");
+            Sleep(500);
 
-                if (t1->id == t2->id)
+            RefreshPropertyList(h);
+            GetAllPropertyValues(h, pv1, &count);
+
+            if (pv2)
+            {
+                // Compare
+                for (int i = 0; i < count; i++)
                 {
-                    if (t1->value != t2->value)
+                    PROPERTYVALUE* t1 = (pv1 + i);
+                    PROPERTYVALUE* t2 = (pv2 + i);
+
+                    if (t1->id == t2->id)
                     {
-                        printf("Property x%04x value changed from x%04x to x%04x (%S -> %S)\n", t1->id, t2->value, t1->value, t2->text, t1->text);
+                        if (t1->value != t2->value)
+                        {
+                            printf("Property x%04x value changed from x%04x to x%04x (%S -> %S)\n", t1->id, t2->value, t1->value, t2->text, t1->text);
+                        }
+                    }
+                    else
+                    {
+                        // Expectation is same order for return data
+                        printf("Id's don't match! x%04x != x%04x\n", t1->id, t2->id);
                     }
                 }
-                else
-                {
-                    // Expectation is same order for return data
-                    printf("Id's don't match! x%04x != x%04x\n", t1->id, t2->id);
-                }
             }
-        }
 
-        pv2 = pv1;
-        pv1 = new PROPERTYVALUE[count];
+            pv2 = pv1;
+            pv1 = new PROPERTYVALUE[count];
+        }
     }
 }
 
@@ -227,18 +230,18 @@ int main()
         }
     }
 
-    DEVICEINFO info;
+//    DEVICEINFO info;
 
-    info.version = 1;
-    GetDeviceInfo(0, &info);
+//    info.version = 1;
+//    GetDeviceInfo(0, &info);
 
-    HANDLE h = OpenDevice(info.deviceName);
+    HANDLE h = OpenDevice(pdinfo.id);
 
     // Uncomment to just keep pulling settings looking for changes
-//    watchSettings(h);
+    watchSettings(h, false);
 
     // Uncomment to try state-machiney thing to change exposure time
-    testExposure(h);
+//    testExposure(h);
 //    testSetISO(h);
 //    dumpExposureOptions(h);
 

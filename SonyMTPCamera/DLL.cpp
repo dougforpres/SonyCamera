@@ -269,28 +269,31 @@ CloseDevice(HANDLE hCamera)
 }
 
 HRESULT
-GetDeviceInfo(DWORD deviceId, DEVICEINFO *info)
+GetDeviceInfo(HANDLE hCamera, DEVICEINFO *info)
 {
-    LOGTRACE(L"In: GetDeviceInfo(x%p, @ x%p)", deviceId, info);
+    LOGTRACE(L"In: GetDeviceInfo(x%p, @ x%p)", hCamera, info);
 
     if (!info || info->version != 1)
     {
-        LOGWARN(L"Out: GetDeviceInfo(x%p, @ x%p) - Passed wrong version", deviceId, info);
+        LOGWARN(L"Out: GetDeviceInfo(x%p, @ x%p) - Passed wrong version", hCamera, info);
 
         return ERROR_INCORRECT_SIZE;
     }
 
-    std::list<Device*> deviceList = deviceManager->GetFilteredDevices();
-    std::list<Device*>::iterator it = deviceList.begin();
+    Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
 
-    std::advance(it, deviceId);
+//    std::list<Device*> deviceList = deviceManager->GetFilteredDevices();
+//    std::list<Device*>::iterator it = deviceList.begin();
 
-    if (it != deviceList.end())
+//    std::advance(it, deviceId);
+
+//    if (it != deviceList.end())
+//    {
+//        Device* device = (*it);// ->Clone();
+//        SonyCamera* camera = new SonyCamera(device);
+    if (hCamera)
     {
-        Device* device = (*it);// ->Clone();
-        SonyCamera* camera = new SonyCamera(device);
-
-        camera->Open();
+//        camera->Open();
         DeviceInfo* deviceInfo = camera->GetDeviceInfo(false);
 
         info->imageWidthPixels = deviceInfo->GetSensorXResolution();
@@ -309,22 +312,22 @@ GetDeviceInfo(DWORD deviceId, DEVICEINFO *info)
         info->manufacturer = exportString(deviceInfo->GetManufacturer());
         info->model = exportString(deviceInfo->GetModel());
         info->serialNumber = exportString(deviceInfo->GetSerialNumber());
-        info->deviceName = exportString((*it)->GetId());
+        info->deviceName = exportString(camera->GetId());// (*it)->GetId());
         info->sensorName = exportString(deviceInfo->GetSensorName());
         info->deviceVersion = exportString(deviceInfo->GetVersion());
 
         delete deviceInfo;
 
-        LOGTRACE(L"Out: GetDeviceInfo(x%p, @ x%p) - Returning data", deviceId, info);
+        LOGTRACE(L"Out: GetDeviceInfo(x%p, @ x%p) - Returning data", hCamera, info);
 
-        camera->Close();
-        delete camera;
+//        camera->Close();
+//        delete camera;
 
         return ERROR_SUCCESS;
     }
     else
     {
-        LOGWARN(L"Out: GetDeviceInfo(x%p, @ x%p) - Device Not Found", deviceId, info);
+        LOGWARN(L"Out: GetDeviceInfo(x%p, @ x%p) - Device Not Found", hCamera, info);
 
         return ERROR_NOT_FOUND;
     }
@@ -612,6 +615,20 @@ GetAvailablePropertyValues(HANDLE hCamera, Camera* camera, Property propertyId, 
 
     desired->SetCurrentValue(desiredVal);
 
+    int compareResult;
+    CameraProperty* inout = nullptr;
+
+    // There seems to be an issue learning Exposure times - possibly related to the camera effectively being a
+    // little "sticky" when first connected.  So what we'll do is loiter for a little, then try bumping up,
+    // then down, and finally try the actual "detect" part.
+    Sleep(1000);
+
+    // Just to ensure we're up-to-date
+    camera->GetSettings(true);
+
+    NudgePropertyAndWait(camera, desired, true, &inout, &compareResult);
+    NudgePropertyAndWait(camera, desired, false, &inout, &compareResult);
+
     // Moves to lowest possible value
     SetPropertyValue(hCamera, (DWORD)propertyId, startAt);
 
@@ -619,8 +636,6 @@ GetAvailablePropertyValues(HANDLE hCamera, Camera* camera, Property propertyId, 
 
     bool adjusted;
     int expectedCompareResult = current->Compare(*desired);
-    int compareResult;
-    CameraProperty* inout = nullptr;
 
     do
     {
