@@ -97,6 +97,12 @@ typedef struct
 } PORTABLEDEVICEINFO;
 //#pragma pack(pop)
 
+typedef struct
+{
+    std::wstring name;
+    std::wstring version;
+} VERSIONINFO;
+
 typedef void (*F)(HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int value);
 
 typedef DWORD (*PGETPORTABLEDEVICECOUNT)();
@@ -1000,9 +1006,66 @@ separate_console(void)
     return ((!csbi.dwCursorPosition.X) && (!csbi.dwCursorPosition.Y));
 }
 
+// TODO: Move other version getting into here
+VERSIONINFO get_version_info(HMODULE hModule)
+{
+    TCHAR szModName[1024];
+    VERSIONINFO version_info;
+
+    version_info.name = L"";
+    version_info.version = L"";
+
+    if (GetModuleFileName(hModule, szModName,
+        sizeof(szModName) / sizeof(TCHAR)))
+    {
+        // allocate a block of memory for the version info
+        DWORD dummy;
+        DWORD dwSize = GetFileVersionInfoSize(szModName, &dummy);
+
+        if (dwSize > 0)
+        {
+            // allocate a block of memory for the version info
+            std::vector<BYTE> data(dwSize);
+
+            // load the version info
+            if (!GetFileVersionInfo(szModName, NULL, dwSize, &data[0]))
+            {
+                std::wcout << L"  Error getting version info" << std::endl;
+            }
+            else
+            {
+                // get the name and version strings
+                LPVOID pvProductName = NULL;
+                unsigned int iProductNameLen = 0;
+                LPVOID pvProductVersion = NULL;
+                unsigned int iProductVersionLen = 0;
+
+                // replace "040904e4" with the language ID of your resources
+                if (VerQueryValue(&data[0], L"\\StringFileInfo\\040904b0\\ProductName", &pvProductName, &iProductNameLen))
+                {
+                    version_info.name = (PTCHAR)pvProductName;
+                }
+
+                if (VerQueryValue(&data[0], L"\\StringFileInfo\\040904b0\\ProductVersion", &pvProductVersion, &iProductVersionLen))
+                {
+                    version_info.version = (PTCHAR)pvProductVersion;
+                }
+            }
+        }
+    }
+
+    return version_info;
+}
+
 int
 main(int argc, char* argv[])
 {
+    bool isWin64 = false;
+
+#if _WIN64
+    isWin64 = true;
+#endif
+
     bool error = false;
     bool option_specified = false;
     bool do_help = false;
@@ -1137,7 +1200,9 @@ main(int argc, char* argv[])
         }
     }
 
-    std::cout << "Sony Camera Info\n~~~~~~~~~~~~~~~~\n\n";
+    VERSIONINFO version_info = get_version_info(GetModuleHandle(nullptr));
+
+    std::wcout << L"Sony Camera Info v" << version_info.version << L" (" << (isWin64 ? L"64" : L"32") << L" bit)" << std::endl << std::endl;
 
     if (!loadDLLs())
     {
