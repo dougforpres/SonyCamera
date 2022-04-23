@@ -553,6 +553,8 @@ CameraManager::SetupSupportedDevices()
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 4.27);
     registry.SetDWORDDefault(key, L"Sensor X Resolution", 5472);
     registry.SetDWORDDefault(key, L"Sensor Y Resolution", 3656);
+    registry.SetDWORDDefault(key, L"AutoCropped X Resolution", 5456);
+    registry.SetDWORDDefault(key, L"AutoCropped Y Resolution", 3632);
     registry.SetDWORDDefault(key, L"Preview X Resolution", 0);
     registry.SetDWORDDefault(key, L"Preview Y Resolution", 0);
     registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
@@ -560,6 +562,8 @@ CameraManager::SetupSupportedDevices()
     registry.SetDoubleDefault(key, L"Exposure Time Step", 0.000125);
     registry.SetDWORDDefault(key, L"Sensor Type", 2);
     registry.SetDWORDDefault(key, L"Supports Liveview", 0);
+    registry.SetStringDefault(key, L"Exposure Times", L"0,19660810,16384010,13107210,9830410,8519690,6553610,5242890,3932170,3276810,2621450,2097162,1638410,1310730,1048586,851978,655370,524298,393226,327690,262154,65539,65540,65541,65542,65544,65546,65549,65551,65556,65561,65566,65576,65586,65596,65616,65636,65661,65696,65736,65786,65856,65936,66036,66176,66336,66536,66786,67136,67536,68036,68736,69536");
+    registry.SetStringDefault(key, L"ISOs", L"16777215,100,200,400,800,1600,3200,6400,12800,16000");
 
     // SLT Alpha 99
     key = L"Cameras\\Sony Corporation\\SLT-A99V";

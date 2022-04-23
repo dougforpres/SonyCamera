@@ -332,7 +332,14 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
     CameraSettings* settings = GetSettings(true);
 
     // Ensure the shutter control properties are correct
-    if (settings->GetPropertyValue(Property::ShutterFullDown)->GetUINT16() != up.GetUINT16())
+
+    // These null checks are necessary as some models advertise the property
+    // but then don't actually return it.
+    // If there are too many I may add some code to support default values
+    // so we don't need all these checks.
+    PropertyValue* v = settings->GetPropertyValue(Property::ShutterFullDown);
+
+    if (v && v->GetUINT16() != up.GetUINT16())
     {
         LOGWARN(L"ShutterFullDown is set, clearing");
 
@@ -342,7 +349,9 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
         settings = GetSettings(true);
     }
 
-    if (settings->GetPropertyValue(Property::ShutterFullDown)->GetUINT16() != up.GetUINT16())
+    v = settings->GetPropertyValue(Property::ShutterHalfDown);
+
+    if (v && v->GetUINT16() != up.GetUINT16())
     {
         LOGWARN(L"ShutterHalfDown is set, clearing");
         PropertyValue up((WORD)1);
