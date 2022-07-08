@@ -186,6 +186,46 @@ Camera::LoadFakeProperties(CameraSettings* settings)
     inf->SetEnumeration(values);
 
     settings->AddProperty(p);
+
+    // Some cameras do not return info for the shutter control "buttons"
+    // if they're missing, lets create some fake ones that always return "up"
+    // but mimic the expected button-type so other pieces of the code can
+    // continue to work
+    if (!settings->GetProperty(Property::ShutterHalfDown))
+    {
+        p = f.Create(Property::ShutterHalfDown);
+
+        p->SetCurrentValue(new PropertyValue((UINT8)0));
+
+        inf = p->GetInfo();
+
+        inf->SetDefault(new PropertyValue((UINT8)0));
+        inf->SetId(Property::ShutterHalfDown);
+        inf->SetType(DataType::UINT8);
+        inf->SetFormMode(FormMode::NONE);
+        inf->SetAccess(Accessibility::WRITE_ONLY_BUTTON);
+        inf->SetSonySpare(1);
+
+        settings->AddProperty(p);
+    }
+
+    if (!settings->GetProperty(Property::ShutterFullDown))
+    {
+        p = f.Create(Property::ShutterFullDown);
+
+        p->SetCurrentValue(new PropertyValue((UINT8)0));
+
+        inf = p->GetInfo();
+
+        inf->SetDefault(new PropertyValue((UINT8)0));
+        inf->SetId(Property::ShutterFullDown);
+        inf->SetType(DataType::UINT8);
+        inf->SetFormMode(FormMode::NONE);
+        inf->SetAccess(Accessibility::WRITE_ONLY_BUTTON);
+        inf->SetSonySpare(1);
+
+        settings->AddProperty(p);
+    }
 }
 
 Device *
@@ -221,10 +261,10 @@ Camera::ProcessDeviceInfoOverrides()
     d->SetSensorType((SensorType)registry.GetDWORD(cameraPath, L"Sensor Type", (DWORD)d->GetSensorType()));
     d->SetSupportsLiveview((bool)registry.GetDWORD(cameraPath, L"Supports Liveview", d->GetSupportsLiveview()));
     d->SetCropMode((CropMode)registry.GetDWORD(cameraPath, L"Crop Mode", (DWORD)d->GetCropMode()));
-    d->SetLeftCrop(registry.GetDWORD(cameraPath, L"Crop Left", d->GetLeftCrop()));
-    d->SetRightCrop(registry.GetDWORD(cameraPath, L"Crop Right", d->GetRightCrop()));
-    d->SetTopCrop(registry.GetDWORD(cameraPath, L"Crop Top", d->GetTopCrop()));
-    d->SetBottomCrop(registry.GetDWORD(cameraPath, L"Crop Bottom", d->GetBottomCrop()));
+    d->SetLeftCrop((UINT16)registry.GetDWORD(cameraPath, L"Crop Left", d->GetLeftCrop()));
+    d->SetRightCrop((UINT16)registry.GetDWORD(cameraPath, L"Crop Right", d->GetRightCrop()));
+    d->SetTopCrop((UINT16)registry.GetDWORD(cameraPath, L"Crop Top", d->GetTopCrop()));
+    d->SetBottomCrop((UINT16)registry.GetDWORD(cameraPath, L"Crop Bottom", d->GetBottomCrop()));
     d->SetButtonPropertiesInverted((bool)registry.GetDWORD(cameraPath, L"Button Properties Inverted", d->GetButtonPropertiesInverted()));
 
     std::wistringstream exposureTimes(registry.GetString(cameraPath, L"Exposure Times", L""));
@@ -339,9 +379,9 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
     // so we don't need all these checks.
     PropertyValue* v = settings->GetPropertyValue(Property::ShutterFullDown);
 
-    if (v && v->GetUINT16() != up.GetUINT16())
+    if (!v || v->GetUINT16() != up.GetUINT16())
     {
-        LOGWARN(L"ShutterFullDown is set, clearing");
+        LOGWARN(L"ShutterFullDown is %s, clearing", v ? L"set" : L"unreported");
 
         SetProperty(Property::ShutterFullDown, &up);
 
@@ -351,9 +391,9 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
 
     v = settings->GetPropertyValue(Property::ShutterHalfDown);
 
-    if (v && v->GetUINT16() != up.GetUINT16())
+    if (!v || v->GetUINT16() != up.GetUINT16())
     {
-        LOGWARN(L"ShutterHalfDown is set, clearing");
+        LOGWARN(L"ShutterHalfDown is %s, clearing", v ? L"set" : L"unreported");
         PropertyValue up((WORD)1);
 
         SetProperty(Property::ShutterHalfDown, &up);

@@ -1,4 +1,11 @@
 # Change Log
+## 10.0.0.36
+* ICLE-7M4 (A7 Mk IV): Added.
+* Changes to support two missing property descriptors from the ICLE-7M4 (that describe the controls to manipulate the shutter button) thus preventing the driver from taking a photo.
+
+## 10.0.0.35
+* Test version for adding ICLE-7M4
+
 ## 1.0.0.34
 * SLT-A58 (a58): Updated to include Auto-Crop resolution, Exposure, and ISO info.
 * Added code to deal with some funky behavior on the part of the a7III (and possibly others).  These cameras report a couple of settings as being available, but then never expose them.  The driver needs to read these values as part of taking a photo.  Update is to just ignore them (and assume they're right) if they're not present.

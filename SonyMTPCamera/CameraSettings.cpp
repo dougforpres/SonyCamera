@@ -63,7 +63,9 @@ CameraSettings::GetProperties()
 CameraProperty *
 CameraSettings::GetProperty(Property id)
 {
-    return m_properties[id];
+    CAMERAPROP::iterator it = m_properties.find(id);
+
+    return (it != m_properties.end()) ? (*it).second : nullptr;
 }
 
 PropertyValue*

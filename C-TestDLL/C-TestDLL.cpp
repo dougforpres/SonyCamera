@@ -66,7 +66,7 @@ int main()
 
     // Try to close device, then reopen it
     CloseDevice(h);
-    h = OpenDevice(info.deviceName);
+    h = OpenDevice(pdinfo.id);
     DWORD count = 0;
     IMAGEINFO iinfo;
 

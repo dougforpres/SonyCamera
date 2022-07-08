@@ -113,8 +113,8 @@ DummyDevice::InternalSend(Op kind, Message* out)
         return GetObject(out);
 
     case COMMAND_SONY_SET_PROPERTY:
+    case COMMAND_SONY_SET_PROPERTY2:
         return SetProperty(out);
-        break;
 
     default:
         LOGERROR(L"Don't know how to process command x%04x", out->GetCommand());
@@ -176,12 +176,12 @@ DummyDevice::ReadSettings(Message* out)
 {
     MessageWriter w(COMMAND_RESULT_SUCCESS);
 
-    w.WriteDWORD(7); // Number of properties
+    w.WriteDWORD(5); // Number of properties
     w.WriteDWORD(0); // Some other value
 
     AddCameraProperty(w, Property::PhotoBufferStatus, new PropertyValue((UINT16)(m_photoReady ? 0x8001 : 0)), false); // Ready
-    AddCameraProperty(w, Property::ShutterFullDown, new PropertyValue((UINT16)m_shutterHalf), true);
-    AddCameraProperty(w, Property::ShutterHalfDown, new PropertyValue((UINT16)m_shutterFull), true);
+//    AddCameraProperty(w, Property::ShutterFullDown, new PropertyValue((UINT16)m_shutterHalf), true);
+//    AddCameraProperty(w, Property::ShutterHalfDown, new PropertyValue((UINT16)m_shutterFull), true);
     AddCameraProperty(w, Property::ShutterSpeed, new PropertyValue((UINT32)0), false);  // BULB
     AddCameraProperty(w, Property::CompressionSetting, new PropertyValue((UINT8)0x10), false); // RAW
     AddCameraProperty(w, Property::ShutterButtonStatus, new PropertyValue((UINT8)1), false); // Shutter button UP
