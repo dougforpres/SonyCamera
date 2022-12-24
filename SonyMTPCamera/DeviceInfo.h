@@ -79,6 +79,8 @@ public:
     void SetExposureTimes(std::list<DWORD> exposureTimes);
     std::list<DWORD> GetISOs();
     void SetISOs(std::list<DWORD> isos);
+    UINT32 GetBitsPerPixel();
+    void SetBitsPerPixel(UINT32 bpp);
 
     bool GetButtonPropertiesInverted();
     void SetButtonPropertiesInverted(bool invert);
@@ -108,6 +110,7 @@ private:
     DWORD m_sensorYCroppedResolution = 0;
     DWORD m_previewXResolution = 0;
     DWORD m_previewYResolution = 0;
+    DWORD m_bitsPerPixel = 14;
     UINT16 m_leftCrop = 0;
     UINT16 m_rightCrop = 0;
     UINT16 m_topCrop = 0;

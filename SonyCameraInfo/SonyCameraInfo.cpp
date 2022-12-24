@@ -338,6 +338,42 @@ ensureExposureMode(HANDLE hCamera)
 }
 
 bool
+ensureFocusMode(HANDLE hCamera)
+{
+    // Get settings...
+    HRESULT hr = ERROR_SUCCESS;
+    PROPERTYVALUE pv;
+    bool modeOk = false;
+
+    while (!modeOk && hr == ERROR_SUCCESS)
+    {
+        fRefreshPropertyList(hCamera);
+        hr = fGetSinglePropertyValue(hCamera, 0x500a, &pv);
+
+        if (hr == ERROR_SUCCESS)
+        {
+            if (pv.value == 1)
+            {
+                modeOk = true;
+            }
+            else
+            {
+                std::wcout << L"\n    Focus mode currently set to '" << pv.text << L"', please set to 'MF'";
+                Sleep(2500);
+            }
+        }
+        else
+        {
+            std::wcout << L"Error getting focus mode from camera - error " << hr << L"\n";
+        }
+    }
+
+    std::wcout << "\n  Focus mode set to:  " << pv.text;
+
+    return modeOk;
+}
+
+bool
 ensureStorageMode(HANDLE hCamera)
 {
     // Get settings...
@@ -754,6 +790,7 @@ performScan(HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortForm)
         {
             ensureExposureMode(hCamera);
             ensureStorageMode(hCamera);
+            ensureFocusMode(hCamera);
 
             std::wcout << std::endl << std::endl << L"Performing the following actions." << std::endl;
 

@@ -266,6 +266,7 @@ Camera::ProcessDeviceInfoOverrides()
     d->SetTopCrop((UINT16)registry.GetDWORD(cameraPath, L"Crop Top", d->GetTopCrop()));
     d->SetBottomCrop((UINT16)registry.GetDWORD(cameraPath, L"Crop Bottom", d->GetBottomCrop()));
     d->SetButtonPropertiesInverted((bool)registry.GetDWORD(cameraPath, L"Button Properties Inverted", d->GetButtonPropertiesInverted()));
+    d->SetBitsPerPixel(registry.GetDWORD(cameraPath, L"Bits Per Pixel", d->GetBitsPerPixel()));
 
     std::wistringstream exposureTimes(registry.GetString(cameraPath, L"Exposure Times", L""));
     std::list<DWORD> times;

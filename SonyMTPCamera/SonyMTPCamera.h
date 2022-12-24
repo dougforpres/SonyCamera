@@ -32,6 +32,7 @@ typedef struct
     double exposureTimeStep;
     double pixelWidth;
     double pixelHeight;
+    DWORD  bitsPerPixel;
 
     LPWSTR manufacturer;
     LPWSTR model;

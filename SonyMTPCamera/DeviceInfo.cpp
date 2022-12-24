@@ -124,6 +124,7 @@ DeviceInfo::DumpToLog()
     LOGINFO(L"  Minimum Exposure Time         %f sec", m_exposureTimeMin);
     LOGINFO(L"  Maximum Exposure Time         %f sec", m_exposureTimeMax);
     LOGINFO(L"  Exposure Time Step            %f sec", m_exposureTimeStep);
+    LOGINFO(L"  Bits Per Pixel                %d bits", m_bitsPerPixel);
 }
 
 void
@@ -445,4 +446,16 @@ void
 DeviceInfo::SetISOs(std::list<DWORD> isos)
 {
     m_isos = isos;
+}
+
+UINT32
+DeviceInfo::GetBitsPerPixel()
+{
+    return m_bitsPerPixel;
+}
+
+void
+DeviceInfo::SetBitsPerPixel(UINT32 bpp)
+{
+    m_bitsPerPixel = bpp;
 }

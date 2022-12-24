@@ -308,6 +308,7 @@ GetDeviceInfo(HANDLE hCamera, DEVICEINFO *info)
         info->bayerXOffset = deviceInfo->GetBayerXOffset();
         info->bayerYOffset = deviceInfo->GetBayerYOffset();
         info->cropMode = (DWORD)deviceInfo->GetCropMode();
+        info->bitsPerPixel = deviceInfo->GetBitsPerPixel();
 
         info->manufacturer = exportString(deviceInfo->GetManufacturer());
         info->model = exportString(deviceInfo->GetModel());
