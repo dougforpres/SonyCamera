@@ -240,11 +240,12 @@ Image::ProcessARWData()
 
                 LOGINFO(L"Raw data layout in form: %S", builder.str().c_str());
 
-                ushort rawCropLeft   = libraw->imgdata.sizes.raw_crop.cleft;
-                ushort rawCropTop    = libraw->imgdata.sizes.raw_crop.ctop;
+                libraw_raw_inset_crop_t* crops = &(libraw->imgdata.sizes.raw_inset_crops[0]);
+                ushort rawCropLeft   = crops->cleft;
+                ushort rawCropTop    = crops->ctop;
 
-                m_croppedHeight = libraw->imgdata.sizes.raw_crop.cheight;
-                m_croppedWidth  = libraw->imgdata.sizes.raw_crop.cwidth;
+                m_croppedHeight = crops->cheight;
+                m_croppedWidth  = crops->cwidth;
 
                 // libraw sets top/left to be 0xffff if they're 0
                 if (rawCropLeft > m_rawWidth)
@@ -259,8 +260,8 @@ Image::ProcessARWData()
                     rawCropTop = 0;
                 }
 
-                m_croppedWidth = libraw->imgdata.sizes.raw_crop.cwidth;
-                m_croppedHeight = libraw->imgdata.sizes.raw_crop.cheight;
+//                m_croppedWidth = libraw->imgdata.sizes.raw_crop.cwidth;
+//                m_croppedHeight = libraw->imgdata.sizes.raw_crop.cheight;
 
                 if (m_cropLeft < 0) {
                     LOGINFO(L"Crop Mode set to auto, using info from image");

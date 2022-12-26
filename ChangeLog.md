@@ -1,4 +1,9 @@
 # Change Log
+## 1.0.0.38
+* Built against latest libraw 0.21.0.
+* Small change for latest libraw as a cropping info structure was changed.
+* ICLE-7RM2 (A7R Mk II): Added exposure and ISO info.
+
 ## 1.0.0.37
 * Replaced ASCOM sample code MaxADU setting with a new camera property "bits per pixel".  This defaults to 14 which seems to be fairly standard for the Sony cameras I'm seeing.  Can be overridden in registry by adding a DWORD in the camera config `Computer\HKEY_CURRENT_USER\SOFTWARE\Retro.kiwi\SonyMTPCamera.dll\Cameras\Sony Corporation\{Camera Model}\Bits Per Pixel` with the appropriate number. (note that some Sony cameras dynamically change bpp based on shooting mode or other setting) The value of MaxADU is calculated as (2^bpp - 1) so would be 16383 for a 140bit camera. Thanks to John P for the info.
 * Updated SonyCameraInfo to ensure focus is set to Manual Focus as some cameras still have trouble despite the 0.5 second delay the driver adds.
