@@ -1,4 +1,12 @@
 # Change Log
+## 1.0.0.40
+* Corrected auto file save to write correct file attributes - previously was marking the files as Read-Only preventing auto-overwriting.
+* Added another case where we block settings refresh as NINA's multi-threaded code messes with image download.
+
+## 1.0.0.39
+* ICLE-6300 (a6300): Added more supported ISO values.
+* Extended auto-save of ARW files to allow writing the files in a date-subdirectory.
+
 ## 1.0.0.38
 * Built against latest libraw 0.21.0.
 * Small change for latest libraw as a cropping info structure was changed.

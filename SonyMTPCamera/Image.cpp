@@ -562,15 +562,54 @@ void
 Image::SaveFile(std::wstring path)
 {
 //    LOGTRACE(L"In: Image::SaveFile('%s')", path.c_str());
+    registry.Open();
 
     if (path.empty())
     {
-        // Whenever we open a device, set the save file path
         registry.Open();
+
+        std::wostringstream builder;
 
         if (registry.GetDWORD(L"", L"File Auto Save", 0))
         {
             path = registry.GetString(L"", L"File Save Path", L"");
+        }
+
+        if (!path.empty())
+        {
+            builder << path;
+
+            if (!StringEndsWith(path, L"\\"))
+            {
+                builder << L"\\";
+            }
+
+            if (registry.GetDWORD(L"", L"File Save Path Add Date", 0))
+            {
+                SYSTEMTIME now;
+
+                GetLocalTime(&now);
+
+                builder << now.wYear << L"-" << now.wMonth << L"-" << now.wDay << L"\\";
+            }
+
+            if (!builder.str().empty())
+            {
+                // Ensure the directory exists
+                if (!CreateDirectory(builder.str().c_str(), nullptr) && GetLastError() != ERROR_ALREADY_EXISTS)
+                {
+                    // Cannot create directory (and doesn't already exist)
+                    LOGERROR(L"Unable to create directory '%s': Error = 0x%x", builder.str().c_str(), GetLastError());
+                    builder.clear();
+                }
+            }
+        }
+
+        if (!builder.str().empty())
+        {
+            builder << m_info->GetFilename();
+
+            path = builder.str();
         }
 
         registry.Close();
@@ -578,23 +617,10 @@ Image::SaveFile(std::wstring path)
 
     if (!path.empty())
     {
-        std::wostringstream builder;
-
-        builder << path;
-
-        if (!StringEndsWith(path, L"\\"))
-        {
-            builder << L"\\";
-        }
-
-        builder << m_info->GetFilename();
-
-        std::wstring filename = builder.str();
-
-        LOGTRACE(L"Saving to '%s'", filename.c_str());
+        LOGTRACE(L"Saving image as '%s'", path.c_str());
 
         // Create the file, overwriting if needed (this is needed for the preview JPEG's which are all same filename)
-        HANDLE hfile = CreateFile(filename.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, TRUNCATE_EXISTING, nullptr);
+        HANDLE hfile = CreateFile(path.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 
         if (hfile != INVALID_HANDLE_VALUE)
         {

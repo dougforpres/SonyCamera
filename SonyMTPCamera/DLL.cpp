@@ -948,7 +948,7 @@ RefreshPropertyList(HANDLE hCamera)
         status = CaptureStatus::Cancelled;
     }
 
-    if (status != CaptureStatus::Capturing && status != CaptureStatus::Starting)
+    if (status != CaptureStatus::Capturing && status != CaptureStatus::Starting && status != CaptureStatus::Reading)
     {
         try
         {
