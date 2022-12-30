@@ -124,7 +124,7 @@ SonyCamera::Initialize()
 CameraSettings*
 SonyCamera::GetSettings(bool refresh)
 {
-    LOGTRACE(L"In: SonyCamera::GetSettings()");
+    LOGTRACE(L"In: SonyCamera::GetSettings(%s)", refresh ? L"true": L"false");
 
     if (refresh)
     {

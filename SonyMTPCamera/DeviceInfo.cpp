@@ -5,7 +5,7 @@
 DeviceInfo::DeviceInfo(Message* message)
     : MessageReader(message)
 {
-    LOGTRACE(L"In: DeviceInfo::DeviceInfo");
+    LOGTRACE(L"In: DeviceInfo::DeviceInfo(this=0x%x)", this);
 
     DWORD offset = 0;
 
@@ -29,7 +29,8 @@ DeviceInfo::DeviceInfo(Message* message)
 
 DeviceInfo::~DeviceInfo()
 {
-
+    LOGTRACE(L"In: DeviceInfo::~DeviceInfo(this=0x%x)", this);
+    LOGTRACE(L"Out: DeviceInfo::~DeviceInfo");
 }
 
 void
@@ -80,6 +81,10 @@ DeviceInfo::DumpToLog()
     LOGINFO(L"  Serial Number               %s", m_serialNumber.c_str());
     LOGINFO(L"Extras");
     LOGINFO(L"  Sensor Name                 %s", m_sensorName.c_str());
+    LOGINFO(L"  Supported Exposure Times    %d values", m_exposureTimes.size());
+    this->DumpList(m_exposureTimes);
+    LOGINFO(L"  Supported ISO Values        %d values", m_isos.size());
+    this->DumpList(m_isos);
 
     std::wstring sensorType;
 
@@ -132,7 +137,16 @@ DeviceInfo::DumpList(std::list<WORD> list)
 {
     for (std::list<WORD>::iterator it = list.begin(); it != list.end(); it++)
     {
-        LOGINFO(L"                              x%04x", *it);
+        LOGINFO(L"                              %d (x%04x)", *it, *it);
+    }
+}
+
+void
+DeviceInfo::DumpList(std::list<DWORD> list)
+{
+    for (std::list<DWORD>::iterator it = list.begin(); it != list.end(); it++)
+    {
+        LOGINFO(L"                              %d (x%08x)", *it, *it);
     }
 }
 

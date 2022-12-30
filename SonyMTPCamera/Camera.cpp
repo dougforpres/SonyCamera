@@ -85,6 +85,13 @@ Camera::Close()
             LOGERROR(L"Camera handler thread would not exit, terminating with prejudice");
             TerminateThread(m_hHandlerThread, -1);
         }
+
+        if (m_deviceInfo)
+        {
+            LOGINFO(L"Cleaning up deviceInfo");
+            delete m_deviceInfo;
+            m_deviceInfo = nullptr;
+        }
     }
 
     return result;

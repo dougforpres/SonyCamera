@@ -87,6 +87,7 @@ public:
 
 private:
     void DumpList(std::list<WORD> list);
+    void DumpList(std::list<DWORD> list);
 
     double m_standardVersion = 0;
     DWORD m_vendorExtensionId = 0;

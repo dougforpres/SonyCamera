@@ -1,4 +1,8 @@
 # Change Log
+## 1.0.0.41
+* Corrected a long-standing issue that causes apps to fail when opening the Sony ASCOM device.  This was caused by accessing deleted memory.
+* Serialized access to the Connect method in the ASCOM driver - some multi-threaded apps were being naughty and trying to access properties before the camera had been connected.
+
 ## 1.0.0.40
 * Corrected auto file save to write correct file attributes - previously was marking the files as Read-Only preventing auto-overwriting.
 * Added another case where we block settings refresh as NINA's multi-threaded code messes with image download.

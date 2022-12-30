@@ -317,8 +317,6 @@ GetDeviceInfo(HANDLE hCamera, DEVICEINFO *info)
         info->sensorName = exportString(deviceInfo->GetSensorName());
         info->deviceVersion = exportString(deviceInfo->GetVersion());
 
-        delete deviceInfo;
-
         LOGTRACE(L"Out: GetDeviceInfo(x%p, @ x%p) - Returning data", hCamera, info);
 
 //        camera->Close();
