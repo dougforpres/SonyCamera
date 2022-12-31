@@ -55,13 +55,16 @@ DummyDevice::DummyDevice(const std::wstring deviceId, const std::wstring friendl
 HANDLE
 DummyDevice::Open()
 {
+    m_openCount++;
     return GetHandle();
 }
 
 bool
 DummyDevice::Close()
 {
-    return true;
+    m_openCount--;
+
+    return m_openCount == 0;
 }
 
 HANDLE
