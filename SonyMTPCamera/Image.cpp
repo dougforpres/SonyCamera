@@ -9,6 +9,8 @@
 static const DWORD EXIF_IDENT = 0x002a4949;
 static const DWORD JPEG_IDENT = 0xe1ffd8ff;
 
+std::wstring Image::s_savePath;
+
 Image::Image(ObjectInfo* info, Message* message)
     : MessageReader(message),
       m_info(info)
@@ -271,15 +273,15 @@ Image::ProcessARWData()
                     m_cropBottom = m_rawHeight - m_croppedHeight - m_cropTop;
                 }
 
-                ushort width = m_rawWidth - m_cropLeft - m_cropRight;
-                ushort height = m_rawHeight - m_cropTop - m_cropBottom;
+                ushort width = ushort(m_rawWidth - m_cropLeft - m_cropRight);
+                ushort height = ushort(m_rawHeight - m_cropTop - m_cropBottom);
 
                 LOGINFO(L"Raw size is %d x %d, crop (T,L,R,B) = %d, %d, %d, %d, result will be %d x %d", m_rawWidth, m_rawHeight, m_cropTop, m_cropLeft, m_cropBottom, m_cropRight, width, height);
 
                 m_pixelDataSize = width * height * sizeof(short);
                 m_pixelData = new BYTE[m_pixelDataSize];
 
-                for (int y = m_cropTop; y < (m_rawHeight - m_cropBottom); y++)
+                for (int y = m_cropTop; y < int(m_rawHeight - m_cropBottom); y++)
                 {
                     ushort* pds = (ushort*)m_pixelData;
                     int readOffset = y * m_rawWidth;
@@ -564,6 +566,13 @@ Image::SaveFile(std::wstring path)
 //    LOGTRACE(L"In: Image::SaveFile('%s')", path.c_str());
     registry.Open();
 
+    // The first time we try to generate/use path from registry we save it into m_savePath.
+    // This means that the path will not change until the DLL is reloaded.
+    if (path.empty())
+    {
+        path = s_savePath;
+    }
+
     if (path.empty())
     {
         registry.Open();
@@ -577,42 +586,87 @@ Image::SaveFile(std::wstring path)
 
         if (!path.empty())
         {
+            DWORD autoSaveAddDate = registry.GetDWORD(L"", L"File Save Path Add Date", 0);
+            DWORD autoSaveCreateMultipleDirectories = registry.GetDWORD(L"", L"File Save Path Create Multiple Directories", 0);
+
             builder << path;
 
-            if (!StringEndsWith(path, L"\\"))
-            {
-                builder << L"\\";
-            }
-
-            if (registry.GetDWORD(L"", L"File Save Path Add Date", 0))
+            if (autoSaveAddDate)
             {
                 SYSTEMTIME now;
 
                 GetLocalTime(&now);
 
-                builder << now.wYear << L"-" << now.wMonth << L"-" << now.wDay << L"\\";
-            }
-
-            if (!builder.str().empty())
-            {
-                // Ensure the directory exists
-                if (!CreateDirectory(builder.str().c_str(), nullptr) && GetLastError() != ERROR_ALREADY_EXISTS)
+                if (!StringEndsWith(path, L"\\"))
                 {
-                    // Cannot create directory (and doesn't already exist)
-                    LOGERROR(L"Unable to create directory '%s': Error = 0x%x", builder.str().c_str(), GetLastError());
-                    builder.clear();
+                    builder << L"\\";
                 }
+
+                builder << now.wYear << L"-" << std::setfill(L'0') << std::setw(2) << now.wMonth << L"-" << std::setfill(L'0') << std::setw(2) << now.wDay;
             }
-        }
 
-        if (!builder.str().empty())
-        {
-            builder << m_info->GetFilename();
+            int attempt = 0;
 
-            path = builder.str();
+            do
+            {
+                std::wostringstream path_builder;
+
+                path_builder << builder.str();
+
+                if (attempt > 0)
+                {
+                    path_builder << L" (" << attempt << L")";
+                }
+
+                DWORD err = EnsureDirectory(path_builder.str());
+
+                if (err != ERROR_SUCCESS)
+                {
+                    if (err == ERROR_ALREADY_EXISTS)
+                    {
+                        if (autoSaveCreateMultipleDirectories)
+                        {
+                            LOGWARN(L"Directory '%s' already exists, trying alternate", path_builder.str().c_str());
+                            attempt += 1;
+                        }
+                        else
+                        {
+                            // Directory is present and flag not set - use it
+                            s_savePath = path_builder.str();
+                        }
+                    }
+                    else
+                    {
+                        // Cannot create directory (and doesn't already exist)
+                        LOGERROR(L"Unable to create directory '%s': Error = 0x%x", path_builder.str().c_str(), err);
+                        path_builder.clear();
+                    }
+                }
+                else {
+                    s_savePath = path_builder.str();
+                }
+            } while (s_savePath.empty() && attempt < 20);
+
+            path = s_savePath;
         }
 
         registry.Close();
+    }
+
+    if (!path.empty())
+    {
+        std::wostringstream file_builder;
+        
+        file_builder << path;
+
+        if (!StringEndsWith(path, L"\\"))
+        {
+            file_builder << L"\\";
+        }
+
+        file_builder << m_info->GetFilename();
+
+        path = file_builder.str();
     }
 
     if (!path.empty())
@@ -648,6 +702,53 @@ Image::SaveFile(std::wstring path)
     }
 
 //    LOGTRACE(L"Out: Image::SaveFile('%s')", path.c_str());
+}
+
+DWORD
+Image::EnsureDirectory(const std::wstring dir)
+{
+    DWORD type = GetFileAttributes(dir.c_str());
+
+    if (type == INVALID_FILE_ATTRIBUTES)
+    {
+        LOGTRACE(L"'%s' not found", dir.c_str());
+
+        // Parent does not seem to exist, try to get parent of parent
+        static const std::wstring separators(L"\\/");
+
+        // If the specified directory name doesn't exist, do our thing
+        std::size_t slashIndex = dir.find_last_of(separators);
+
+        if (slashIndex != std::wstring::npos) {
+            std::wstring p = dir.substr(0, slashIndex);
+
+            LOGTRACE(L"Checking parent '%s'", p.c_str());
+
+            if (EnsureDirectory(dir.substr(0, slashIndex)) == ERROR_ALREADY_EXISTS)
+            {
+                // Create the last directory on the path (the recursive calls will have taken
+                // care of the parent directories by now)
+                BOOL result = CreateDirectory(dir.c_str(), nullptr);
+
+                LOGTRACE(L"Create '%s' %s", dir.c_str(), result ? L"Succeeded" : L"Failed");
+
+                return result ? ERROR_SUCCESS : GetLastError();
+            }
+        }
+        else
+        {
+            return ERROR_DIRECTORY;
+        }
+    }
+    else if (!(type & FILE_ATTRIBUTE_DIRECTORY))
+    {
+        LOGERROR(L"Attempt to retrieve parent directory '%s' failed - type is not directory.", dir.c_str());
+
+        return ERROR_BAD_PATHNAME;
+    }
+    else {
+        return ERROR_ALREADY_EXISTS;
+    }
 }
 
 void

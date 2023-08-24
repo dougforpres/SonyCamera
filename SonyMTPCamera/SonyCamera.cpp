@@ -4,6 +4,9 @@
 #include "CameraException.h"
 #include "Locker.h"
 
+#define SONY_GET_NEXT_HANDLE_ENABLE
+#define SONY_GET_NEXT_HANDLE_EXTRA_PARAMS
+
 SonyCamera::SonyCamera(Device* device)
     : Camera(device)
 {
@@ -47,11 +50,14 @@ SonyCamera::Initialize()
     delete tx;
     delete rx;
 
+#ifdef SONY_GET_NEXT_HANDLE_ENABLE
     tx = new Message(COMMAND_SONY_GET_NEXT_HANDLE);
 
     tx->AddParam(0x00000001);
+#ifdef SONY_GET_NEXT_HANDLE_EXTRA_PARAMS
+    tx->AddParam(0x00000000);  // Test only sending one param (which is what MTP spec says it should be)
     tx->AddParam(0x00000000);
-    tx->AddParam(0x00000000);
+#endif
 
     rx = m_device->Receive(tx);
     result &= rx->IsSuccess();
@@ -64,8 +70,10 @@ SonyCamera::Initialize()
     tx = new Message(COMMAND_SONY_GET_NEXT_HANDLE);
 
     tx->AddParam(0x00000002);
+#ifdef SONY_GET_NEXT_HANDLE_EXTRA_PARAMS
+    tx->AddParam(0x00000000);  // Test only sending one param (which is what MTP spec says it should be)
     tx->AddParam(0x00000000);
-    tx->AddParam(0x00000000);
+#endif
 
     rx = m_device->Receive(tx);
     result &= rx->IsSuccess();
@@ -74,6 +82,7 @@ SonyCamera::Initialize()
 
     delete tx;
     delete rx;
+#endif
 
     tx = new Message(COMMAND_SONY_GET_PROPERTY_LIST);
 

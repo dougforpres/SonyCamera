@@ -136,11 +136,14 @@ MTPDevice::Close()
         if (m_openCount == 1)
         {
 //            StopNotifications();
+            LOGINFO(L"MTPDevice::Close - opencount == 1, issuing actual close on device");
 
+            // Per MS, close is automatically done when release bumps open count to 0
             HRESULT hr = m_device->Close();
 
             if (SUCCEEDED(hr))
             {
+                LOGINFO(L"MTPDevice::Close - closed, now releasing IUnknown");
                 m_openCount--;
                 m_device->Release();
                 m_device = nullptr;
@@ -151,6 +154,10 @@ MTPDevice::Close()
                 LOGINFO(L"Out: Device::Close - Closed()");
 
                 closed = true;
+            }
+            else
+            {
+                LOGERROR(L"Unable to close device - error: %08x", hr);
             }
         }
         else

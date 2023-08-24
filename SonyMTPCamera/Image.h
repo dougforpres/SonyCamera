@@ -41,6 +41,8 @@ private:
     bool ProcessARWData();
     bool ProcessJPEGData();
 
+//    bool CreateSubdirectory(const std::wstring parent, const std::wstring child);
+    DWORD EnsureDirectory(const std::wstring parent);
     bool StringEndsWith(const std::wstring& mainStr, const std::wstring& toMatch);
 
     ObjectInfo* m_info = nullptr;
@@ -59,4 +61,6 @@ private:
     DWORD m_rawHeight = 0;
     DWORD m_croppedWidth = 0;
     DWORD m_croppedHeight = 0;
+
+    static std::wstring s_savePath;
 };

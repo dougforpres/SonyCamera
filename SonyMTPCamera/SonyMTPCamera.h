@@ -134,7 +134,7 @@ extern "C" {
     IMPEXP HRESULT GetPropertyDescriptor(HANDLE hCamera, DWORD propertyId, PROPERTYDESCRIPTOR* descriptor);
     IMPEXP HRESULT GetPropertyValueOption(HANDLE hCamera, DWORD propertyId, PROPERTYVALUEOPTION* option, DWORD index);
     IMPEXP HRESULT GetSinglePropertyValue(HANDLE hCamera, DWORD propertyId, PROPERTYVALUE* value);
-    IMPEXP HRESULT GetAllPropertyValues(HANDLE hCamers, PROPERTYVALUE* values, DWORD* count);
+    IMPEXP HRESULT GetAllPropertyValues(HANDLE hCamera, PROPERTYVALUE* values, DWORD* count);
     IMPEXP HRESULT SetPropertyValue(HANDLE hCamera, DWORD propertyId, DWORD value);
     IMPEXP HRESULT SetExposureTime(HANDLE hCamera, float exposureTime, PROPERTYVALUE* valueOut);
 

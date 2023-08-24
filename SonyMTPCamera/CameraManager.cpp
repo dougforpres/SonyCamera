@@ -387,6 +387,8 @@ CameraManager::SetupSupportedDevices()
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 4.86);
     registry.SetDWORDDefault(key, L"Sensor X Resolution", 7968);
     registry.SetDWORDDefault(key, L"Sensor Y Resolution", 5320);
+    registry.SetDWORDDefault(key, L"AutoCropped X Resolution", 7952);
+    registry.SetDWORDDefault(key, L"AutoCropped Y Resolution", 5304);
     registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
     registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
     registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
@@ -394,6 +396,8 @@ CameraManager::SetupSupportedDevices()
     registry.SetDoubleDefault(key, L"Exposure Time Step", 0.000125);
     registry.SetDWORDDefault(key, L"Sensor Type", 2);
     registry.SetDWORDDefault(key, L"Supports Liveview", 1);
+    registry.SetStringDefault(key, L"Exposure Times", L"0,19660810,16384010,13107210,9830410,8519690,6553610,5242890,3932170,3276810,2621450,2097162,1638410,1310730,1048586,851978,655370,524298,393226,327690,262154,65539,65540,65541,65542,65544,65546,65549,65551,65556,65561,65566,65576,65586,65596,65616,65636,65661,65696,65736,65786,65856,65936,66036,66176,66336,66536,66786,67136,67536,68036,68736,69536,70536,71936,73536");
+    registry.SetStringDefault(key, L"ISOs", L"16777215,50,64,80,100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000,5000,6400,8000,10000,12800,16000,20000,25600,32000,40000,51200,64000,80000,102400");
 
     // a7r IIIa
     key = L"Cameras\\Sony Corporation\\ILCE-7RM3A";
@@ -401,8 +405,8 @@ CameraManager::SetupSupportedDevices()
     registry.CreateKey(key);
     registry.SetStringDefault(key, L"", L"a7R Mk IIIa");
     registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
-    registry.SetDoubleDefault(key, L"Sensor X Size um", 4.86);
-    registry.SetDoubleDefault(key, L"Sensor Y Size um", 4.86);
+    registry.SetDoubleDefault(key, L"Sensor X Size um", 4.51);
+    registry.SetDoubleDefault(key, L"Sensor Y Size um", 4.51);
     registry.SetDWORDDefault(key, L"Sensor X Resolution", 7968);
     registry.SetDWORDDefault(key, L"Sensor Y Resolution", 5320);
     registry.SetDWORDDefault(key, L"AutoCropped X Resolution", 7952);
@@ -463,6 +467,28 @@ CameraManager::SetupSupportedDevices()
     registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.72);
     registry.SetDWORDDefault(key, L"Sensor X Resolution", 9600);
     registry.SetDWORDDefault(key, L"Sensor Y Resolution", 6376);
+    registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
+    registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
+    registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
+    registry.SetDoubleDefault(key, L"Exposure Time Max", 900.0);
+    registry.SetDoubleDefault(key, L"Exposure Time Step", 0.000125);
+    registry.SetDWORDDefault(key, L"Sensor Type", 2);
+    registry.SetDWORDDefault(key, L"Supports Liveview", 1);
+    registry.SetStringDefault(key, L"Exposure Times", L"0,19660810,16384010,13107210,9830410,8519690,6553610,5242890,3932170,3276810,2621450,2097162,1638410,1310730,1048586,851978,655370,524298,393226,327690,262154,65539,65540,65541,65542,65544,65546,65549,65551,65556,65561,65566,65576,65586,65596,65616,65636,65661,65696,65736,65786,65856,65936,66036,66176,66336,66536,66786,67136,67536,68036,68736,69536,70536,71936,73536");
+    registry.SetStringDefault(key, L"ISOs", L"16777215,50,64,80,100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000,5000,6400,8000,10000,12800,16000,20000,25600,32000,40000,51200,64000,80000,102400");
+
+    // a7R V
+    key = L"Cameras\\Sony Corporation\\ILCE-7RM5";
+
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a7R Mk IVa");
+    registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
+    registry.SetDoubleDefault(key, L"Sensor X Size um", 3.76);
+    registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.76);
+    registry.SetDWORDDefault(key, L"Sensor X Resolution", 9568);
+    registry.SetDWORDDefault(key, L"Sensor Y Resolution", 6376);
+    registry.SetDWORDDefault(key, L"AutoCropped X Resolution", 9504);
+    registry.SetDWORDDefault(key, L"AutoCropped Y Resolution", 6336);
     registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
     registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
     registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
@@ -592,6 +618,50 @@ CameraManager::SetupSupportedDevices()
     registry.SetDWORDDefault(key, L"Sensor Type", 2);
     registry.SetDWORDDefault(key, L"Supports Liveview", 1);
 
+    // a9
+    key = L"Cameras\\Sony Corporation\\ILCE-9";
+
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a9");
+    registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
+    registry.SetDoubleDefault(key, L"Sensor X Size um", 5.91);
+    registry.SetDoubleDefault(key, L"Sensor Y Size um", 5.91);
+    registry.SetDWORDDefault(key, L"Sensor X Resolution", 6024);
+    registry.SetDWORDDefault(key, L"Sensor Y Resolution", 4024);
+    registry.SetDWORDDefault(key, L"AutoCropped X Resolution", 6000);
+    registry.SetDWORDDefault(key, L"AutoCropped Y Resolution", 4000);
+    registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
+    registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
+    registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
+    registry.SetDoubleDefault(key, L"Exposure Time Max", 900.0);
+    registry.SetDoubleDefault(key, L"Exposure Time Step", 0.000125);
+    registry.SetDWORDDefault(key, L"Sensor Type", 2);
+    registry.SetDWORDDefault(key, L"Supports Liveview", 1);
+    registry.SetStringDefault(key, L"Exposure Times", L"0,19660810,16384010,13107210,9830410,8519690,6553610,5242890,3932170,3276810,2621450,2097162,1638410,1310730,1048586,851978,655370,524298,393226,327690,262154,65539,65540,65541,65542,65544,65546,65549,65551,65556,65561,65566,65576,65586,65596,65616,65636,65661,65696,65736,65786,65856,65936,66036,66176,66336,66536,66786,67136,67536,68036,68736,69536,70536,71936,73536,75536,78336,81536,97536");
+    registry.SetStringDefault(key, L"ISOs", L"16777215,50,64,80,100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000,5000,6400,8000,10000,12800,16000,20000,25600");
+
+    // a68
+    key = L"Cameras\\Sony Corporation\\ILCA-68";
+
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a68");
+    registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
+    registry.SetDoubleDefault(key, L"Sensor X Size um", 3.90);
+    registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.90);
+    registry.SetDWORDDefault(key, L"Sensor X Resolution", 6024);
+    registry.SetDWORDDefault(key, L"Sensor Y Resolution", 4016);
+    registry.SetDWORDDefault(key, L"AutoCropped X Resolution", 6000);
+    registry.SetDWORDDefault(key, L"AutoCropped Y Resolution", 4000);
+    registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
+    registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
+    registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
+    registry.SetDoubleDefault(key, L"Exposure Time Max", 900.0);
+    registry.SetDoubleDefault(key, L"Exposure Time Step", 0.000125);
+    registry.SetDWORDDefault(key, L"Sensor Type", 2);
+    registry.SetDWORDDefault(key, L"Supports Liveview", 1);
+    registry.SetStringDefault(key, L"Exposure Times", L"0,19660810,16384010,13107210,9830410,8519690,6553610,5242890,3932170,3276810,2621450,2097162,1638410,1310730,1048586,851978,655370,524298,393226,327690,262154,65539,65540,65541,65542,65544,65546,65549,65551,65556,65561,65566,65576,65586,65596,65616,65636,65661,65696,65736,65786,65856,65936,66036,66176,66336,66536,66786,67136,67536,68036,68736,69536");
+    registry.SetStringDefault(key, L"ISOs", L"16777215,100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000,5000,6400,8000,10000,12800,16000,20000,25600");
+
     // A99 MkII
     key = L"Cameras\\Sony Corporation\\ILCA-99M2";
 
@@ -654,6 +724,24 @@ CameraManager::SetupSupportedDevices()
     registry.SetStringDefault(key, L"Exposure Times", L"19660810, 16384010, 13107210, 9830410, 8519690, 6553610, 5242890, 3932170, 3276810, 2621450, 2097162, 1638410, 1310730, 1048586, 851978, 655370, 524298, 393226, 327690, 262154, 65539, 65540, 65541, 65542, 65544, 65546, 65549, 65551, 65556, 65561, 65566, 65576, 65586, 65596, 65616, 65636, 65661, 65696, 65736, 65786, 65856, 65936, 66036, 66176, 66336, 66536, 66786, 67136, 67536, 68036, 68736, 69536, 70536, 71936, 73536");
     registry.SetStringDefault(key, L"ISOs", L" 16777215, 50, 64, 80, 100, 125, 160, 200, 250, 320, 400, 500, 640, 800, 1000, 1250, 1600, 2000, 2500, 3200, 4000, 5000, 6400, 8000, 10000, 12800, 16000, 20000, 25600");
 
+/*    // DSC RX10 Mk3
+    key = L"Cameras\\Sony Corporation\\DSC-RX10M3";
+
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"RX10 Mk III");
+    registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
+    registry.SetDoubleDefault(key, L"Sensor X Size um", 2.40);
+    registry.SetDoubleDefault(key, L"Sensor Y Size um", 2.40);
+    registry.SetDWORDDefault(key, L"Sensor X Resolution", 5496);
+    registry.SetDWORDDefault(key, L"Sensor Y Resolution", 3672);
+    registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
+    registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
+    registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
+    registry.SetDoubleDefault(key, L"Exposure Time Max", 900.0);
+    registry.SetDoubleDefault(key, L"Exposure Time Step", 0.000125);
+    registry.SetDWORDDefault(key, L"Sensor Type", 2);
+    registry.SetDWORDDefault(key, L"Supports Liveview", 0);
+    */
     // DSC RX10 Mk4
     key = L"Cameras\\Sony Corporation\\DSC-RX10M4";
 

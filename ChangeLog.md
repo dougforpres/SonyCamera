@@ -1,4 +1,15 @@
 # Change Log
+## 1.0.0.42
+* Corrected the structure used by SonyCameraInfo internally.  While this structure was unused, it is important to have consistency.
+* ICLE-7RM3 (A7R Mk III): Added autocrop resolution info, added exposure and ISO info.
+* ICLE-7RM3A (A7R Mk IIIa): Corrected pixel size.
+* ICLE-7RM5 (A7R Mk V): Added.
+* ICLE-9 (A9): Added.
+* ICLA-68 (A68): Added.
+* Updated preview code to support varying image types (was RGB, now supports RGB and JPEG). This is an internal change.
+* Added option to save files into a subdirectory based on date that the first image after DLL is loaded.
+* Added option to automatically create a new subdirectory if the named location already exists (useful if camera image id is reset for each session, as it avoids overwriting).
+
 ## 1.0.0.41
 * Corrected a long-standing issue that causes apps to fail when opening the Sony ASCOM device.  This was caused by accessing deleted memory.
 * Serialized access to the Connect method in the ASCOM driver - some multi-threaded apps were being naughty and trying to access properties before the camera had been connected.

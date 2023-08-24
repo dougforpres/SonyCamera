@@ -356,8 +356,8 @@ GetPreviewImage(HANDLE hCamera, IMAGEINFO *info)
 
         if (image)
         {
-            // Always want RGB as preview doesn't support RAW
-            image->SetOutputMode(OutputMode::RGB);
+//            // Always want RGB as preview doesn't support RAW
+            image->SetOutputMode((OutputMode)info->imageMode);// OutputMode::RGB);
 
             info->size = image->GetImageDataSize();
             LOGDEBUG(L"Image Data Size = %d bytes", info->size);
