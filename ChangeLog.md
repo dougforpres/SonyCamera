@@ -1,4 +1,7 @@
 # Change Log
+## 1.0.0.43
+* ICLE-6700 (A6700): Added.
+
 ## 1.0.0.42
 * Corrected the structure used by SonyCameraInfo internally.  While this structure was unused, it is important to have consistency.
 * ICLE-7RM3 (A7R Mk III): Added autocrop resolution info, added exposure and ISO info.
