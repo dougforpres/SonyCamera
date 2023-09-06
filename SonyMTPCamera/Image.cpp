@@ -487,7 +487,7 @@ Image::GetDataLength()
 {
     LOGTRACE(L"In: Image::GetDataLength");
 
-    DWORD result = m_message ? m_message->GetDataLen() : 0;
+    DWORD result = GetMessageSize();
 
     LOGTRACE(L"Out: Image::GetDataLength - result %p", result);
 
@@ -499,7 +499,7 @@ Image::GetData()
 {
     LOGTRACE(L"In: Image::GetData");
 
-    BYTE* result = m_message ? m_message->GetData() : nullptr;
+    BYTE* result = GetRawMessage();
 
     LOGTRACE(L"Out: Image::GetData - result @ x%p", (void*)result);
 

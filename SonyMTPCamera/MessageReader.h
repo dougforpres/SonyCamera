@@ -12,7 +12,8 @@ public:
     virtual ~MessageReader();
 
 protected:
-    Message* m_message;
+    DWORD GetMessageSize();
+    BYTE* GetRawMessage();
 
     BYTE GetBYTE(DWORD &addr);
     WORD GetWORD(DWORD &addr);
@@ -23,4 +24,7 @@ protected:
     std::list<WORD> GetWORDArray(DWORD& addr);
     std::list<DWORD> GetDWORDArray(DWORD& addr);
     std::list<std::wstring> GetStringArray(DWORD& addr);
+
+private:
+    Message* m_message = nullptr;
 };

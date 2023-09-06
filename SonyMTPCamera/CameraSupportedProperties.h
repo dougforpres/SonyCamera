@@ -6,7 +6,12 @@ class CameraSupportedProperties :
     public MessageReader
 {
 public:
+    CameraSupportedProperties();
+    CameraSupportedProperties(const CameraSupportedProperties& rhs);
     CameraSupportedProperties(Message* message);
+    ~CameraSupportedProperties();
+
+    CameraSupportedProperties operator=(const CameraSupportedProperties& rhs);
 
     DWORD Size();
     std::list<Property> Properties();

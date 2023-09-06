@@ -50,6 +50,8 @@ DeviceManager::GetDevice(std::wstring id)
 size_t
 DeviceManager::RefreshDevices()
 {
+    HRESULT coInit = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+
     MTPEnumerator* mtpEnumerator = new MTPEnumerator();
 
     std::list<Device*> foundDevices = mtpEnumerator->EnumerateDevices();
@@ -110,6 +112,8 @@ DeviceManager::RefreshDevices()
     }
 
     m_allDevices = newAllDevices;
+
+    CoUninitialize();
 
     return m_allDevices.size();
 }

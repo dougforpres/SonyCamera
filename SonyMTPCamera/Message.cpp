@@ -8,13 +8,18 @@ Message::Message(WORD command)
       m_dataLen(0),
       m_data(nullptr)
 {
-
+#ifdef DEBUG
+    LOGTRACE(L"Message::Message(command = x%04x) [this = x%08p]", command, this);
+#endif
 }
 
 Message::Message(const Message& rhs)
     : m_command(rhs.m_command),
       m_dataLen(rhs.m_dataLen)
 {
+#ifdef DEBUG
+    LOGTRACE(L"Message::Message(rhs(command = x%04x, dataLen = x%08x)) [this = x%08p]", rhs.m_command, rhs.m_dataLen, this);
+#endif
     if (m_dataLen > 0) {
         m_data = new BYTE[m_dataLen];
 
@@ -24,6 +29,9 @@ Message::Message(const Message& rhs)
 
 Message::~Message()
 {
+#ifdef DEBUG
+    LOGTRACE(L"Message::~Message() [this = x%08p]", this);
+#endif
     SetData(nullptr, 0);
 }
 

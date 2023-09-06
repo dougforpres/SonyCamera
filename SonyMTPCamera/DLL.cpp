@@ -12,6 +12,7 @@
 #include "ResourceLoader.h"
 #include "CameraException.h"
 #include "Locker.h"
+#include "CameraWorker.h"
 
 #define MAX_MANUFACTURER_SIZE   0x64
 #define MAX_MODEL_SIZE          0x64
@@ -23,7 +24,6 @@
 #define MAX_EXPOSURE_SAME_COUNT 20
 
 static DeviceManager* deviceManager = nullptr;
-static CameraManager* cameraManager = nullptr;
 
 void
 Init()
@@ -42,12 +42,7 @@ Shutdown()
 {
     LOGINFO(L"Shutdown() - Shutting down");
 
-    if (cameraManager)
-    {
-        LOGINFO(L"Destroying CameraManager");
-        delete cameraManager;
-        cameraManager = nullptr;
-    }
+    RemoveCameraManager();
 
     if (deviceManager)
     {
@@ -55,18 +50,6 @@ Shutdown()
         delete deviceManager;
         deviceManager = nullptr;
     }
-}
-
-CameraManager*
-GetCameraManager()
-{
-    if (cameraManager == nullptr)
-    {
-        LOGINFO(L"GetCameraManager: First time thru, creating new CameraManager singleton");
-        cameraManager = new CameraManager();
-    }
-
-    return cameraManager;
 }
 
 LPWSTR
@@ -102,7 +85,7 @@ exportBytes(BYTE* buffer, DWORD bufferLen)
 }
 
 void
-RenderProperty(Property id, CameraProperty* property, PROPERTYVALUE* output)
+RenderProperty(Property id, const CameraProperty* property, PROPERTYVALUE* output)
 {
     if (property)
     {
@@ -203,21 +186,26 @@ OpenDeviceEx(LPWSTR deviceName, DWORD flags)
             {
                 Locker lock(camera);
 
-                if (camera->Initialize())
+                InitializeCameraTask task;
+
+                LOGDEBUG(L"Initializing Camera");
+                if (task.Run(camera))
                 {
                     // It will be useful to dump a list of camera properties
-                    PropertyInfoMap supportedProperties = camera->GetSupportedProperties();
+                    std::unique_ptr<CameraSettings> cs(camera->GetSettings());
 
-                    for (std::unordered_map<Property, PropertyInfo*>::iterator it = supportedProperties.begin(); it != supportedProperties.end(); it++)
+                    for (CAMERAPROP::const_iterator it =cs->begin(); it != cs->end(); it++)
                     {
-                        LOGDEBUG(L"Camera property: %s", (*it).second->ToString().c_str());
+                        LOGDEBUG(L"Camera property: %04x = %s", (*it).first, (*it).second->ToString().c_str());
                     }
                 }
                 else
                 {
                     LOGERROR(L"Unable to initialize camera");
                     result = INVALID_HANDLE_VALUE;
+                    camera->Close();
                     GetCameraManager()->RemoveCamera(result);
+                    delete camera;
                     camera = nullptr;
                 }
             }
@@ -226,7 +214,9 @@ OpenDeviceEx(LPWSTR deviceName, DWORD flags)
                 LOGERROR(L"Exception initializing camera: %s", gfe.GetMessage().c_str());
 
                 result = INVALID_HANDLE_VALUE;
+                camera->Close();
                 GetCameraManager()->RemoveCamera(result);
+                delete camera;
                 camera = nullptr;
             }
         }
@@ -248,12 +238,17 @@ CloseDevice(HANDLE hCamera)
     {
         Locker lock(camera);
 
-        if (camera->Close())
+        CloseCameraTask task(hCamera);
+
+        task.Run(camera);
+
+        if (task.Closed())
         {
             // This happens if the device is fully closed
             LOGINFO(L"Removing device x%p as it is no longer open", hCamera);
 
             GetCameraManager()->RemoveCamera(hCamera);
+            delete camera;
         }
         else
         {
@@ -282,45 +277,32 @@ GetDeviceInfo(HANDLE hCamera, DEVICEINFO *info)
 
     Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
 
-//    std::list<Device*> deviceList = deviceManager->GetFilteredDevices();
-//    std::list<Device*>::iterator it = deviceList.begin();
-
-//    std::advance(it, deviceId);
-
-//    if (it != deviceList.end())
-//    {
-//        Device* device = (*it);// ->Clone();
-//        SonyCamera* camera = new SonyCamera(device);
     if (hCamera)
     {
-//        camera->Open();
-        DeviceInfo* deviceInfo = camera->GetDeviceInfo(false);
+        DeviceInfo deviceInfo = camera->GetDeviceInfo();
 
-        info->imageWidthPixels = deviceInfo->GetSensorXResolution();
-        info->imageHeightPixels = deviceInfo->GetSensorYResolution();
-        info->imageWidthCroppedPixels = deviceInfo->GetSensorXCroppedResolution();
-        info->imageHeightCroppedPixels = deviceInfo->GetSensorYCroppedResolution();
-        info->pixelWidth = deviceInfo->GetSensorPixelWidth();
-        info->pixelHeight = deviceInfo->GetSensorPixelHeight();
-        info->exposureTimeMin = deviceInfo->GetExposureTimeMin();
-        info->exposureTimeMax = deviceInfo->GetExposureTimeMax();
-        info->exposureTimeStep = deviceInfo->GetExposureTimeStep();
-        info->bayerXOffset = deviceInfo->GetBayerXOffset();
-        info->bayerYOffset = deviceInfo->GetBayerYOffset();
-        info->cropMode = (DWORD)deviceInfo->GetCropMode();
-        info->bitsPerPixel = deviceInfo->GetBitsPerPixel();
+        info->imageWidthPixels = deviceInfo.GetSensorXResolution();
+        info->imageHeightPixels = deviceInfo.GetSensorYResolution();
+        info->imageWidthCroppedPixels = deviceInfo.GetSensorXCroppedResolution();
+        info->imageHeightCroppedPixels = deviceInfo.GetSensorYCroppedResolution();
+        info->pixelWidth = deviceInfo.GetSensorPixelWidth();
+        info->pixelHeight = deviceInfo.GetSensorPixelHeight();
+        info->exposureTimeMin = deviceInfo.GetExposureTimeMin();
+        info->exposureTimeMax = deviceInfo.GetExposureTimeMax();
+        info->exposureTimeStep = deviceInfo.GetExposureTimeStep();
+        info->bayerXOffset = deviceInfo.GetBayerXOffset();
+        info->bayerYOffset = deviceInfo.GetBayerYOffset();
+        info->cropMode = (DWORD)deviceInfo.GetCropMode();
+        info->bitsPerPixel = deviceInfo.GetBitsPerPixel();
 
-        info->manufacturer = exportString(deviceInfo->GetManufacturer());
-        info->model = exportString(deviceInfo->GetModel());
-        info->serialNumber = exportString(deviceInfo->GetSerialNumber());
+        info->manufacturer = exportString(deviceInfo.GetManufacturer());
+        info->model = exportString(deviceInfo.GetModel());
+        info->serialNumber = exportString(deviceInfo.GetSerialNumber());
         info->deviceName = exportString(camera->GetId());// (*it)->GetId());
-        info->sensorName = exportString(deviceInfo->GetSensorName());
-        info->deviceVersion = exportString(deviceInfo->GetVersion());
+        info->sensorName = exportString(deviceInfo.GetSensorName());
+        info->deviceVersion = exportString(deviceInfo.GetVersion());
 
         LOGTRACE(L"Out: GetDeviceInfo(x%p, @ x%p) - Returning data", hCamera, info);
-
-//        camera->Close();
-//        delete camera;
 
         return ERROR_SUCCESS;
     }
@@ -341,55 +323,58 @@ GetPreviewImage(HANDLE hCamera, IMAGEINFO *info)
 
     try
     {
-        Locker lock(camera);
-
-        camera->GetSettings(true);
-
-        // Set up some defaults
-        info->data = nullptr;
-        info->width = 0;
-        info->height = 0;
-        info->duration = 0.0;
+        GetPreviewTask preview;
 
         LOGDEBUG(L"Getting Preview");
-        Image* image = camera->GetImage(PREVIEW_IMAGE);
-
-        if (image)
+        if (preview.Run(camera))
         {
-//            // Always want RGB as preview doesn't support RAW
-            image->SetOutputMode((OutputMode)info->imageMode);// OutputMode::RGB);
+            Image* image = preview.GetImage();
 
-            info->size = image->GetImageDataSize();
-            LOGDEBUG(L"Image Data Size = %d bytes", info->size);
+            // Set up some defaults
+            info->data = nullptr;
+            info->width = 0;
+            info->height = 0;
+            info->duration = 0.0;
 
-            if (info->size)
+            if (image)
             {
-                info->data = exportBytes(image->GetImageData(), info->size);
+                image->SetOutputMode((OutputMode)info->imageMode);
 
-                info->width = image->GetWidth();
-                info->height = image->GetHeight();
-                info->duration = 0.0;
-                info->status = (DWORD)CaptureStatus::Complete;
+                info->size = image->GetImageDataSize();
+                LOGDEBUG(L"Image Data Size = %d bytes", info->size);
 
-                if (info->flags & IMAGEFLAG_SAVE_RAW_DATA)
+                if (info->size)
                 {
-                    image->SaveFile();
+                    info->data = exportBytes(image->GetImageData(), info->size);
+
+                    info->width = image->GetWidth();
+                    info->height = image->GetHeight();
+                    info->duration = 0.0;
+                    info->status = (DWORD)CaptureStatus::Complete;
+
+                    if (info->flags & IMAGEFLAG_SAVE_RAW_DATA)
+                    {
+                        image->SaveFile();
+                    }
                 }
+                else
+                {
+                    // This should not occur
+                    LOGWARN(L"Got an image, but it's size is 0 bytes");
+                    info->status = (DWORD)CaptureStatus::Failed;
+                }
+
+                delete image;
             }
             else
             {
-                // This should not occur
-                LOGWARN(L"Got an image, but it's size is 0 bytes");
+                LOGWARN(L"Asked for liveview image, but none returned");
+
                 info->status = (DWORD)CaptureStatus::Failed;
             }
-
-            delete image;
         }
-        else
-        {
-            LOGWARN(L"Asked for liveview image, but none returned");
-
-            info->status = (DWORD)CaptureStatus::Failed;
+        else {
+            LOGWARN(L"Problem getting preview");
         }
     }
     catch (CameraException & gfe)
@@ -441,8 +426,9 @@ StartCapture(HANDLE hCamera, IMAGEINFO* info)
 HRESULT
 GetCaptureStatus(HANDLE hCamera, IMAGEINFO* info)
 {
+#ifdef DEBUG
     LOGTRACE(L"In: GetCaptureStatus(x%08p)", hCamera);
-
+#endif
     Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
 
     try
@@ -476,9 +462,9 @@ GetCaptureStatus(HANDLE hCamera, IMAGEINFO* info)
 
         info->status = (DWORD)CaptureStatus::Failed;
     }
-
+#ifdef DEBUG
     LOGTRACE(L"Out: GetCaptureStatus(x%08p)", hCamera);
-
+#endif
     return ERROR_SUCCESS;
 }
 
@@ -505,9 +491,9 @@ CancelCapture(HANDLE hCamera, IMAGEINFO* info)
     return ERROR_SUCCESS;
 }
 
-bool NudgePropertyAndWait(Camera* camera, CameraProperty* desired, bool up, CameraProperty** inout, int* compareResult)
+bool NudgePropertyAndWait(Camera* camera, CameraProperty* desired, bool up, int* compareResult)
 {
-    PropertyValue* val = nullptr;;
+    PropertyValue* val;
     DWORD value = up ? 1 : -1;
 
     // Try to just do it
@@ -541,27 +527,29 @@ bool NudgePropertyAndWait(Camera* camera, CameraProperty* desired, bool up, Came
         throw CameraException(L"Unable to set property, only properties with int/uint 8/16/32 supported");
     }
 
-    CameraProperty* current = camera->GetSettings(true)->GetProperty(desired->GetId())->Clone();
+    std::unique_ptr<CameraProperty> current(camera->GetProperty(desired->GetId()));
 
     // This will nudge the property in hopefully the correct direction
-    camera->SetProperty(desired->GetId(), val);
+    LOGTRACE(L"Property x%04x is set to %s, nudging %s toward %s", desired->GetId(), current->GetCurrentValue()->ToString().c_str(), val->ToString().c_str(), desired->GetCurrentValue()->ToString().c_str());
+    SetPropertyTaskParams params(desired->GetId(), val);
+    SetPropertyTask task(&params);
+
+    task.Run(camera);
 
     // Now wait a bit to see if it updates - wait no more than 2 seconds
     int count = 0;
-    int changed;
+    int changed = 0;
+    CameraProperty* latest = nullptr;
 
     do
     {
         Sleep(50);
-        delete* inout;
-        *inout = camera->GetSettings(true)->GetProperty(desired->GetId())->Clone();
-        changed = (*inout)->Compare(*current);
+        std::unique_ptr<CameraProperty> latest(camera->GetProperty(desired->GetId()));
+
+        changed = latest->Compare(current.get());
+        *compareResult = latest->Compare(desired);
         count++;
     } while (count < 40 && changed == 0);
-
-    delete current;
-
-    *compareResult = (*inout)->Compare(*desired);
 
     bool upIsBigger = desired->UpIsBigger();
     bool result = changed != 0 && (changed == (up ? (upIsBigger ? 1 : -1) : (upIsBigger ? -1 : 1)));
@@ -577,7 +565,9 @@ GetAvailablePropertyValues(HANDLE hCamera, Camera* camera, Property propertyId, 
     std::list<DWORD> values;
     PropertyValue* val;
     PropertyValue* desiredVal;
-    CameraProperty* current = camera->GetSettings(true)->GetProperty(propertyId)->Clone();
+    camera->RefreshSettings();
+    std::unique_ptr<CameraSettings> cs(camera->GetSettings());
+    CameraProperty* current = cs->GetProperty(propertyId);
     CameraProperty* desired = current->Clone();
 
     switch (current->GetInfo()->GetType())
@@ -610,12 +600,9 @@ GetAvailablePropertyValues(HANDLE hCamera, Camera* camera, Property propertyId, 
         throw CameraException(L"Unable to set property, only properties with int/uint 8/16/32 supported");
     }
 
-    delete current;
-
     desired->SetCurrentValue(desiredVal);
 
     int compareResult;
-    CameraProperty* inout = nullptr;
 
     // There seems to be an issue learning Exposure times - possibly related to the camera effectively being a
     // little "sticky" when first connected.  So what we'll do is loiter for a little, then try bumping up,
@@ -623,22 +610,27 @@ GetAvailablePropertyValues(HANDLE hCamera, Camera* camera, Property propertyId, 
     Sleep(1000);
 
     // Just to ensure we're up-to-date
-    camera->GetSettings(true);
+    camera->RefreshSettings();
 
-    NudgePropertyAndWait(camera, desired, true, &inout, &compareResult);
-    NudgePropertyAndWait(camera, desired, false, &inout, &compareResult);
+    NudgePropertyAndWait(camera, desired, true, &compareResult);
+    NudgePropertyAndWait(camera, desired, false, &compareResult);
 
     // Moves to lowest possible value
     SetPropertyValue(hCamera, (DWORD)propertyId, startAt);
 
-    current = camera->GetSettings(true)->GetProperty(propertyId)->Clone();
+    camera->RefreshSettings();
+    std::unique_ptr<CameraSettings> updated(camera->GetSettings());
+
+    current = updated->GetProperty(propertyId);
 
     bool adjusted;
-    int expectedCompareResult = current->Compare(*desired);
+    int expectedCompareResult = current->Compare(desired);
 
     do
     {
-        val = camera->GetSettings(false)->GetPropertyValue(propertyId);
+        camera->RefreshSettings();
+        std::unique_ptr<CameraSettings> loop_cs(camera->GetSettings());
+        val = loop_cs->GetPropertyValue(propertyId);
 
         switch (current->GetInfo()->GetType())
         {
@@ -670,10 +662,9 @@ GetAvailablePropertyValues(HANDLE hCamera, Camera* camera, Property propertyId, 
             throw CameraException(L"Unable to set property, only properties with int/uint 8/16/32 supported");
         }
 
-        adjusted = NudgePropertyAndWait(camera, desired, true, &inout, &compareResult);
+        adjusted = NudgePropertyAndWait(camera, desired, true, &compareResult);
     } while (adjusted && compareResult == expectedCompareResult);
 
-    delete current;
     delete desired;
 
     return values;
@@ -716,11 +707,9 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
             // We try to lock the camera in the capture thread, which will block on this one
             // since this method is (should) only be called in discovery, we can leave the lock
             // out until it's more state-machiney
-//            Locker lock(camera);
-
             result = ERROR_SUCCESS;
 
-            DeviceInfo* deviceInfo = camera->GetDeviceInfo(false);
+            DeviceInfo deviceInfo = camera->GetDeviceInfo();
             std::wostringstream builder;
 
             builder << L"Cameras\\" << camera->GetDevice()->GetRegistryPath();
@@ -729,30 +718,30 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
 
             registry.Open();
 
-            if (deviceInfo->GetExposureTimes().empty() && (flags & INFOFLAG_INCLUDE_SETTINGS))
+            if (deviceInfo.GetExposureTimes().empty() && (flags & INFOFLAG_INCLUDE_SETTINGS))
             {
                 std::list<DWORD> list = GetAvailablePropertyValues(hCamera, camera, Property::ShutterSpeed, 0, 0x0001ffff);
 
                 registry.SetString(cameraPath, L"Exposure Times", ListToString(list));
             }
 
-            if (deviceInfo->GetISOs().empty() && (flags & INFOFLAG_INCLUDE_SETTINGS))
+            if (deviceInfo.GetISOs().empty() && (flags & INFOFLAG_INCLUDE_SETTINGS))
             {
                 std::list<DWORD> list = GetAvailablePropertyValues(hCamera, camera, Property::ISO, 0, 0x0001ffff);
 
                 registry.SetString(cameraPath, L"ISOs", ListToString(list));
             }
 
-            if (deviceInfo->GetPreviewXResolution() == 0 || deviceInfo->GetPreviewYResolution() == 0
-                || deviceInfo->GetSensorXResolution() == 0 || deviceInfo->GetSensorYResolution() == 0
-                || deviceInfo->GetSensorXCroppedResolution() == 0 || deviceInfo->GetSensorYCroppedResolution() == 0)
+            if (deviceInfo.GetPreviewXResolution() == 0 || deviceInfo.GetPreviewYResolution() == 0
+                || deviceInfo.GetSensorXResolution() == 0 || deviceInfo.GetSensorYResolution() == 0
+                || deviceInfo.GetSensorXCroppedResolution() == 0 || deviceInfo.GetSensorYCroppedResolution() == 0)
             {
                 // Camera not fully specified
-                LOGINFO(L"GetCameraInfo for '%s' is missing image size info", deviceInfo->GetModel().c_str());
+                LOGINFO(L"GetCameraInfo for '%s' is missing image size info", deviceInfo.GetModel().c_str());
 
                 if (flags & INFOFLAG_ACTIVE)
                 {
-                    bool previewNeeded = deviceInfo->GetPreviewXResolution() == 0 || deviceInfo->GetPreviewYResolution() == 0;
+                    bool previewNeeded = deviceInfo.GetPreviewXResolution() == 0 || deviceInfo.GetPreviewYResolution() == 0;
 
                     if (previewNeeded)
                     {
@@ -777,8 +766,8 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
                     }
 
                     // This flag allows us to fetch the info from the camera by changing settings and taking photos
-                    if (deviceInfo->GetSensorXResolution() == 0 || deviceInfo->GetSensorYResolution() == 0
-                        || deviceInfo->GetSensorXCroppedResolution() == 0 || deviceInfo->GetSensorYCroppedResolution() == 0)
+                    if (deviceInfo.GetSensorXResolution() == 0 || deviceInfo.GetSensorYResolution() == 0
+                        || deviceInfo.GetSensorXCroppedResolution() == 0 || deviceInfo.GetSensorYCroppedResolution() == 0)
                     {
                         if (previewNeeded)
                         {
@@ -835,21 +824,25 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
             registry.Close();
 
             // Fetch updated
-            deviceInfo = camera->GetDeviceInfo(true);
-            camera->GetSettings(true);
+            RefreshDeviceInfoTask task;
+
+            task.Run(camera);
+
+            deviceInfo = camera->GetDeviceInfo();
+            camera->RefreshSettings();
 
             info->flags = 0;
-            info->flags |= deviceInfo->GetSupportsLiveview() ? CAMERAFLAGS_SUPPORTS_LIVEVIEW : 0;
-            info->imageWidthPixels = deviceInfo->GetSensorXResolution();
-            info->imageHeightPixels = deviceInfo->GetSensorYResolution();
-            info->imageWidthCroppedPixels = deviceInfo->GetSensorXCroppedResolution();
-            info->imageHeightCroppedPixels = deviceInfo->GetSensorYCroppedResolution();
-            info->previewWidthPixels = deviceInfo->GetPreviewXResolution();
-            info->previewHeightPixels = deviceInfo->GetPreviewYResolution();
-            info->pixelWidth = deviceInfo->GetSensorPixelWidth();
-            info->pixelHeight = deviceInfo->GetSensorPixelHeight();
-            info->bayerXOffset = deviceInfo->GetBayerXOffset();
-            info->bayerYOffset = deviceInfo->GetBayerYOffset();
+            info->flags |= deviceInfo.GetSupportsLiveview() ? CAMERAFLAGS_SUPPORTS_LIVEVIEW : 0;
+            info->imageWidthPixels = deviceInfo.GetSensorXResolution();
+            info->imageHeightPixels = deviceInfo.GetSensorYResolution();
+            info->imageWidthCroppedPixels = deviceInfo.GetSensorXCroppedResolution();
+            info->imageHeightCroppedPixels = deviceInfo.GetSensorYCroppedResolution();
+            info->previewWidthPixels = deviceInfo.GetPreviewXResolution();
+            info->previewHeightPixels = deviceInfo.GetPreviewYResolution();
+            info->pixelWidth = deviceInfo.GetSensorPixelWidth();
+            info->pixelHeight = deviceInfo.GetSensorPixelHeight();
+            info->bayerXOffset = deviceInfo.GetBayerXOffset();
+            info->bayerYOffset = deviceInfo.GetBayerYOffset();
         }
         catch (CameraException & gfe)
         {
@@ -897,7 +890,7 @@ GetPortableDeviceInfo(DWORD offset, PORTABLEDEVICEINFO* pdinfo)
 
     if (it != deviceList.end())
     {
-        Device* device = (*it);// ->Clone();
+        Device* device = (*it);
 
         pdinfo->id = exportString((*it)->GetId());
         pdinfo->manufacturer = exportString(device->GetManufacturer());
@@ -916,58 +909,6 @@ GetPortableDeviceInfo(DWORD offset, PORTABLEDEVICEINFO* pdinfo)
     }
 }
 
-HRESULT
-RefreshPropertyList(HANDLE hCamera)
-{
-    LOGTRACE(L"In: RefreshPropertyList(x%p)", hCamera);
-
-    Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
-
-    if (!camera)
-    {
-        LOGTRACE(L"Out: RefreshPropertyList(x%p) - camera not found", hCamera);
-
-        return ERROR_INVALID_HANDLE;
-    }
-
-    // If the camera is currently taking a picture this will block, potentially causing issues
-    // with apps like NINA that like to scan camera settings while other things are happening
-    // so if we're taking a photo, this bit will be skipped.
-    CaptureStatus status;
-
-    try
-    {
-        status = camera->GetCaptureStatus();
-    }
-    catch (CameraException& gfe)
-    {
-        // This is ok, it just means there is no capture
-        LOGDEBUG(L"No capture exists, using Cancelled as placeholder for capture status");
-        status = CaptureStatus::Cancelled;
-    }
-
-    if (status != CaptureStatus::Capturing && status != CaptureStatus::Starting && status != CaptureStatus::Reading)
-    {
-        try
-        {
-            Locker lock(camera);
-
-            camera->GetSettings(true);
-        }
-        catch (CameraException& gfe)
-        {
-            LOGERROR(L"Exception refreshing property list: %s", gfe.GetMessage().c_str());
-        }
-    }
-    else
-    {
-        LOGINFO(L"Skipping property refresh as camera is busy taking a photo");
-    }
-
-    LOGTRACE(L"Out: RefreshPropertyList(x%p)", hCamera);
-
-    return ERROR_SUCCESS;
-}
 
 HRESULT
 GetPropertyList(HANDLE hCamera, DWORD* list, DWORD* listSize)
@@ -985,7 +926,7 @@ GetPropertyList(HANDLE hCamera, DWORD* list, DWORD* listSize)
 
     try
     {
-        Locker lock(camera);
+        std::unique_ptr<CameraSettings> cs(camera->GetSettings());
 
         if (!list)
         {
@@ -997,18 +938,19 @@ GetPropertyList(HANDLE hCamera, DWORD* list, DWORD* listSize)
             }
 
             // Get number of properties advertised, fill in listSize
-            *listSize = camera->GetSupportedProperties().size();
 
-            LOGTRACE(L"Out: GetPropertyList(x%p, ...) - list size set, retry", hCamera);
+            *listSize = cs->size();
+
+            LOGTRACE(L"Out: GetPropertyList(x%p, ...) - list size set (%d), retry", hCamera, *listSize);
 
             return ERROR_RETRY;
         }
 
-        PropertyInfoMap supportedProperties = camera->GetSupportedProperties();
         int offset = 0;
 
-        for (std::unordered_map<Property, PropertyInfo*>::iterator it = supportedProperties.begin(); it != supportedProperties.end(); it++)
+        for (CAMERAPROP::const_iterator it = cs->begin(); it != cs->end(); it++)
         {
+//            LOGTRACE(L"Adding property x%04x to list", (*it).first);
             list[offset++] = (DWORD)((*it).first);
         }
     }
@@ -1047,14 +989,11 @@ GetPropertyDescriptor(HANDLE hCamera, DWORD propertyId, PROPERTYDESCRIPTOR* desc
 
     try
     {
-        Locker lock(camera);
+        std::unique_ptr<CameraProperty> prop(camera->GetProperty((Property)propertyId));
 
-        PropertyInfoMap supportedProperties = camera->GetSupportedProperties();
-        PropertyInfoMap::iterator it = supportedProperties.find((Property)propertyId);
-
-        if (it != supportedProperties.end())
+        if (prop)
         {
-            PropertyInfo* info = (*it).second;
+            PropertyInfo* info = prop->GetInfo();
             std::wstring name = ResourceLoader::GetString(propertyId);
 
             descriptor->id = propertyId;
@@ -1102,14 +1041,12 @@ GetPropertyValueOption(HANDLE hCamera, DWORD propertyId, PROPERTYVALUEOPTION* op
 
     try
     {
-        Locker lock(camera);
+//        Locker lock(camera);
+        std::unique_ptr<CameraProperty> prop(camera->GetProperty((Property)propertyId));
 
-        PropertyInfoMap supportedProperties = camera->GetSupportedProperties();
-        PropertyInfoMap::iterator it = supportedProperties.find((Property)propertyId);
-
-        if (it != supportedProperties.end())
+        if (prop)
         {
-            PropertyInfo* info = (*it).second;
+            PropertyInfo* info = prop->GetInfo();
 
             if (info->GetFormMode() == FormMode::ENUMERATION)
             {
@@ -1127,17 +1064,12 @@ GetPropertyValueOption(HANDLE hCamera, DWORD propertyId, PROPERTYVALUEOPTION* op
                     return ERROR_INVALID_PARAMETER;
                 }
 
-                CameraPropertyFactory f;
-                CameraProperty* p = f.Create((Property)propertyId);
-
-                p->SetInfo(info);
-
                 std::list<PropertyValue*> values = info->GetEnumeration();
                 std::list<PropertyValue*>::iterator it = values.begin();
                 std::advance(it, index);
 
                 PropertyValue* v = *it;
-                option->name = exportString(p->AsString(v));
+                option->name = exportString(prop->AsString());
 
                 switch (v->GetType())
                 {
@@ -1169,8 +1101,6 @@ GetPropertyValueOption(HANDLE hCamera, DWORD propertyId, PROPERTYVALUEOPTION* op
                     option->value = 0xffffffff;
                     break;
                 }
-
-                delete p;
             }
 
 
@@ -1213,9 +1143,8 @@ SetPropertyValue(HANDLE hCamera, DWORD propertyId, DWORD value)
     {
         Locker lock(camera);
 
-        CameraSettings* cs = camera->GetSettings(true);
-        CameraProperty* v = cs->GetProperty((Property)propertyId);
-        PropertyValue* val = nullptr;
+        std::unique_ptr<CameraProperty> v(camera->GetProperty((Property)propertyId));
+        PropertyValue* val;
 
         if (v)
         {
@@ -1252,7 +1181,10 @@ SetPropertyValue(HANDLE hCamera, DWORD propertyId, DWORD value)
 
             if (v->GetInfo()->GetSonySpare() == 0)
             {
-                camera->SetProperty((Property)propertyId, val);
+                SetPropertyTaskParams params((Property)propertyId, val);
+                SetPropertyTask task(&params);
+
+                task.Run(camera);
             }
             else
             {
@@ -1260,11 +1192,11 @@ SetPropertyValue(HANDLE hCamera, DWORD propertyId, DWORD value)
                 // Figure out if the current value is higher or lower than we want
                 // and keep moving in that direction until we hit or skip-over (if a
                 // non-supported value is given) the target
-                CameraProperty* target = v->Clone();
+                std::unique_ptr<CameraProperty> target(v->Clone());
 
                 target->SetCurrentValue(val);
 
-                int compare = v->Compare(*target);
+                int compare = v->Compare(target.get());
 
                 if (compare == 0)
                 {
@@ -1285,17 +1217,11 @@ SetPropertyValue(HANDLE hCamera, DWORD propertyId, DWORD value)
                         up = compare > 0;
                     }
 
-                    CameraProperty* inout = nullptr;
-
                     do
                     {
-                        adjusted = NudgePropertyAndWait(camera, target, up, &inout, &compareResult);
+                        adjusted = NudgePropertyAndWait(camera, target.get(), up, &compareResult);
                     } while (adjusted && compareResult == compare);
-
-                    delete inout;
                 }
-
-                delete target;
             }
 
             LOGTRACE(L"Out: SetPropertyValue(x%p, x%04x, %d)", hCamera, propertyId, value);
@@ -1327,14 +1253,11 @@ GetSinglePropertyValue(HANDLE hCamera, DWORD propertyId, PROPERTYVALUE* value)
 
     try
     {
-        Locker lock(camera);
-
-        CameraSettings* cs = camera->GetSettings(false);
-        CameraProperty* v = cs->GetProperty((Property)propertyId);
+        std::unique_ptr<CameraProperty> v(camera->GetProperty((Property)propertyId));
 
         if (v)
         {
-            RenderProperty((Property)propertyId, v, value);
+            RenderProperty((Property)propertyId, (const CameraProperty*)v.get(), value);
 
             return ERROR_SUCCESS;
         }
@@ -1363,23 +1286,20 @@ GetAllPropertyValues(HANDLE hCamera, PROPERTYVALUE* values, DWORD* count)
 
     try
     {
-        Locker lock(camera);
-
-        CameraSettings* cs = camera->GetSettings(false);
-        std::list<CameraProperty*> properties = cs->GetProperties();
+        std::unique_ptr<CameraSettings> cs(camera->GetSettings());
 
         if (!values)
         {
-            *count = properties.size();
+            *count = cs->size();
 
             return ERROR_SUCCESS;
         }
 
         DWORD offset = 0;
 
-        for (std::list<CameraProperty*>::iterator it = properties.begin(); it != properties.end() && offset < *count; it++)
+        for (CAMERAPROP::const_iterator it = cs->begin(); it != cs->end() && offset < *count; it++)
         {
-            RenderProperty((*it)->GetId(), *it, &values[offset]);
+            RenderProperty((*it).first, (*it).second, &values[offset]);
 
             offset++;
         }
@@ -1437,7 +1357,7 @@ SetExposureTime(HANDLE hCamera, float desired, PROPERTYVALUE* valueOut)
         DWORD currentExposure = 0;
         float lastRead = -9e9;
         float current = 0.0;
-        std::list<DWORD> exposureTimes = camera->GetDeviceInfo(false)->GetExposureTimes();
+        std::list<DWORD> exposureTimes = camera->GetDeviceInfo().GetExposureTimes();
         short sameCount = 0;
         float longestNonBulb = 0.0;
 

@@ -38,8 +38,8 @@ public:
     ~SonyCamera();
 
     bool Initialize();
-    CameraSettings* GetSettings(bool refresh);
-    bool SetProperty(Property id, PropertyValue* value);
+    bool RefreshSettings();
+    bool SetProperty(const Property id, PropertyValue* value);
 
 private:
 };

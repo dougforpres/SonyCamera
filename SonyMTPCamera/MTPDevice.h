@@ -22,7 +22,7 @@ public:
     virtual bool Send(Message* out);
     virtual Message* Receive(Message* out);
 
-    virtual bool StartNotifications();
+    virtual bool StartNotifications(Camera* camera);
     virtual bool StopNotifications();
 
     virtual std::wstring GetRegistryPath();

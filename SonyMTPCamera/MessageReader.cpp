@@ -4,6 +4,9 @@
 
 MessageReader::MessageReader(Message* message)
 {
+#ifdef DEBUG
+    LOGTRACE(L"MessageReader::MessageReader(Message* = x%08p) [this = x%08p]", message, this);
+#endif
     if (message)
     {
         m_message = new Message(*message);
@@ -12,11 +15,27 @@ MessageReader::MessageReader(Message* message)
 
 MessageReader::~MessageReader()
 {
-    if (m_message)
+#ifdef DEBUG
+    LOGTRACE(L"MessageReader::~MessageReader() [this = x%08p]", this);
+#endif
+     if (m_message)
     {
         delete m_message;
         m_message = nullptr;
     }
+
+}
+
+DWORD
+MessageReader::GetMessageSize()
+{
+    return m_message ? m_message->GetDataLen() : 0;
+}
+
+BYTE*
+MessageReader::GetRawMessage()
+{
+    return m_message ? m_message->GetData() : nullptr;
 }
 
 DWORD

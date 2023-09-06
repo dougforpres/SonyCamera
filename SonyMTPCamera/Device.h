@@ -7,6 +7,8 @@
 #define CLIENT_MINOR_VER 1
 #define CLIENT_REVISION 1
 
+class Camera;
+
 class Device
 {
 public:
@@ -38,12 +40,13 @@ public:
     virtual Message* Receive(Message* out) = 0;
 
     virtual HANDLE GetHandle();
-    virtual bool StartNotifications();
+    virtual bool StartNotifications(Camera* camera);
     virtual bool StopNotifications();
 
     bool IsSupported();
     virtual std::wstring GetRegistryPath() = 0;
     virtual bool NeedsSession();
+    int GetOpenCount();
 
 protected:
     std::wstring m_id;

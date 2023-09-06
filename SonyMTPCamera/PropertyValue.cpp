@@ -2,6 +2,10 @@
 #include "PropertyValue.h"
 #include "Property.h"
 
+PropertyValue::PropertyValue()
+{
+
+}
 
 PropertyValue::PropertyValue(const PropertyValue& rhs)
     : m_int8(rhs.m_int8),
@@ -12,7 +16,27 @@ PropertyValue::PropertyValue(const PropertyValue& rhs)
       m_uint32(rhs.m_uint32),
       m_type(rhs.m_type)
 {
+    Copy(rhs);
+}
 
+PropertyValue
+PropertyValue::operator=(const PropertyValue& rhs)
+{
+    Copy(rhs);
+
+    return *this;
+}
+
+void
+PropertyValue::Copy(const PropertyValue& rhs)
+{
+    m_int8 = rhs.m_int8;
+    m_uint8 = rhs.m_uint8;
+    m_int16 = rhs.m_int16;
+    m_uint16 = rhs.m_uint16;
+    m_int32 = rhs.m_int32;
+    m_uint32 = rhs.m_uint32;
+    m_type = rhs.m_type;
 }
 
 PropertyValue::PropertyValue(INT8 value)
@@ -70,49 +94,49 @@ PropertyValue::~PropertyValue()
 }
 
 DataType
-PropertyValue::GetType()
+PropertyValue::GetType() const
 {
     return m_type;
 }
 
 UINT8
-PropertyValue::GetUINT8()
+PropertyValue::GetUINT8() const
 {
     return m_uint8;
 }
 
 INT8
-PropertyValue::GetINT8()
+PropertyValue::GetINT8() const
 {
     return m_int8;
 }
 
 UINT16
-PropertyValue::GetUINT16()
+PropertyValue::GetUINT16() const
 {
     return m_uint16;
 }
 
 INT16
-PropertyValue::GetINT16()
+PropertyValue::GetINT16() const
 {
     return m_uint16;
 }
 
 UINT32
-PropertyValue::GetUINT32()
+PropertyValue::GetUINT32() const
 {
     return m_uint32;
 }
 
 INT32
-PropertyValue::GetINT32()
+PropertyValue::GetINT32() const
 {
     return m_uint32;
 }
 
 std::wstring
-PropertyValue::GetString()
+PropertyValue::GetString() const
 {
     return m_str;
 }
@@ -162,7 +186,7 @@ PropertyValue::ToPROPVARIANT()
 }
 
 size_t
-PropertyValue::Write(BYTE* buffer, DWORD bufferLen)
+PropertyValue::Write(BYTE* buffer, DWORD bufferLen) const
 {
     size_t result = GetDataSize();
 
@@ -207,7 +231,7 @@ PropertyValue::Write(BYTE* buffer, DWORD bufferLen)
 }
 
 size_t
-PropertyValue::GetDataSize()
+PropertyValue::GetDataSize() const
 {
     size_t result = 0;
 
@@ -249,7 +273,7 @@ PropertyValue::GetDataSize()
 }
 
 std::wstring
-PropertyValue::ToString()
+PropertyValue::ToString() const
 {
     std::wostringstream builder;
 

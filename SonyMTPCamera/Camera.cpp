@@ -13,39 +13,89 @@ Camera::Camera(Device* device)
     : m_device(device)
 {
     m_hBusyMutex = CreateMutex(nullptr, false, nullptr);
-    m_hWakeEvent = CreateEvent(nullptr, false, false, nullptr);
+    pWorker = new CameraWorker(this);
 }
 
 Camera::~Camera()
 {
-    if (m_settings)
-    {
-        delete m_settings;
-        m_settings = nullptr;
-    }
+    delete pWorker;
+    pWorker = nullptr;
 
     CloseHandle(m_hBusyMutex);
-    CloseHandle(m_hWakeEvent);
+
     m_hBusyMutex = INVALID_HANDLE_VALUE;
-    m_hWakeEvent = INVALID_HANDLE_VALUE;
+}
+
+CameraWorker*
+Camera::GetWorker()
+{
+    return pWorker;
 }
 
 const std::wstring
-Camera::GetId()
+Camera::GetId() const
 {
     return m_device->GetId();
+}
+
+void
+Camera::SetInitialized(bool value)
+{
+    initialized = value;
+}
+
+bool
+Camera::IsInitialized() const
+{
+    return initialized;
+}
+
+void
+Camera::OnPropertiesUpdated()
+{
+    RefreshPropertiesTask* task = new RefreshPropertiesTask();
+
+    if (!task->QueueAndForget(this))
+    {
+        LOGTRACE(L"Removing unqueued task");
+        // It didn't get queued
+        delete task;
+    }
+}
+
+void
+Camera::OnImageBufferStatus(ImageBufferStatus status)
+{
+    LOGINFO(L"Image Buffer Status Update %d", status);
+
+    if (status == ImageBufferStatus::ImageReady)
+    {
+        if (!m_takePhotoTaskParams) {
+            m_takePhotoTaskParams = new TakePhotoTaskParams(0, OutputMode::PASSTHRU);
+        }
+
+        m_downloadAndProcessImageTask = new DownloadAndProcessImageTask(m_takePhotoTaskParams);
+
+        m_downloadAndProcessImageTask->Start(this);
+    }
 }
 
 HANDLE
 Camera::Open()
 {
-    HANDLE hCamera =  m_device->Open();
+    pWorker->OnCameraStateChange(CameraState::Connecting);
 
-    if (hCamera != INVALID_HANDLE_VALUE && m_hHandlerThread == INVALID_HANDLE_VALUE)
+    HANDLE hCamera = m_device->Open();
+
+    if (hCamera != INVALID_HANDLE_VALUE)
     {
-        // Start up handler thread
-        m_shutdown = false;
-        m_hHandlerThread = CreateThread(nullptr, 0, &_runHandlerThread, this, 0, nullptr);
+        if (m_device->GetOpenCount() == 1)
+        {
+            m_device->StartNotifications(this);
+        }
+
+        pWorker->OnCameraStateChange(CameraState::Connected);
+        RefreshDeviceInfo();
     }
 
     return hCamera;
@@ -54,91 +104,62 @@ Camera::Open()
 bool
 Camera::Close()
 {
+    if (m_device->GetOpenCount() == 1)
+    {
+        m_device->StopNotifications();
+    }
+
     bool result = m_device->Close();
 
-    if (result && m_hHandlerThread != INVALID_HANDLE_VALUE)
+    if (result)
     {
-        // Stop the handler thread when device reports "closed for reals"
-        // Wait for exit
-        DWORD exitCode = 0;
-        DWORD waitCount = 0;
-
-        m_shutdown = true;
-        SetEvent(m_hWakeEvent);
-
-        BOOL ret = GetExitCodeThread(m_hHandlerThread, &exitCode);
-
-        waitCount = 0;
-
-        while (exitCode == STILL_ACTIVE && waitCount < THREAD_WAIT_EXIT_LOOPS)
-        {
-            waitCount++;
-
-            LOGINFO(L"Waiting for camera handler thread to exit %d / %d loops", waitCount, THREAD_WAIT_EXIT_LOOPS);
-
-            Sleep(THREAD_WAIT_EXIT_SLEEP);
-            GetExitCodeThread(m_hHandlerThread, &exitCode);
-        }
-
-        if (exitCode == STILL_ACTIVE)
-        {
-            LOGERROR(L"Camera handler thread would not exit, terminating with prejudice");
-            TerminateThread(m_hHandlerThread, -1);
-        }
-
-        if (m_deviceInfo)
-        {
-            LOGINFO(L"Cleaning up deviceInfo");
-            delete m_deviceInfo;
-            m_deviceInfo = nullptr;
-        }
+        SetInitialized(false);
     }
+
+    pWorker->OnCameraStateChange(CameraState::Disconnected);
 
     return result;
 }
 
-DeviceInfo*
-Camera::GetDeviceInfo(bool refresh)
+const DeviceInfo
+Camera::GetDeviceInfo() const
 {
-    if (!m_deviceInfo || refresh)
-    {
-        m_device->Open();
-
-        Message* tx;
-        Message* rx;
-
-        tx = new Message(COMMAND_GET_DEVICE_INFO);
-        rx = m_device->Receive(tx);
-
-        LOGTRACE(L"GetDeviceInfo() >> %s", rx->Dump().c_str());
-
-        m_deviceInfo = new DeviceInfo(rx);
-
-        delete tx;
-        delete rx;
-
-        m_device->Close();
-
-        ProcessDeviceInfoOverrides();
-        m_deviceInfo->DumpToLog();
-    }
-
     return m_deviceInfo;
 }
 
-PropertyInfoMap
-Camera::GetSupportedProperties()
+bool
+Camera::RefreshDeviceInfo()
 {
-    PropertyInfoMap result;
+    m_device->Open();
 
-    std::list<CameraProperty*> properties = m_settings->GetProperties();
+    Message* tx;
+    Message* rx;
 
-    for (std::list<CameraProperty*>::iterator it = properties.begin(); it != properties.end(); it++)
+    tx = new Message(COMMAND_GET_DEVICE_INFO);
+    rx = m_device->Receive(tx);
+
+    LOGTRACE(L"GetDeviceInfo() >> %s", rx->Dump().c_str());
+
+    DeviceInfo newDeviceInfo(rx);
+
+    delete tx;
+    delete rx;
+
+    m_device->Close();
+
+    ProcessDeviceInfoOverrides(newDeviceInfo);
+    newDeviceInfo.DumpToLog();
+
+    DWORD waitResult = WaitForSingleObject(m_hBusyMutex, 1000);
+
+    if (waitResult == WAIT_OBJECT_0)
     {
-        result.insert(std::pair<Property, PropertyInfo*>((*it)->GetId(), new PropertyInfo(*(*it)->GetInfo())));
+        m_deviceInfo = newDeviceInfo;
     }
 
-    return result;
+    ReleaseMutex(m_hBusyMutex);
+
+    return true;
 }
 
 void
@@ -148,10 +169,10 @@ Camera::LoadFakeProperties(CameraSettings* settings)
     CameraPropertyFactory f;
 
     CameraProperty* p = f.Create(Property::PossibleExposureTimes);
-
+    DeviceInfo deviceInfo = GetDeviceInfo();
     p->SetCurrentValue(new PropertyValue(0));
 
-    PropertyInfo* inf = p->GetInfo();
+    PropertyInfo* inf = new PropertyInfo();
 
     inf->SetDefault(new PropertyValue((UINT32)0));
     inf->SetId(Property::PossibleExposureTimes);
@@ -159,7 +180,7 @@ Camera::LoadFakeProperties(CameraSettings* settings)
     inf->SetFormMode(FormMode::ENUMERATION);
 
     std::list<PropertyValue*> values;
-    std::list<DWORD> et = GetDeviceInfo(false)->GetExposureTimes();
+    std::list<DWORD> et = deviceInfo.GetExposureTimes();
 
     for (std::list<DWORD>::iterator ei = et.begin(); ei != et.end(); ei++)
     {
@@ -167,6 +188,7 @@ Camera::LoadFakeProperties(CameraSettings* settings)
     }
 
     inf->SetEnumeration(values);
+    p->SetInfo(inf);
 
     settings->AddProperty(p);
 
@@ -174,7 +196,7 @@ Camera::LoadFakeProperties(CameraSettings* settings)
 
     p->SetCurrentValue(new PropertyValue(0));
 
-    inf = p->GetInfo();
+    inf = new PropertyInfo();
 
     inf->SetDefault(new PropertyValue((UINT32)0));
     inf->SetId(Property::PossibleISOs);
@@ -183,7 +205,7 @@ Camera::LoadFakeProperties(CameraSettings* settings)
 
     values.clear();
 
-    et = GetDeviceInfo(false)->GetISOs();
+    et = deviceInfo.GetISOs();
 
     for (std::list<DWORD>::iterator ei = et.begin(); ei != et.end(); ei++)
     {
@@ -191,7 +213,7 @@ Camera::LoadFakeProperties(CameraSettings* settings)
     }
 
     inf->SetEnumeration(values);
-
+    p->SetInfo(inf);
     settings->AddProperty(p);
 
     // Some cameras do not return info for the shutter control "buttons"
@@ -204,7 +226,7 @@ Camera::LoadFakeProperties(CameraSettings* settings)
 
         p->SetCurrentValue(new PropertyValue((UINT8)0));
 
-        inf = p->GetInfo();
+        inf = new PropertyInfo();
 
         inf->SetDefault(new PropertyValue((UINT8)0));
         inf->SetId(Property::ShutterHalfDown);
@@ -212,6 +234,7 @@ Camera::LoadFakeProperties(CameraSettings* settings)
         inf->SetFormMode(FormMode::NONE);
         inf->SetAccess(Accessibility::WRITE_ONLY_BUTTON);
         inf->SetSonySpare(1);
+        p->SetInfo(inf);
 
         settings->AddProperty(p);
     }
@@ -222,7 +245,7 @@ Camera::LoadFakeProperties(CameraSettings* settings)
 
         p->SetCurrentValue(new PropertyValue((UINT8)0));
 
-        inf = p->GetInfo();
+        inf = new PropertyInfo();
 
         inf->SetDefault(new PropertyValue((UINT8)0));
         inf->SetId(Property::ShutterFullDown);
@@ -230,7 +253,7 @@ Camera::LoadFakeProperties(CameraSettings* settings)
         inf->SetFormMode(FormMode::NONE);
         inf->SetAccess(Accessibility::WRITE_ONLY_BUTTON);
         inf->SetSonySpare(1);
-
+        p->SetInfo(inf);
         settings->AddProperty(p);
     }
 }
@@ -242,38 +265,37 @@ Camera::GetDevice()
 }
 
 bool
-Camera::ProcessDeviceInfoOverrides()
+Camera::ProcessDeviceInfoOverrides(DeviceInfo& deviceInfo)
 {
     std::wostringstream builder;
 
     builder << L"Cameras\\" << m_device->GetRegistryPath();
 
     std::wstring cameraPath = builder.str();
-    DeviceInfo* d = m_deviceInfo;
 
     registry.Open();
 
-    d->SetSensorName(registry.GetString(cameraPath, L"Sensor Name", d->GetSensorName()));
-    d->SetSensorPixelWidth(registry.GetDouble(cameraPath, L"Sensor X Size um", d->GetSensorPixelWidth()));
-    d->SetSensorPixelHeight(registry.GetDouble(cameraPath, L"Sensor Y Size um", d->GetSensorPixelHeight()));
-    d->SetSensorXResolution(registry.GetDWORD(cameraPath, L"Sensor X Resolution", d->GetSensorXResolution()));
-    d->SetSensorYResolution(registry.GetDWORD(cameraPath, L"Sensor Y Resolution", d->GetSensorYResolution()));
-    d->SetSensorXCroppedResolution(registry.GetDWORD(cameraPath, L"AutoCropped X Resolution", d->GetSensorXCroppedResolution()));
-    d->SetSensorYCroppedResolution(registry.GetDWORD(cameraPath, L"AutoCropped Y Resolution", d->GetSensorYCroppedResolution()));
-    d->SetPreviewXResolution(registry.GetDWORD(cameraPath, L"Preview X Resolution", d->GetPreviewXResolution()));
-    d->SetPreviewYResolution(registry.GetDWORD(cameraPath, L"Preview Y Resolution", d->GetPreviewYResolution()));
-    d->SetExposureTimeMin(registry.GetDouble(cameraPath, L"Exposure Time Min", d->GetExposureTimeMin()));
-    d->SetExposureTimeMax(registry.GetDouble(cameraPath, L"Exposure Time Max", d->GetExposureTimeMax()));
-    d->SetExposureTimeStep(registry.GetDouble(cameraPath, L"Exposure Time Step", d->GetExposureTimeStep()));
-    d->SetSensorType((SensorType)registry.GetDWORD(cameraPath, L"Sensor Type", (DWORD)d->GetSensorType()));
-    d->SetSupportsLiveview((bool)registry.GetDWORD(cameraPath, L"Supports Liveview", d->GetSupportsLiveview()));
-    d->SetCropMode((CropMode)registry.GetDWORD(cameraPath, L"Crop Mode", (DWORD)d->GetCropMode()));
-    d->SetLeftCrop((UINT16)registry.GetDWORD(cameraPath, L"Crop Left", d->GetLeftCrop()));
-    d->SetRightCrop((UINT16)registry.GetDWORD(cameraPath, L"Crop Right", d->GetRightCrop()));
-    d->SetTopCrop((UINT16)registry.GetDWORD(cameraPath, L"Crop Top", d->GetTopCrop()));
-    d->SetBottomCrop((UINT16)registry.GetDWORD(cameraPath, L"Crop Bottom", d->GetBottomCrop()));
-    d->SetButtonPropertiesInverted((bool)registry.GetDWORD(cameraPath, L"Button Properties Inverted", d->GetButtonPropertiesInverted()));
-    d->SetBitsPerPixel(registry.GetDWORD(cameraPath, L"Bits Per Pixel", d->GetBitsPerPixel()));
+    deviceInfo.SetSensorName(registry.GetString(cameraPath, L"Sensor Name", deviceInfo.GetSensorName()));
+    deviceInfo.SetSensorPixelWidth(registry.GetDouble(cameraPath, L"Sensor X Size um", deviceInfo.GetSensorPixelWidth()));
+    deviceInfo.SetSensorPixelHeight(registry.GetDouble(cameraPath, L"Sensor Y Size um", deviceInfo.GetSensorPixelHeight()));
+    deviceInfo.SetSensorXResolution(registry.GetDWORD(cameraPath, L"Sensor X Resolution", deviceInfo.GetSensorXResolution()));
+    deviceInfo.SetSensorYResolution(registry.GetDWORD(cameraPath, L"Sensor Y Resolution", deviceInfo.GetSensorYResolution()));
+    deviceInfo.SetSensorXCroppedResolution(registry.GetDWORD(cameraPath, L"AutoCropped X Resolution", deviceInfo.GetSensorXCroppedResolution()));
+    deviceInfo.SetSensorYCroppedResolution(registry.GetDWORD(cameraPath, L"AutoCropped Y Resolution", deviceInfo.GetSensorYCroppedResolution()));
+    deviceInfo.SetPreviewXResolution(registry.GetDWORD(cameraPath, L"Preview X Resolution", deviceInfo.GetPreviewXResolution()));
+    deviceInfo.SetPreviewYResolution(registry.GetDWORD(cameraPath, L"Preview Y Resolution", deviceInfo.GetPreviewYResolution()));
+    deviceInfo.SetExposureTimeMin(registry.GetDouble(cameraPath, L"Exposure Time Min", deviceInfo.GetExposureTimeMin()));
+    deviceInfo.SetExposureTimeMax(registry.GetDouble(cameraPath, L"Exposure Time Max", deviceInfo.GetExposureTimeMax()));
+    deviceInfo.SetExposureTimeStep(registry.GetDouble(cameraPath, L"Exposure Time Step", deviceInfo.GetExposureTimeStep()));
+    deviceInfo.SetSensorType((SensorType)registry.GetDWORD(cameraPath, L"Sensor Type", (DWORD)deviceInfo.GetSensorType()));
+    deviceInfo.SetSupportsLiveview((bool)registry.GetDWORD(cameraPath, L"Supports Liveview", deviceInfo.GetSupportsLiveview()));
+    deviceInfo.SetCropMode((CropMode)registry.GetDWORD(cameraPath, L"Crop Mode", (DWORD)deviceInfo.GetCropMode()));
+    deviceInfo.SetLeftCrop((UINT16)registry.GetDWORD(cameraPath, L"Crop Left", deviceInfo.GetLeftCrop()));
+    deviceInfo.SetRightCrop((UINT16)registry.GetDWORD(cameraPath, L"Crop Right", deviceInfo.GetRightCrop()));
+    deviceInfo.SetTopCrop((UINT16)registry.GetDWORD(cameraPath, L"Crop Top", deviceInfo.GetTopCrop()));
+    deviceInfo.SetBottomCrop((UINT16)registry.GetDWORD(cameraPath, L"Crop Bottom", deviceInfo.GetBottomCrop()));
+    deviceInfo.SetButtonPropertiesInverted((bool)registry.GetDWORD(cameraPath, L"Button Properties Inverted", deviceInfo.GetButtonPropertiesInverted()));
+    deviceInfo.SetBitsPerPixel(registry.GetDWORD(cameraPath, L"Bits Per Pixel", deviceInfo.GetBitsPerPixel()));
 
     std::wistringstream exposureTimes(registry.GetString(cameraPath, L"Exposure Times", L""));
     std::list<DWORD> times;
@@ -283,7 +305,7 @@ Camera::ProcessDeviceInfoOverrides()
         times.push_back(_wtoi(s.c_str()));
     }
 
-    d->SetExposureTimes(times);
+    deviceInfo.SetExposureTimes(times);
 
     std::wistringstream isos(registry.GetString(cameraPath, L"ISOs", L""));
     std::list<DWORD> iso;
@@ -292,7 +314,7 @@ Camera::ProcessDeviceInfoOverrides()
         iso.push_back(_wtoi(s.c_str()));
     }
 
-    d->SetISOs(iso);
+    deviceInfo.SetISOs(iso);
 
     registry.Close();
 
@@ -355,6 +377,14 @@ Camera::GetImage(DWORD id)
     return image;
 }
 
+void
+Camera::DoRefreshProperties()
+{
+    RefreshPropertiesTask rpt;
+
+    rpt.Run(this);
+}
+
 bool
 Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
 {
@@ -362,22 +392,61 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
 
     bool result = false;
 
-    if (m_captureThread)
+    DWORD waitResult = WaitForSingleObject(m_hBusyMutex, 1000);
+
+    if (waitResult == WAIT_OBJECT_0)
     {
-        LOGINFO(L"There's a pre-existing capture, attempting to clean up");
-        CleanupCapture();
+        if (m_takePhotoTask)
+        {
+            {
+                LOGINFO(L"There's a pre-existing capture, attempting to clean up");
+                if (m_takePhotoTask->Cancel(20000) == WAIT_OBJECT_0)
+                {
+                    // Task successfully cancelled
+                    delete m_takePhotoTask;
+                    m_takePhotoTask = nullptr;
+                }
+                //                CleanupCapture();
+            }
+        }
+
+        if (m_downloadAndProcessImageTask)
+        {
+            {
+                LOGINFO(L"There's a pre-existing download, attempting to clean up");
+                if (m_downloadAndProcessImageTask->Cancel(20000) == WAIT_OBJECT_0)
+                {
+                    // Task successfully cancelled
+                    delete m_downloadAndProcessImageTask;;
+                    m_downloadAndProcessImageTask = nullptr;
+                }
+                //                CleanupCapture();
+            }
+        }
+
+        if (m_takePhotoTaskParams)
+        {
+            delete m_takePhotoTaskParams;
+            m_takePhotoTaskParams = nullptr;
+        }
+
+        SetCaptureStatus(CaptureStatus::Created);
     }
+
+    ReleaseMutex(m_hBusyMutex);
 
     // Get camera settings... this serves two purposes
     // 1. Ensure camera is in a state that will allow a photo to be taken
     // 2. Allows us to clean out any "pending" images that could have been
     //    created by user pressing shutter button
-    PropertyValue up((UINT16)(GetDeviceInfo(false)->GetButtonPropertiesInverted() ? 2 : 1));
+    PropertyValue up((UINT16)(GetDeviceInfo().GetButtonPropertiesInverted() ? 2 : 1));
 
     LOGTRACE(L"Up value is %d (%s)", up.GetUINT16(), up.ToString().c_str());
     LOGTRACE(L"Getting latest camera settings");
 
-    CameraSettings* settings = GetSettings(true);
+    DoRefreshProperties();
+
+    std::unique_ptr<CameraSettings> cs(GetSettings());
 
     // Ensure the shutter control properties are correct
 
@@ -385,7 +454,7 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
     // but then don't actually return it.
     // If there are too many I may add some code to support default values
     // so we don't need all these checks.
-    PropertyValue* v = settings->GetPropertyValue(Property::ShutterFullDown);
+    PropertyValue* v = cs->GetPropertyValue(Property::ShutterFullDown);
 
     if (!v || v->GetUINT16() != up.GetUINT16())
     {
@@ -394,10 +463,11 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
         SetProperty(Property::ShutterFullDown, &up);
 
         // Re-fetch settings
-        settings = GetSettings(true);
+        DoRefreshProperties();
     }
 
-    v = settings->GetPropertyValue(Property::ShutterHalfDown);
+    std::unique_ptr<CameraSettings> cs2(GetSettings());
+    v = cs2->GetPropertyValue(Property::ShutterHalfDown);
 
     if (!v || v->GetUINT16() != up.GetUINT16())
     {
@@ -407,22 +477,23 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
         SetProperty(Property::ShutterHalfDown, &up);
 
         // Re-fetch settings
-        settings = GetSettings(true);
+        DoRefreshProperties();
     }
 
-    while (WORD bufferStatus = settings->GetPropertyValue(Property::PhotoBufferStatus)->GetUINT16() != 0)
+    while (WORD bufferStatus = cs->GetPropertyValue(Property::PhotoBufferStatus)->GetUINT16() != 0)
     {
-        switch (bufferStatus)
+        std::unique_ptr<CameraSettings> cs(GetSettings());
+
+        if (bufferStatus == 0x0001)
         {
-        case 0x0001:
             // Camera is busy getting a photo ready for us
             LOGTRACE(L"  Waiting for camera to have previous photo ready");
             Sleep(100);
-            break;
+        }
 
-        case 0x8001:
-            // Photo is ready... we don't actually want it, so we'll just toss whatever we get back
+        if (bufferStatus & 0x8000)
         {
+            // Photo is ready... we don't actually want it, so we'll just toss whatever we get back
             LOGTRACE(L"  Previous photo is ready to retrieve");
             Image* iimage = GetImage(FULL_IMAGE);
 
@@ -433,30 +504,23 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
 
             LOGTRACE(L"  Previous photo retrieved and discarded");
         }
-        break;
-
-        default:
-            LOGERROR(L"Unknown status of photo buffer x%08x, this is not good", bufferStatus);
-
-            throw CameraException(L"Unknown status of photo buffer");
-        }
 
         // Re-fetch settings
-        settings = GetSettings(true);
+        DoRefreshProperties();
     }
 
-    if (settings->GetPropertyValue(Property::ShutterButtonStatus)->GetUINT8() == 1)
+    cs = std::unique_ptr<CameraSettings>(GetSettings());
+
+    if (cs->GetPropertyValue(Property::ShutterButtonStatus)->GetUINT8() == 1)
     {
         LOGTRACE(L"  Shutter button is UP");
 
-        PropertyValue* exposureTime = settings->GetPropertyValue(Property::ShutterSpeed);
+        PropertyValue* exposureTime = cs->GetPropertyValue(Property::ShutterSpeed);
 
-        if (!exposureTime)
+        if (exposureTime->GetType() == DataType::UNKNOWN)
         {
             throw CameraException(L"Could not fetch exposure time");
         }
-
-        m_captureThread = new CaptureThread(this, outputMode);
 
         DWORD exposureTimeRaw = exposureTime->GetUINT32();
 
@@ -471,11 +535,16 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
             LOGTRACE(L"  Shutter time is %s (%f s), we wanted (%f s) - letting camera figure it out", exposureTime->ToString().c_str(), duration, requestedDuration);
         }
 
-        result = m_captureThread->StartCapture(duration);
+        m_takePhotoTaskParams = new TakePhotoTaskParams(duration, outputMode);
+        m_takePhotoTask = new TakePhotoTask(m_takePhotoTaskParams);
+
+        m_takePhotoTask->Start(this);
+
+        result = true;
     }
     else
     {
-        LOGWARN(L"StartCapture: Cannot start capture as someone has their finger on the shutter button (%s)", settings->GetPropertyValue(Property::ShutterButtonStatus)->ToString().c_str());
+        LOGWARN(L"StartCapture: Cannot start capture as someone has their finger on the shutter button (%s)", cs->GetPropertyValue(Property::ShutterButtonStatus)->ToString().c_str());
         throw CameraException(L"Cannot start capture as shutter already open");
     }
 
@@ -484,60 +553,108 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
     return result;
 }
 
-CaptureStatus
+CameraSettings*
+Camera::GetSettings() const
+{
+    DWORD waitResult = WaitForSingleObject(m_hBusyMutex, 1000);
+    CameraSettings* result = nullptr;
+
+    if (waitResult == WAIT_OBJECT_0)
+    {
+        result = new CameraSettings(*m_settings);
+    }
+
+    ReleaseMutex(m_hBusyMutex);
+
+    return result;
+}
+
+CameraProperty*
+Camera::GetProperty(Property id) const
+{
+    DWORD waitResult = WaitForSingleObject(m_hBusyMutex, 1000);
+    CameraProperty* result = nullptr;
+
+    if (waitResult == WAIT_OBJECT_0)
+    {
+        CameraProperty* existing = m_settings->GetProperty(id);
+
+        if (existing)
+        {
+            result = existing->Clone();
+        }
+    }
+
+    ReleaseMutex(m_hBusyMutex);
+
+    return result;
+}
+
+void
+Camera::SetCaptureStatus(CaptureStatus status)
+{
+    LOGTRACE(L"Set capture status to: %d", status);
+    DWORD waitResult = WaitForSingleObject(m_hBusyMutex, 1000);
+
+    if (waitResult == WAIT_OBJECT_0)
+    {
+        m_captureStatus = status;
+    }
+
+    ReleaseMutex(m_hBusyMutex);
+}
+
+const CaptureStatus
 Camera::GetCaptureStatus()
 {
     CaptureStatus result = CaptureStatus::Failed;
-    CaptureThread* capture = m_captureThread;
 
-    if (capture)
+    DWORD waitResult = WaitForSingleObject(m_hBusyMutex, 1000);
+
+    if (waitResult == WAIT_OBJECT_0)
     {
-        result = capture->GetStatus();
-
-        switch (result)
-        {
-        case CaptureStatus::Complete:
-            LOGTRACE(L"Camera::GetCaptureStatus() - Capture Complete");
-            break;
-
-        case CaptureStatus::Cancelled:
-            LOGTRACE(L"Camera::GetCaptureStatus() - Capture Cancelled");
-            break;
-
-        case CaptureStatus::Capturing:
-            LOGTRACE(L"Camera::GetCaptureStatus() - Capture Capturing");
-            break;
-
-        case CaptureStatus::Created:
-            LOGTRACE(L"Camera::GetCaptureStatus() - Capture Created (not started yet)");
-            break;
-
-        case CaptureStatus::Failed:
-            LOGTRACE(L"Camera::GetCaptureStatus() - Capture Failed");
-            break;
-
-        case CaptureStatus::Processing:
-            LOGTRACE(L"Camera::GetCaptureStatus() - Capture Processing Data");
-            break;
-
-        case CaptureStatus::Reading:
-            LOGTRACE(L"Camera::GetCaptureStatus() - Capture Reading From Camera");
-            break;
-
-        case CaptureStatus::Starting:
-            LOGTRACE(L"Camera::GetCaptureStatus() - Capture Starting");
-            break;
-
-        default:
-            LOGWARN(L"Camera::GetCaptureStatus() - Unknown Capture State %d", capture->GetStatus());
-            break;
-        }
+        result = m_captureStatus;
     }
-    else
-    {
-        LOGWARN(L"Asked for status of a capture that doesn't exist");
 
-        throw CameraException(L"No capture exists for this camera");
+    ReleaseMutex(m_hBusyMutex);
+
+    switch (result)
+    {
+    case CaptureStatus::Complete:
+        LOGTRACE(L"Camera::GetCaptureStatus() - Capture Complete");
+        break;
+
+    case CaptureStatus::Cancelled:
+        LOGTRACE(L"Camera::GetCaptureStatus() - Capture Cancelled");
+        break;
+
+    case CaptureStatus::Capturing:
+        LOGTRACE(L"Camera::GetCaptureStatus() - Capture Capturing");
+        break;
+
+    case CaptureStatus::Created:
+        LOGTRACE(L"Camera::GetCaptureStatus() - Capture Created (not started yet)");
+        break;
+
+    case CaptureStatus::Failed:
+        LOGTRACE(L"Camera::GetCaptureStatus() - Capture Failed");
+        break;
+
+    case CaptureStatus::Processing:
+        LOGTRACE(L"Camera::GetCaptureStatus() - Capture Processing Data");
+        break;
+
+    case CaptureStatus::Reading:
+        LOGTRACE(L"Camera::GetCaptureStatus() - Capture Reading From Camera");
+        break;
+
+    case CaptureStatus::Starting:
+        LOGTRACE(L"Camera::GetCaptureStatus() - Capture Starting");
+        break;
+
+    default:
+        LOGWARN(L"Camera::GetCaptureStatus() - Unknown Capture State %d", result);
+        break;
     }
 
     return result;
@@ -546,23 +663,43 @@ Camera::GetCaptureStatus()
 Image*
 Camera::GetCapturedImage()
 {
-    if (m_captureThread)
+    DWORD waitResult = WaitForSingleObject(m_hBusyMutex, 1000);
+    Image* image = nullptr;
+
+    if (waitResult == WAIT_OBJECT_0)
     {
-        return m_captureThread->GetImage();
+        if (m_downloadAndProcessImageTask && GetCaptureStatus() == CaptureStatus::Complete)//m_downloadAndProcessImageTask && m_downloadAndProcessImageTask->IsComplete())
+        {
+            image = m_downloadAndProcessImageTask->GetImage();
+        }
     }
-    else
+
+    ReleaseMutex(m_hBusyMutex);
+
+    if (image)
     {
-        throw CameraException(L"No active capture, therefore no image to retrieve");
+        return image;
     }
+
+    throw CameraException(L"No active capture, therefore no image to retrieve");
 }
 
 bool
 Camera::CancelCapture()
 {
-    if (m_captureThread)
+    DWORD waitResult = WaitForSingleObject(m_hBusyMutex, 1000);
+
+    if (waitResult == WAIT_OBJECT_0)
     {
-        m_captureThread->CancelCapture();
+        if (m_takePhotoTask)
+        {
+            m_takePhotoTask->Cancel(20000);
+            delete m_takePhotoTask;
+            m_takePhotoTask = nullptr;
+        }
     }
+
+    ReleaseMutex(m_hBusyMutex);
 
     return true;
 }
@@ -570,43 +707,5 @@ Camera::CancelCapture()
 void
 Camera::CleanupCapture()
 {
-    if (m_captureThread)
-    {
-        delete m_captureThread;
-        m_captureThread = nullptr;
-    }
-}
-
-DWORD WINAPI
-Camera::_runHandlerThread(LPVOID lpParameter)
-{
-    LOGTRACE(L"In: Camera::_runHandlerThread(x%08x)", lpParameter);
-
-    DWORD result = ((Camera*)lpParameter)->RunHandlerThread();
-
-    LOGTRACE(L"Out: Camera::_runHandlerThread(x%08x) - returning %d", lpParameter, result);
-
-    return result;
-}
-
-DWORD
-Camera::RunHandlerThread()
-{
-    DWORD waitResult = 0;
-
-    // Waits for work to do
-    while (!m_shutdown)
-    {
-        if (WaitForSingleObject(m_hWakeEvent, INFINITE) == WAIT_OBJECT_0)
-        {
-            if (WaitForSingleObject(m_hBusyMutex, MUTEX_TIMEOUT) == WAIT_OBJECT_0)
-            {
-                // Process Queue
-
-                ReleaseMutex(m_hBusyMutex);
-            }
-        }
-    }
-
-    return 0;
+    CancelCapture();
 }

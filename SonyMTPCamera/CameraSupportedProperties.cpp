@@ -4,9 +4,20 @@
 #include "ResourceLoader.h"
 #include "Logger.h"
 
+CameraSupportedProperties::CameraSupportedProperties()
+    : MessageReader(nullptr)
+{
+#ifdef DEBUG
+    LOGTRACE(L"CameraSupportedProperties::CameraSupportedProperties() [this = x%08p]", this);
+#endif
+}
+
 CameraSupportedProperties::CameraSupportedProperties(Message* message)
     : MessageReader(message)
 {
+#ifdef DEBUG
+    LOGTRACE(L"CameraSupportedProperties::CameraSupportedProperties(Message* = x%08p]) [this = x%08p]", message, this);
+#endif
     DWORD offset = 0;
 
     m_unknown = GetWORD(offset);
@@ -27,6 +38,37 @@ CameraSupportedProperties::CameraSupportedProperties(Message* message)
     {
         m_listb.push_back((Property) * it);
     }
+}
+
+CameraSupportedProperties::CameraSupportedProperties(const CameraSupportedProperties& rhs)
+    : MessageReader(nullptr)
+{
+#ifdef DEBUG
+    LOGTRACE(L"CameraSupportedProperties::CameraSupportedProperties(copy = x%08p]) [this = x%08p]", &rhs, this);
+#endif
+    m_unknown = rhs.m_unknown;
+    m_lista = rhs.m_lista;
+    m_listb = rhs.m_listb;
+}
+
+CameraSupportedProperties::~CameraSupportedProperties()
+{
+#ifdef DEBUG
+    LOGTRACE(L"CameraSupportedProperties::~CameraSupportedProperties() [this = x%08p]", this);
+#endif
+}
+
+CameraSupportedProperties
+CameraSupportedProperties::operator=(const CameraSupportedProperties& rhs)
+{
+#ifdef DEBUG
+    LOGTRACE(L"CameraSupportedProperties::operator=(rhs = x%08p]) [this = x%08p]", &rhs, this);
+#endif
+    m_unknown = rhs.m_unknown;
+    m_lista = rhs.m_lista;
+    m_listb = rhs.m_listb;
+
+    return *this;
 }
 
 std::wstring

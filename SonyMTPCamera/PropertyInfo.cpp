@@ -7,47 +7,50 @@ PropertyInfo::PropertyInfo()
 {
 }
 
-PropertyInfo::PropertyInfo(const PropertyInfo& rhs)
+PropertyInfo::PropertyInfo(const PropertyInfo* rhs)
 {
-    m_id = rhs.m_id;
-    m_type = rhs.m_type;
-    m_access = rhs.m_access;
-    m_sonySpare = rhs.m_sonySpare;
-    m_default = new PropertyValue(*rhs.m_default);
-    m_form = rhs.m_form;
+    Copy(rhs);
+}
 
-    if (rhs.m_rangeLo)
+PropertyInfo*
+PropertyInfo::operator= (const PropertyInfo* rhs)
+{
+    Copy(rhs);
+
+    return this;
+}
+
+void
+PropertyInfo::Copy(const PropertyInfo* rhs)
+{
+    m_id = rhs->m_id;
+    m_type = rhs->m_type;
+    m_access = rhs->m_access;
+    m_sonySpare = rhs->m_sonySpare;
+    SetDefault(new PropertyValue(*rhs->m_default));
+    m_form = rhs->m_form;
+    SetRange(rhs->m_rangeLo ? new PropertyValue(*rhs->m_rangeLo) : nullptr,
+        rhs->m_rangeHi ? new PropertyValue(*rhs->m_rangeHi) : nullptr,
+        rhs->m_rangeStep ? new PropertyValue(*rhs->m_rangeStep) : nullptr);
+
+    for (std::list<PropertyValue*>::const_iterator it = m_enum.begin(); it != m_enum.end(); it++)
     {
-        m_rangeLo = new PropertyValue(*rhs.m_rangeLo);
+        delete (*it);
     }
 
-    if (rhs.m_rangeHi)
-    {
-        m_rangeHi = new PropertyValue(*rhs.m_rangeHi);
-    }
+    m_enum.clear();
 
-    if (rhs.m_rangeStep)
+    for (std::list<PropertyValue*>::const_iterator it = rhs->m_enum.begin(); it != rhs->m_enum.end(); it++)
     {
-        m_rangeStep = new PropertyValue(*rhs.m_rangeStep);
-    }
-
-    if (!rhs.m_enum.empty())
-    {
-        for (std::list<PropertyValue*>::const_iterator it = rhs.m_enum.begin(); it != rhs.m_enum.end(); it++)
         {
-            m_enum.push_back(new PropertyValue(**it));
+            m_enum.push_back(new PropertyValue(*(*it)));
         }
     }
 }
 
 PropertyInfo::~PropertyInfo()
 {
-    if (m_default)
-    {
-        delete m_default;
-        m_default = nullptr;
-    }
-
+    SetDefault(nullptr);
     SetRange(nullptr, nullptr, nullptr);
     SetEnumeration(std::list<PropertyValue*>());
 }
@@ -59,7 +62,7 @@ PropertyInfo::SetId(Property id)
 }
 
 Property
-PropertyInfo::GetId()
+PropertyInfo::GetId() const
 {
     return m_id;
 }
@@ -71,7 +74,7 @@ PropertyInfo::SetType(DataType type)
 }
 
 DataType
-PropertyInfo::GetType()
+PropertyInfo::GetType() const
 {
     return m_type;
 }
@@ -83,7 +86,7 @@ PropertyInfo::SetAccess(Accessibility access)
 }
 
 Accessibility
-PropertyInfo::GetAccess()
+PropertyInfo::GetAccess() const
 {
     return m_access;
 }
@@ -95,7 +98,7 @@ PropertyInfo::SetSonySpare(BYTE sonySpare)
 }
 
 BYTE
-PropertyInfo::GetSonySpare()
+PropertyInfo::GetSonySpare() const
 {
     return m_sonySpare;
 }
@@ -103,11 +106,16 @@ PropertyInfo::GetSonySpare()
 void
 PropertyInfo::SetDefault(PropertyValue* def)
 {
+    if (m_default)
+    {
+        delete m_default;
+    }
+
     m_default = def;
 }
 
 PropertyValue*
-PropertyInfo::GetDefault()
+PropertyInfo::GetDefault() const
 {
     return m_default;
 }
@@ -119,7 +127,7 @@ PropertyInfo::SetFormMode(FormMode formMode)
 }
 
 FormMode
-PropertyInfo::GetFormMode()
+PropertyInfo::GetFormMode() const
 {
     return m_form;
 }
@@ -130,39 +138,27 @@ PropertyInfo::SetRange(PropertyValue* lo, PropertyValue* hi, PropertyValue* step
     if (m_rangeLo)
     {
         delete m_rangeLo;
-        m_rangeLo = nullptr;
     }
+
+    m_rangeLo = lo;
 
     if (m_rangeHi)
     {
         delete m_rangeHi;
-        m_rangeHi = nullptr;
     }
+
+    m_rangeHi = hi;
 
     if (m_rangeStep)
     {
         delete m_rangeStep;
-        m_rangeStep = nullptr;
     }
 
-    if (lo)
-    {
-        m_rangeLo = lo;
-    }
-
-    if (hi)
-    {
-        m_rangeHi = hi;
-    }
-
-    if (step)
-    {
-        m_rangeStep = step;
-    }
+    m_rangeStep = step;
 }
 
 PropertyValue*
-PropertyInfo::GetRangeLo()
+PropertyInfo::GetRangeLo() const
 {
     if (m_form == FormMode::RANGE)
     {
@@ -175,7 +171,7 @@ PropertyInfo::GetRangeLo()
 }
 
 PropertyValue*
-PropertyInfo::GetRangeHi()
+PropertyInfo::GetRangeHi() const
 {
     if (m_form == FormMode::RANGE)
     {
@@ -188,7 +184,7 @@ PropertyInfo::GetRangeHi()
 }
 
 PropertyValue*
-PropertyInfo::GetRangeStep()
+PropertyInfo::GetRangeStep() const
 {
     if (m_form == FormMode::RANGE)
     {
@@ -203,27 +199,27 @@ PropertyInfo::GetRangeStep()
 void
 PropertyInfo::SetEnumeration(std::list<PropertyValue*> values)
 {
-    for (std::list<PropertyValue*>::iterator it = m_enum.begin(); it != m_enum.end(); it++)
+    for (std::list<PropertyValue*>::iterator dit = m_enum.begin(); dit != m_enum.end(); dit++)
     {
-        delete* it;
+        delete (*dit);
     }
 
     m_enum.clear();
 
-    for (std::list<PropertyValue*>::iterator it = values.begin(); it != values.end(); it++)
+    for (std::list<PropertyValue*>::const_iterator it = values.begin(); it != values.end(); it++)
     {
         m_enum.push_back(*it);
     }
 }
 
 std::list<PropertyValue*>
-PropertyInfo::GetEnumeration()
+PropertyInfo::GetEnumeration() const
 {
     return m_enum;
 }
 
 std::wstring
-PropertyInfo::ToString()
+PropertyInfo::ToString() const
 {
     std::wostringstream builder;
     std::wostringstream formBuilder;
@@ -234,7 +230,7 @@ PropertyInfo::ToString()
     case FormMode::ENUMERATION:
         formBuilder << L"Enum [";
 
-        for (std::list<PropertyValue*>::iterator it = m_enum.begin(); it != m_enum.end(); it++)
+        for (std::list<PropertyValue*>::const_iterator it = m_enum.begin(); it != m_enum.end(); it++)
         {
             formBuilder << (it == m_enum.begin() ? L"" : L", ") << (*it)->ToString().c_str();
         }

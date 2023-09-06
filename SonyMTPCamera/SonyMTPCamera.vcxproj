@@ -164,6 +164,7 @@
     <ClInclude Include="CameraProperty.h" />
     <ClInclude Include="CameraSettings.h" />
     <ClInclude Include="CameraSupportedProperties.h" />
+    <ClInclude Include="CameraWorker.h" />
     <ClInclude Include="Device.h" />
     <ClInclude Include="DeviceEnumerator.h" />
     <ClInclude Include="DeviceEventHandler.h" />
@@ -216,7 +217,7 @@
     <ClCompile Include="CameraProperty.cpp" />
     <ClCompile Include="CameraSettings.cpp" />
     <ClCompile Include="CameraSupportedProperties.cpp" />
-    <ClCompile Include="CaptureThread.cpp" />
+    <ClCompile Include="CameraWorker.cpp" />
     <ClCompile Include="Device.cpp" />
     <ClCompile Include="DeviceEnumerator.cpp" />
     <ClCompile Include="DeviceEventHandler.cpp" />

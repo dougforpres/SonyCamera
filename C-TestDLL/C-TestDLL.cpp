@@ -62,28 +62,47 @@ int main()
 
     HANDLE h = OpenDevice(pdinfo.id);
 
-    RefreshPropertyList(h);
-
     // Try to close device, then reopen it
-    CloseDevice(h);
-    h = OpenDevice(pdinfo.id);
+//    CloseDevice(h);
+//    h = OpenDevice(pdinfo.id);
     DWORD count = 0;
     IMAGEINFO iinfo;
 
-    bool previewOnly = false;
+    bool previewOnly = true;
 
     CAMERAINFO cameraInfo;
 
     memset(&cameraInfo, 0, sizeof(cameraInfo));
     GetCameraInfo(h, &cameraInfo, 0);
+    GetPropertyList(h, nullptr, &count);
 
-    while (1)
+    DWORD* ids = new DWORD[count];
+    GetPropertyList(h, ids, &count);
+
+    PROPERTYVALUE* pv1 = new PROPERTYVALUE[count];
+    PROPERTYVALUE* pv2 = nullptr;
+
+    // Dump current state of all properties
+    //RefreshPropertyList(h);
+    //GetAllPropertyValues(h, pv1, &count);
+
+    for (int i = 0; i < count; i++)
+    {
+//        PROPERTYVALUE* v = (pv1 + i);
+        PROPERTYDESCRIPTOR d;
+
+        GetPropertyDescriptor(h, ids[i], &d);
+
+        printf("x%04x (%S), type = x%04x, flags = x%04x\n", ids[i], d.name, d.type, d.flags);
+    }
+
+    for (int j = 0; j < 10; j++)
     {
         memset(&iinfo, 0, sizeof(IMAGEINFO));
 
         if (previewOnly)
         {
-            iinfo.imageMode = 1;// 2;
+            iinfo.imageMode = 2;
             GetPreviewImage(h, &iinfo);
         }
         else
@@ -108,25 +127,9 @@ int main()
             CoTaskMemFree(iinfo.data);
         }
     }
-//
-//    GetPropertyList(h, nullptr, &count);
-//
-//    PROPERTYVALUE* pv1 = new PROPERTYVALUE[count];
-//    PROPERTYVALUE* pv2 = nullptr;
-//
-//    // Dump current state of all properties
-//    RefreshPropertyList(h);
-//    GetAllPropertyValues(h, pv1, &count);
-//
-//    for (int i = 0; i < count; i++)
-//    {
-//        PROPERTYVALUE* v = (pv1 + i);
-//        PROPERTYDESCRIPTOR d;
-//
-//        GetPropertyDescriptor(h, v->id, &d);
-//
-//        printf("x%04x (%S), type = x%04x, flags = x%04x, value = x%04x (%S)\n", v->id, d.name, d.type, d.flags, v->value, v->text);
-//    }
+
+    CloseDevice(h);
+
 //
 //    pv2 = pv1;
 //

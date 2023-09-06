@@ -23,5 +23,8 @@
     <ClInclude Include="..\SonyMTPCamera\SonyMTPCamera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\testdll\sonymtpcamera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

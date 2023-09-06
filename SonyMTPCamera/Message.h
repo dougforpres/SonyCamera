@@ -34,7 +34,7 @@ public:
     bool IsSuccess();
 
 private:
-    WORD m_command;
+    WORD m_command = 0;
     std::list<DWORD> m_params;
     BYTE* m_data = nullptr;
     DWORD m_dataLen = 0;

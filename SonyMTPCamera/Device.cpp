@@ -35,6 +35,12 @@ Device::GetHandle()
     return m_handle;
 }
 
+int
+Device::GetOpenCount()
+{
+    return m_openCount;
+}
+
 std::wstring
 Device::GetId()
 {
@@ -63,13 +69,15 @@ bool
 Device::StopNotifications()
 {
     // Stub, Override
+    LOGWARN(L"StopNotifications on base class... not ideal");
     return false;
 }
 
 bool
-Device::StartNotifications()
+Device::StartNotifications(Camera* camera)
 {
     // Stub, Override
+    LOGWARN(L"StartNotifications on base class... not ideal");
     return false;
 }
 

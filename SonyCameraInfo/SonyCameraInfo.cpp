@@ -115,7 +115,6 @@ typedef HRESULT (*PGETDEVICEINFO)(HANDLE hCamera, DEVICEINFO* info);
 typedef HRESULT (*PGETPROPERTYDESCRIPTOR)(HANDLE hCamera, DWORD propertyId, PROPERTYDESCRIPTOR* descriptor);
 typedef HRESULT (*PGETPROPERTYVALUEOPTION)(HANDLE hCamera, DWORD propertyId, PROPERTYVALUEOPTION* option, DWORD index);
 typedef HRESULT (*PGETSINGLEPROPERTYVALUE)(HANDLE hCamera, DWORD propertyId, PROPERTYVALUE* value);
-typedef HRESULT (*PREFRESHPROPERTYLIST)(HANDLE hCamera);
 typedef HRESULT (*PTESTFUNC)(HANDLE hCamera);
 
 PGETPORTABLEDEVICECOUNT fGetPortableDeviceCount;
@@ -127,7 +126,6 @@ PGETDEVICEINFO fGetDeviceInfo;
 PGETPROPERTYDESCRIPTOR fGetPropertyDescriptor;
 PGETPROPERTYVALUEOPTION fGetPropertyValueOption;
 PGETSINGLEPROPERTYVALUE fGetSinglePropertyValue;
-PREFRESHPROPERTYLIST fRefreshPropertyList;
 PTESTFUNC fTestFunc;
 
 
@@ -286,7 +284,6 @@ loadDLLs()
             fGetPropertyDescriptor = (PGETPROPERTYDESCRIPTOR)GetProcAddress(hSonyCamera, "GetPropertyDescriptor");
             fGetPropertyValueOption = (PGETPROPERTYVALUEOPTION)GetProcAddress(hSonyCamera, "GetPropertyValueOption");
             fGetSinglePropertyValue = (PGETSINGLEPROPERTYVALUE)GetProcAddress(hSonyCamera, "GetSinglePropertyValue");
-            fRefreshPropertyList = (PREFRESHPROPERTYLIST)GetProcAddress(hSonyCamera, "RefreshPropertyList");
             fTestFunc = (PTESTFUNC)GetProcAddress(hSonyCamera, "TestFunc");
             fCloseDevice = (PCLOSEDEVICE)GetProcAddress(hSonyCamera, "CloseDevice");
             fGetPortableDeviceCount = (PGETPORTABLEDEVICECOUNT)GetProcAddress(hSonyCamera, "GetPortableDeviceCount");
@@ -310,7 +307,6 @@ ensureExposureMode(HANDLE hCamera)
 
     while (!modeOk && hr == ERROR_SUCCESS)
     {
-        fRefreshPropertyList(hCamera);
         hr = fGetSinglePropertyValue(hCamera, 0x500e, &pv);
 
         if (hr == ERROR_SUCCESS)
@@ -348,7 +344,6 @@ ensureFocusMode(HANDLE hCamera)
 
     while (!modeOk && hr == ERROR_SUCCESS)
     {
-        fRefreshPropertyList(hCamera);
         hr = fGetSinglePropertyValue(hCamera, 0x500a, &pv);
 
         if (hr == ERROR_SUCCESS)
@@ -385,7 +380,6 @@ ensureStorageMode(HANDLE hCamera)
 
     while (!modeOk && hr == ERROR_SUCCESS)
     {
-        fRefreshPropertyList(hCamera);
         hr = fGetSinglePropertyValue(hCamera, 0x5004, &pv);
 
         if (hr == ERROR_SUCCESS)
@@ -973,8 +967,6 @@ iterateDevices(std::string message, F func, int value)
 {
     std::wcout << message.c_str() << std::endl << std::endl;
 
-    HRESULT comhr = CoInitialize(nullptr);
-
     int portableDeviceCount = fGetPortableDeviceCount();
 
     std::cout << portableDeviceCount << " portable devices found\n\n";
@@ -1022,8 +1014,6 @@ iterateDevices(std::string message, F func, int value)
             }
         }
     }
-
-    CoUninitialize();
 }
 
 // returns TRUE if program is in its own console (cursor at 0,0) or

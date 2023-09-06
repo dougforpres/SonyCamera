@@ -23,3 +23,6 @@ private:
 
     std::unordered_map<HANDLE, Camera*> m_cameraMap;
 };
+
+CameraManager* GetCameraManager();
+void RemoveCameraManager();

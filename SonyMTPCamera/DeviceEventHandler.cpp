@@ -10,10 +10,11 @@
 
 std::wstring g_strEventRegistrationCookie;
 
-DeviceEventHandler::DeviceEventHandler(IPortableDevice* device)
-    : m_device(device)
+DeviceEventHandler::DeviceEventHandler(IPortableDevice* device, Camera* camera)
+    : m_device(device),
+      m_camera(camera)
 {
-    LOGINFO(L"DeviceEventHandler constructor with x%p", (void*)device);
+    LOGINFO(L"DeviceEventHandler::DeviceEventHandler with x%p", (void*)device);
     HRESULT                        hr = S_OK;
     LPWSTR                         wszEventCookie = NULL;
 
@@ -72,6 +73,7 @@ DeviceEventHandler::DeviceEventHandler(IPortableDevice* device)
 
 DeviceEventHandler::~DeviceEventHandler()
 {
+    LOGINFO(L"DeviceEventHandler::~DeviceEventHandler()");
     HRESULT hr = S_OK;
 
     if (m_device == NULL)
@@ -210,9 +212,41 @@ DeviceEventHandler::OnEvent(IPortableDeviceValues* pEventParameters)
         }
         else
         {
-            UuidToString(&guid, &guidString);
-            LOGTRACE(L"Event Type: Unknown - %s", guidString);
-            RpcStringFree(&guidString);
+            // See if it's a Sony event
+            // 1st two bytes
+            DWORD sonyEventId = guid.Data1;
+
+            if ((sonyEventId & 0xc2000000) == 0xc2000000 )
+            {
+                DWORD sonyId = sonyEventId >> 16;
+
+                switch (sonyId)
+                {
+                case 0xc201:
+                    LOGTRACE(L"0xc201 - photo(s) available");
+                    m_camera->OnImageBufferStatus(ImageBufferStatus::ImageReady);
+                    break;
+
+                case 0xc202:
+                    LOGTRACE(L"0xc202 - no more photo(s) available");
+                    m_camera->OnImageBufferStatus(ImageBufferStatus::ImageNotReady);
+                    break;
+
+                case 0xc203:
+                    LOGTRACE(L"0xc203 - property updated");
+                    m_camera->OnPropertiesUpdated();
+                    break;
+
+                default:
+                    LOGTRACE(L"Unknown sony event: 0x%04x", sonyId);
+                    break;
+                }
+            }
+            else {
+                UuidToString(&guid, &guidString);
+                LOGTRACE(L"Event Type: Unknown - %s 0x%08x", guidString, sonyEventId);
+                RpcStringFree(&guidString);
+            }
         }
 
         //IPortableDevicePropVariantCollection* pdpvc;

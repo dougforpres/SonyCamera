@@ -91,8 +91,8 @@ SonyCamera::Initialize()
     rx = m_device->Receive(tx);
     result &= rx->IsSuccess();
 
-    m_supportedProperties = new CameraSupportedProperties(rx);
-    LOGTRACE(L"Get Supported Properties (1) >> %s", m_supportedProperties->AsString().c_str());
+    m_supportedProperties = CameraSupportedProperties(rx);
+    LOGTRACE(L"Get Supported Properties (1) >> %s", m_supportedProperties.AsString().c_str());
 
     delete tx;
     delete rx;
@@ -123,68 +123,72 @@ SonyCamera::Initialize()
     delete tx;
     delete rx;
 
-    GetSettings(true);
+    RefreshSettings();
 
     LOGTRACE(L"Out: SonyCamera::Initialize() - result %d", result);
+
+    SetInitialized(result);
 
     return result;
 }
 
-CameraSettings*
-SonyCamera::GetSettings(bool refresh)
+bool
+SonyCamera::RefreshSettings()
 {
-    LOGTRACE(L"In: SonyCamera::GetSettings(%s)", refresh ? L"true": L"false");
+    LOGTRACE(L"In: SonyCamera::RefreshSettings()");
 
-    if (refresh)
+    Message* tx;
+    Message* rx;
+
+    tx = new Message(COMMAND_READ_SETTINGS);
+    rx = m_device->Receive(tx);
+
+    if (rx->IsSuccess())
     {
-        Message* tx;
-        Message* rx;
+        CameraSettings cs = CameraSettings(rx);
 
-        tx = new Message(COMMAND_READ_SETTINGS);
-        rx = m_device->Receive(tx);
+        LoadFakeProperties(&cs);
 
-        if (rx->IsSuccess())
+        DWORD waitResult = WaitForSingleObject(m_hBusyMutex, 1000);
+
+        if (waitResult == WAIT_OBJECT_0)
         {
-            Locker lock(settingsLock);
-
-            CameraSettings* cs = new CameraSettings(rx);
-
-            delete tx;
-            delete rx;
-
-            if (m_settings)
+            if (!m_settings)
             {
-                delete m_settings;
+                m_settings = new CameraSettings(cs);
             }
-
-            m_settings = cs;
-
-            LoadFakeProperties(m_settings);
+            else
+            {
+                m_settings->Copy(cs);
+            }
         }
-        else
-        {
-            throw CameraException(L"Error reading settings from camera");
-        }
+
+        ReleaseMutex(m_hBusyMutex);
+
+        delete tx;
+        delete rx;
+    }
+    else
+    {
+        throw CameraException(L"Error reading settings from camera");
     }
 
-    LOGTRACE(L"Out: SonyCamera::GetSettings()");
+    LOGTRACE(L"Out: SonyCamera::RefreshSettings()");
 
-    return m_settings;
+    return true;
 }
 
-
-
 bool
-SonyCamera::SetProperty(Property id, PropertyValue* value)
+SonyCamera::SetProperty(const Property id, PropertyValue* value)
 {
-    LOGTRACE(L"In: SonyCamera::SetProperty(x%08x, %s)", (int)id, value->ToString().c_str());
+    LOGTRACE(L"In: SonyCamera::SetProperty(x%04x, %s)", (int)id, value->ToString().c_str());
 
     bool result = false;
 
     Message* tx;
 
     // Depending on the property type, we need to send different command
-    CameraProperty* prop = GetSettings(false)->GetProperty(id);
+    std::unique_ptr<CameraProperty> prop(GetProperty(id));
 
     if (prop)
     {

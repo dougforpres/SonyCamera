@@ -3,46 +3,60 @@
 #include "Property.h"
 #include "CameraProperty.h"
 #include "ResourceLoader.h"
+#include "Logger.h"
 
 CameraProperty::CameraProperty()
 {
+#ifdef DEBUG
+    LOGTRACE(L"CameraProperty::CameraProperty() [this = x%08p]", this);
+#endif
     m_info = new PropertyInfo();
+    m_current = new PropertyValue();
 }
 
-CameraProperty::CameraProperty(const CameraProperty& rhs)
+CameraProperty::CameraProperty(CameraProperty& rhs)
 {
-    m_info = new PropertyInfo(*rhs.m_info);
+#ifdef DEBUG
+    LOGTRACE(L"CameraProperty::CameraProperty(& x%04x) [this = x%08p]", rhs->GetId(), this);
+#endif
 
-    if (rhs.m_current)
-    {
-        SetCurrentValue(new PropertyValue(*rhs.m_current));
-    }
+    SetInfo(new PropertyInfo(rhs.m_info));
+    SetCurrentValue(new PropertyValue(*rhs.m_current));
+}
+
+CameraProperty*
+CameraProperty::operator=(CameraProperty* rhs)
+{
+#ifdef DEBUG
+    LOGTRACE(L"CameraProperty::operator=(x%04x) [this = x%08p]", rhs->GetId(), this);
+#endif
+
+    SetInfo(new PropertyInfo(rhs->m_info));
+    SetCurrentValue(new PropertyValue(*rhs->m_current));
+
+    return this;
 }
 
 CameraProperty::~CameraProperty()
 {
-    if (m_info)
-    {
-        delete m_info;
-        m_info = nullptr;
-    }
+#ifdef DEBUG
+    LOGTRACE(L"CameraProperty::~CameraProperty(id=x%04x) [this = x%08p]", GetId(), this);
+#endif
 
-    if (m_current)
-    {
-        delete m_current;
-        m_current = nullptr;
-    }
+    SetInfo(nullptr);
+    SetCurrentValue(nullptr);
+}
+
+bool
+CameraProperty::IsSet() const
+{
+    return m_current->GetType() != DataType::UNKNOWN;
 }
 
 CameraProperty*
 CameraProperty::Clone()
 {
-    CameraProperty* clone = new CameraProperty();
-
-    clone->SetCurrentValue(new PropertyValue(*m_current));
-    clone->SetInfo(m_info);
-
-    return clone;
+    return new CameraProperty(*this);
 }
 
 void
@@ -52,25 +66,25 @@ CameraProperty::SetId(Property id)
 }
 
 Property
-CameraProperty::GetId()
+CameraProperty::GetId() const
 {
     return m_info->GetId();
 }
 
 std::wstring
-CameraProperty::GetName()
+CameraProperty::GetName() const
 {
     return ResourceLoader::GetString((UINT)GetId());
 }
 
 bool
-CameraProperty::UpIsBigger()
+CameraProperty::UpIsBigger() const
 {
     return true;
 }
 
 std::wstring
-CameraProperty::AsString(PropertyValue* value)
+CameraProperty::AsString(PropertyValue* value) const
 {
     std::wostringstream builder;
 
@@ -119,14 +133,14 @@ CameraProperty::AsString(PropertyValue* value)
 }
 
 std::wstring
-CameraProperty::AsString()
+CameraProperty::AsString() const
 {
     return AsString(m_current);
 }
 
 // Debug info
 std::wstring
-CameraProperty::ToString()
+CameraProperty::ToString() const
 {
     std::wostringstream builder;
 
@@ -136,7 +150,7 @@ CameraProperty::ToString()
 }
 
 PropertyInfo*
-CameraProperty::GetInfo()
+CameraProperty::GetInfo() const
 {
     return m_info;
 }
@@ -144,12 +158,16 @@ CameraProperty::GetInfo()
 void
 CameraProperty::SetInfo(PropertyInfo* info)
 {
-    delete m_info;
-    m_info = new PropertyInfo(*info);
+    if (m_info)
+    {
+        delete m_info;
+    }
+
+    m_info = info;
 }
 
 int
-CameraProperty::Compare(const CameraProperty& rhs)
+CameraProperty::Compare(CameraProperty* rhs) const
 {
     // This only compares values
     // Default is to just compare the two values
@@ -160,27 +178,27 @@ CameraProperty::Compare(const CameraProperty& rhs)
     switch (m_info->GetType())
     {
     case DataType::INT8:
-        result = m_current->GetINT8() == rhs.m_current->GetINT8() ? 0 : m_current->GetINT8() < rhs.m_current->GetINT8() ? -1 : 1;
+        result = m_current->GetINT8() == rhs->m_current->GetINT8() ? 0 : m_current->GetINT8() < rhs->m_current->GetINT8() ? -1 : 1;
         break;
 
     case DataType::UINT8:
-        result = m_current->GetUINT8() == rhs.m_current->GetUINT8() ? 0 : m_current->GetUINT8() < rhs.m_current->GetUINT8() ? -1 : 1;
+        result = m_current->GetUINT8() == rhs->m_current->GetUINT8() ? 0 : m_current->GetUINT8() < rhs->m_current->GetUINT8() ? -1 : 1;
         break;
 
     case DataType::INT16:
-        result = m_current->GetINT16() == rhs.m_current->GetINT16() ? 0 : m_current->GetINT16() < rhs.m_current->GetINT16() ? -1 : 1;
+        result = m_current->GetINT16() == rhs->m_current->GetINT16() ? 0 : m_current->GetINT16() < rhs->m_current->GetINT16() ? -1 : 1;
         break;
 
     case DataType::UINT16:
-        result = m_current->GetUINT16() == rhs.m_current->GetUINT16() ? 0 : m_current->GetUINT16() < rhs.m_current->GetUINT16() ? -1 : 1;
+        result = m_current->GetUINT16() == rhs->m_current->GetUINT16() ? 0 : m_current->GetUINT16() < rhs->m_current->GetUINT16() ? -1 : 1;
         break;
 
     case DataType::INT32:
-        result = m_current->GetINT32() == rhs.m_current->GetINT32() ? 0 : m_current->GetINT32() < rhs.m_current->GetINT32() ? -1 : 1;
+        result = m_current->GetINT32() == rhs->m_current->GetINT32() ? 0 : m_current->GetINT32() < rhs->m_current->GetINT32() ? -1 : 1;
         break;
 
     case DataType::UINT32:
-        result = m_current->GetUINT32() == rhs.m_current->GetUINT32() ? 0 : m_current->GetUINT32() < rhs.m_current->GetUINT32() ? -1 : 1;
+        result = m_current->GetUINT32() == rhs->m_current->GetUINT32() ? 0 : m_current->GetUINT32() < rhs->m_current->GetUINT32() ? -1 : 1;
         break;
 
     default:
@@ -192,26 +210,26 @@ CameraProperty::Compare(const CameraProperty& rhs)
 }
 
 bool
-CameraProperty::equals(const CameraProperty& rhs)
+CameraProperty::equals(CameraProperty* rhs) const
 {
     bool same = true;
 
-    if (m_info->GetId() != rhs.m_info->GetId())
+    if (m_info->GetId() != rhs->m_info->GetId())
     {
         same = false;
     }
 
-    if (m_info->GetAccess() != rhs.m_info->GetAccess())
+    if (m_info->GetAccess() != rhs->m_info->GetAccess())
     {
         same = false;
     }
 
-    if (m_info->GetSonySpare() != rhs.m_info->GetSonySpare())
+    if (m_info->GetSonySpare() != rhs->m_info->GetSonySpare())
     {
         same = false;
     }
 
-    if (m_info->GetType() != rhs.m_info->GetType())
+    if (m_info->GetType() != rhs->m_info->GetType())
     {
         same = false;
     }
@@ -219,42 +237,42 @@ CameraProperty::equals(const CameraProperty& rhs)
     switch (m_info->GetType())
     {
     case DataType::INT8:
-        if (m_current->GetINT8() != rhs.m_current->GetINT8())
+        if (m_current->GetINT8() != rhs->m_current->GetINT8())
         {
             same = false;
         }
         break;
 
     case DataType::UINT8:
-        if (m_current->GetUINT8() != rhs.m_current->GetUINT8())
+        if (m_current->GetUINT8() != rhs->m_current->GetUINT8())
         {
             same = false;
         }
         break;
 
     case DataType::INT16:
-        if (m_current->GetINT16() != rhs.m_current->GetINT16())
+        if (m_current->GetINT16() != rhs->m_current->GetINT16())
         {
             same = false;
         }
         break;
 
     case DataType::UINT16:
-        if (m_current->GetUINT16() != rhs.m_current->GetUINT16())
+        if (m_current->GetUINT16() != rhs->m_current->GetUINT16())
         {
             same = false;
         }
         break;
 
     case DataType::INT32:
-        if (m_current->GetINT32() != rhs.m_current->GetINT32())
+        if (m_current->GetINT32() != rhs->m_current->GetINT32())
         {
             same = false;
         }
         break;
 
     case DataType::UINT32:
-        if (m_current->GetUINT32() != rhs.m_current->GetUINT32())
+        if (m_current->GetUINT32() != rhs->m_current->GetUINT32())
         {
             same = false;
         }
@@ -280,7 +298,7 @@ CameraProperty::equals(const CameraProperty& rhs)
 }
 
 DWORD
-CameraProperty::GetDWORD(BYTE* data, DWORD offset)
+CameraProperty::GetDWORD(BYTE* data, DWORD offset) const
 {
     DWORD result = 0;
 
@@ -290,7 +308,7 @@ CameraProperty::GetDWORD(BYTE* data, DWORD offset)
 }
 
 WORD
-CameraProperty::GetWORD(BYTE* data, DWORD offset)
+CameraProperty::GetWORD(BYTE* data, DWORD offset) const
 {
     WORD result = 0;
 
@@ -300,7 +318,7 @@ CameraProperty::GetWORD(BYTE* data, DWORD offset)
 }
 
 BYTE
-CameraProperty::GetBYTE(BYTE* data, DWORD offset)
+CameraProperty::GetBYTE(BYTE* data, DWORD offset) const
 {
     BYTE result = 0;
 
@@ -362,7 +380,7 @@ CameraProperty::Slurp(BYTE* data, DWORD offset)
 PropertyValue*
 CameraProperty::ReadData(BYTE* data, DWORD &offset, DataType type)
 {
-    PropertyValue* result = nullptr;
+    PropertyValue* result;
 
     switch (m_info->GetType())
     {
@@ -402,7 +420,7 @@ CameraProperty::ReadData(BYTE* data, DWORD &offset, DataType type)
     return result;
 }
 
-PropertyValue *
+PropertyValue*
 CameraProperty::GetCurrentValue() const
 {
     return m_current;
@@ -411,6 +429,11 @@ CameraProperty::GetCurrentValue() const
 void
 CameraProperty::SetCurrentValue(PropertyValue* current)
 {
+    if (m_current)
+    {
+        delete m_current;
+    }
+
     m_current = current;
 }
 
@@ -423,16 +446,11 @@ ISOProperty::ISOProperty()
 CameraProperty*
 ISOProperty::Clone()
 {
-    ISOProperty* clone = new ISOProperty();
-
-    clone->SetCurrentValue(new PropertyValue(*m_current));
-    clone->SetInfo(m_info);
-
-    return clone;
+    return new ISOProperty(*this);
 }
 
 std::wstring
-ISOProperty::AsString(PropertyValue *in)
+ISOProperty::AsString(PropertyValue* in) const
 {
     std::wostringstream builder;
     UINT32 value = in->GetUINT32();
@@ -450,10 +468,10 @@ ISOProperty::AsString(PropertyValue *in)
 }
 
 int
-ISOProperty::Compare(const CameraProperty& rhs)
+ISOProperty::Compare(CameraProperty* rhs) const
 {
     UINT32 lhsValue = m_current->GetUINT32();
-    UINT32 rhsValue = rhs.GetCurrentValue()->GetUINT32();
+    UINT32 rhsValue = rhs->GetCurrentValue()->GetUINT32();
 
     if (lhsValue == 0x00ffffff)
     {
@@ -477,22 +495,17 @@ ShutterTimingProperty::ShutterTimingProperty()
 CameraProperty*
 ShutterTimingProperty::Clone()
 {
-    ShutterTimingProperty* clone = new ShutterTimingProperty();
-
-    clone->SetCurrentValue(new PropertyValue(*m_current));
-    clone->SetInfo(m_info);
-
-    return clone;
+    return new ShutterTimingProperty(*this);
 }
 
 bool
-ShutterTimingProperty::UpIsBigger()
+ShutterTimingProperty::UpIsBigger() const
 {
     return false;
 }
 
 std::wstring
-ShutterTimingProperty::AsString(PropertyValue *in)
+ShutterTimingProperty::AsString(PropertyValue* in) const
 {
     std::wostringstream builder;
     UINT32 value = in->GetUINT32();
@@ -521,10 +534,10 @@ ShutterTimingProperty::AsString(PropertyValue *in)
 }
 
 int
-ShutterTimingProperty::Compare(const CameraProperty& rhs)
+ShutterTimingProperty::Compare(CameraProperty* rhs) const
 {
     UINT32 lhsValue = m_current->GetUINT32();
-    UINT32 rhsValue = rhs.GetCurrentValue()->GetUINT32();
+    UINT32 rhsValue = rhs->GetCurrentValue()->GetUINT32();
 
     if (lhsValue == rhsValue)
     {
@@ -554,8 +567,14 @@ Div10Property::Div10Property()
 
 }
 
+CameraProperty*
+Div10Property::Clone()
+{
+    return new Div10Property(*this);
+}
+
 std::wstring
-Div10Property::AsString(PropertyValue *in)
+Div10Property::AsString(PropertyValue* in) const
 {
     std::wostringstream builder;
     UINT16 value = in->GetUINT16();
@@ -571,8 +590,14 @@ Div100Property::Div100Property()
 
 }
 
+CameraProperty*
+Div100Property::Clone()
+{
+    return new Div100Property(*this);
+}
+
 std::wstring
-Div100Property::AsString(PropertyValue *in)
+Div100Property::AsString(PropertyValue* in) const
 {
     std::wostringstream builder;
     UINT16 value = in->GetUINT16();
@@ -588,8 +613,14 @@ Div1000Property::Div1000Property()
 
 }
 
+CameraProperty*
+Div1000Property::Clone()
+{
+    return new Div1000Property(*this);
+}
+
 std::wstring
-Div1000Property::AsString(PropertyValue *in)
+Div1000Property::AsString(PropertyValue* in) const
 {
     std::wostringstream builder;
     INT16 value = in->GetINT16();
@@ -605,8 +636,14 @@ PercentageProperty::PercentageProperty()
 
 }
 
+CameraProperty*
+PercentageProperty::Clone()
+{
+    return new PercentageProperty(*this);
+}
+
 std::wstring
-PercentageProperty::AsString(PropertyValue *in)
+PercentageProperty::AsString(PropertyValue* in) const
 {
     std::wostringstream builder;
 
@@ -786,6 +823,12 @@ StringLookupProperty::StringLookupProperty()
     }
 }
 
+CameraProperty*
+StringLookupProperty::Clone()
+{
+    return new StringLookupProperty(*this);
+}
+
 void
 StringLookupProperty::AddResource(Property property, WORD value, WORD resid)
 {
@@ -793,7 +836,7 @@ StringLookupProperty::AddResource(Property property, WORD value, WORD resid)
 }
 
 std::wstring
-StringLookupProperty::AsString(PropertyValue *in)
+StringLookupProperty::AsString(PropertyValue* in) const
 {
     // Currently this only works for unsigned 8, 16, 32 bit values
     DWORD lookup = -1;
@@ -814,6 +857,7 @@ StringLookupProperty::AsString(PropertyValue *in)
         break;
 
     default:
+        LOGERROR(L"Invalid datatype when slurping: %d", m_info->GetType());
         throw;
         break;
     }

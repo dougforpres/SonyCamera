@@ -2,11 +2,24 @@
 #include "DeviceInfo.h"
 #include "Logger.h"
 
+DeviceInfo::DeviceInfo()
+    : MessageReader(nullptr)
+{
+#ifdef DEBUG
+    LOGTRACE(L"In: DeviceInfo::DeviceInfo()");
+#endif
+
+#ifdef DEBUG
+    LOGTRACE(L"Out: DeviceInfo::DeviceInfo()");
+#endif
+}
+
 DeviceInfo::DeviceInfo(Message* message)
     : MessageReader(message)
 {
+#ifdef DEBUG
     LOGTRACE(L"In: DeviceInfo::DeviceInfo(this=0x%x)", this);
-
+#endif
     DWORD offset = 0;
 
     m_standardVersion = this->GetWORD(offset) / 100.0;
@@ -23,18 +36,90 @@ DeviceInfo::DeviceInfo(Message* message)
     m_model = this->GetString(offset);
     m_deviceVersion = this->GetString(offset);
     m_serialNumber = this->GetString(offset);
-
+#ifdef DEBUG
     LOGTRACE(L"Out: DeviceInfo::DeviceInfo");
+#endif
+}
+
+DeviceInfo::DeviceInfo(const DeviceInfo& rhs)
+    : MessageReader(nullptr)
+{
+#ifdef DEBUG
+    LOGTRACE(L"In: DeviceInfo::DeviceInfo((copy) rhs = x%08p) [this = %08p]", &rhs, this);
+#endif
+    Copy(rhs);
+}
+
+DeviceInfo
+DeviceInfo::operator=(const DeviceInfo& rhs)
+{
+#ifdef DEBUG
+    LOGTRACE(L"DeviceInfo::operator=(rhs = x%08p) [this = x%08p]", &rhs, this);
+#endif
+    Copy(rhs);
+
+    return *this;
+}
+
+void
+DeviceInfo::Copy(const DeviceInfo& rhs)
+{
+    m_standardVersion = rhs.m_standardVersion;
+    m_vendorExtensionId = rhs.m_vendorExtensionId;
+    m_vendorExtensionVersion = rhs.m_vendorExtensionVersion;
+    m_vendorExtensionDesc = rhs.m_vendorExtensionDesc;
+    m_functionalMode = rhs.m_functionalMode;
+    m_operationsSupported = rhs.m_operationsSupported;
+    m_eventsSupported = rhs.m_eventsSupported;
+    m_devicePropertiesSupported = rhs.m_devicePropertiesSupported;
+    m_captureFormats = rhs.m_captureFormats;
+    m_imageFormats = rhs.m_imageFormats;
+    m_manufacturer = rhs.m_manufacturer;
+    m_model = rhs.m_model;
+    m_deviceVersion = rhs.m_deviceVersion;
+    m_serialNumber = rhs.m_serialNumber;
+    m_sensorName = rhs.m_sensorName;
+    m_sensorType = rhs.m_sensorType;
+    m_sensorXResolution = rhs.m_sensorXResolution;
+    m_sensorYResolution = rhs.m_sensorYResolution;
+    m_sensorXCroppedResolution = rhs.m_sensorXCroppedResolution;
+    m_sensorYCroppedResolution = rhs.m_sensorYCroppedResolution;
+    m_previewXResolution = rhs.m_previewXResolution;
+    m_previewYResolution = rhs.m_previewYResolution;
+    m_bitsPerPixel = rhs.m_bitsPerPixel;
+    m_leftCrop = rhs.m_leftCrop;
+    m_rightCrop = rhs.m_rightCrop;
+    m_topCrop = rhs.m_topCrop;
+    m_bottomCrop = rhs.m_bottomCrop;
+    m_cropMode = rhs.m_cropMode;
+    m_bayerOffsetX = rhs.m_bayerOffsetX;
+    m_bayerOffsetY = rhs.m_bayerOffsetY;
+    m_sensorPixelWidth = rhs.m_sensorPixelWidth;
+    m_sensorPixelHeight = rhs.m_sensorPixelHeight;
+    m_exposureTimeMin = rhs.m_exposureTimeMin;
+    m_exposureTimeMax = rhs.m_exposureTimeMax;
+    m_exposureTimeStep = rhs.m_exposureTimeStep;
+    m_supportsLiveview = rhs.m_supportsLiveview;
+    m_buttonPropertiesInverted = rhs.m_buttonPropertiesInverted;
+    m_exposureTimes = rhs.m_exposureTimes;
+    m_isos = rhs.m_isos;
+#ifdef DEBUG
+    LOGTRACE(L"Out: DeviceInfo::DeviceInfo(copy)");
+#endif
 }
 
 DeviceInfo::~DeviceInfo()
 {
+#ifdef DEBUG
     LOGTRACE(L"In: DeviceInfo::~DeviceInfo(this=0x%x)", this);
+#endif
+#ifdef DEBUG
     LOGTRACE(L"Out: DeviceInfo::~DeviceInfo");
+#endif
 }
 
 void
-DeviceInfo::DumpToLog()
+DeviceInfo::DumpToLog() const
 {
     LOGINFO(L"  Standard Version            %.02f", m_standardVersion);
     LOGINFO(L"  Vendor Extension ID         %d", m_vendorExtensionId);
@@ -133,7 +218,7 @@ DeviceInfo::DumpToLog()
 }
 
 void
-DeviceInfo::DumpList(std::list<WORD> list)
+DeviceInfo::DumpList(std::list<WORD> list) const
 {
     for (std::list<WORD>::iterator it = list.begin(); it != list.end(); it++)
     {
@@ -142,7 +227,7 @@ DeviceInfo::DumpList(std::list<WORD> list)
 }
 
 void
-DeviceInfo::DumpList(std::list<DWORD> list)
+DeviceInfo::DumpList(std::list<DWORD> list) const
 {
     for (std::list<DWORD>::iterator it = list.begin(); it != list.end(); it++)
     {
@@ -151,19 +236,19 @@ DeviceInfo::DumpList(std::list<DWORD> list)
 }
 
 std::wstring
-DeviceInfo::GetManufacturer()
+DeviceInfo::GetManufacturer() const
 {
     return m_manufacturer;
 }
 
 std::wstring
-DeviceInfo::GetModel()
+DeviceInfo::GetModel() const
 {
     return m_model;
 }
 
 std::wstring
-DeviceInfo::GetSerialNumber()
+DeviceInfo::GetSerialNumber() const
 {
     return m_serialNumber;
 }
@@ -175,7 +260,7 @@ DeviceInfo::SetSensorName(std::wstring name)
 }
 
 std::wstring
-DeviceInfo::GetSensorName()
+DeviceInfo::GetSensorName() const
 {
     return m_sensorName;
 }
@@ -187,7 +272,7 @@ DeviceInfo::SetSensorType(SensorType type)
 }
 
 SensorType
-DeviceInfo::GetSensorType()
+DeviceInfo::GetSensorType() const
 {
     return m_sensorType;
 }
@@ -199,7 +284,7 @@ DeviceInfo::SetSensorXResolution(UINT32 resolution)
 }
 
 UINT32
-DeviceInfo::GetSensorXResolution()
+DeviceInfo::GetSensorXResolution() const
 {
     return m_sensorXResolution;
 }
@@ -211,7 +296,7 @@ DeviceInfo::SetSensorYResolution(UINT32 resolution)
 }
 
 UINT32
-DeviceInfo::GetSensorYResolution()
+DeviceInfo::GetSensorYResolution() const
 {
     return m_sensorYResolution;
 }
@@ -223,7 +308,7 @@ DeviceInfo::SetSensorXCroppedResolution(UINT32 resolution)
 }
 
 UINT32
-DeviceInfo::GetSensorXCroppedResolution()
+DeviceInfo::GetSensorXCroppedResolution() const
 {
     return m_sensorXCroppedResolution;
 }
@@ -235,7 +320,7 @@ DeviceInfo::SetSensorYCroppedResolution(UINT32 resolution)
 }
 
 UINT32
-DeviceInfo::GetSensorYCroppedResolution()
+DeviceInfo::GetSensorYCroppedResolution() const
 {
     return m_sensorYCroppedResolution;
 }
@@ -247,7 +332,7 @@ DeviceInfo::SetPreviewXResolution(UINT32 resolution)
 }
 
 UINT32
-DeviceInfo::GetPreviewXResolution()
+DeviceInfo::GetPreviewXResolution() const
 {
     return m_previewXResolution;
 }
@@ -259,7 +344,7 @@ DeviceInfo::SetPreviewYResolution(UINT32 resolution)
 }
 
 UINT32
-DeviceInfo::GetPreviewYResolution()
+DeviceInfo::GetPreviewYResolution() const
 {
     return m_previewYResolution;
 }
@@ -271,7 +356,7 @@ DeviceInfo::SetSensorPixelWidth(double width)
 }
 
 double
-DeviceInfo::GetSensorPixelWidth()
+DeviceInfo::GetSensorPixelWidth() const
 {
     return m_sensorPixelWidth;
 }
@@ -283,7 +368,7 @@ DeviceInfo::SetSensorPixelHeight(double height)
 }
 
 double
-DeviceInfo::GetSensorPixelHeight()
+DeviceInfo::GetSensorPixelHeight() const
 {
     return m_sensorPixelHeight;
 }
@@ -295,7 +380,7 @@ DeviceInfo::SetBayerXOffset(INT8 offset)
 }
 
 INT8
-DeviceInfo::GetBayerXOffset()
+DeviceInfo::GetBayerXOffset() const
 {
     return m_bayerOffsetX;
 }
@@ -307,7 +392,7 @@ DeviceInfo::SetBayerYOffset(INT8 offset)
 }
 
 INT8
-DeviceInfo::GetBayerYOffset()
+DeviceInfo::GetBayerYOffset() const
 {
     return m_bayerOffsetY;
 }
@@ -319,7 +404,7 @@ DeviceInfo::SetExposureTimeMin(double time)
 }
 
 double
-DeviceInfo::GetExposureTimeMin()
+DeviceInfo::GetExposureTimeMin() const
 {
     return m_exposureTimeMin;
 }
@@ -331,7 +416,7 @@ DeviceInfo::SetExposureTimeMax(double time)
 }
 
 double
-DeviceInfo::GetExposureTimeMax()
+DeviceInfo::GetExposureTimeMax() const
 {
     return m_exposureTimeMax;
 }
@@ -343,19 +428,19 @@ DeviceInfo::SetExposureTimeStep(double step)
 }
 
 double
-DeviceInfo::GetExposureTimeStep()
+DeviceInfo::GetExposureTimeStep() const
 {
     return m_exposureTimeStep;
 }
 
 std::wstring
-DeviceInfo::GetVersion()
+DeviceInfo::GetVersion() const
 {
     return m_deviceVersion;
 }
 
 bool
-DeviceInfo::GetSupportsLiveview()
+DeviceInfo::GetSupportsLiveview() const
 {
     return m_supportsLiveview;
 }
@@ -367,7 +452,7 @@ DeviceInfo::SetSupportsLiveview(bool support)
 }
 
 CropMode
-DeviceInfo::GetCropMode()
+DeviceInfo::GetCropMode() const
 {
     return m_cropMode;
 }
@@ -379,7 +464,7 @@ DeviceInfo::SetCropMode(CropMode mode)
 }
 
 UINT16
-DeviceInfo::GetLeftCrop()
+DeviceInfo::GetLeftCrop() const
 {
     return m_leftCrop;
 }
@@ -391,7 +476,7 @@ DeviceInfo::SetLeftCrop(UINT16 crop)
 }
 
 UINT16
-DeviceInfo::GetRightCrop()
+DeviceInfo::GetRightCrop() const
 {
     return m_rightCrop;
 }
@@ -403,7 +488,7 @@ DeviceInfo::SetRightCrop(UINT16 crop)
 }
 
 UINT16
-DeviceInfo::GetTopCrop()
+DeviceInfo::GetTopCrop() const
 {
     return m_topCrop;
 }
@@ -415,7 +500,7 @@ DeviceInfo::SetTopCrop(UINT16 crop)
 }
 
 UINT16
-DeviceInfo::GetBottomCrop()
+DeviceInfo::GetBottomCrop() const
 {
     return m_bottomCrop;
 }
@@ -427,7 +512,7 @@ DeviceInfo::SetBottomCrop(UINT16 crop)
 }
 
 bool
-DeviceInfo::GetButtonPropertiesInverted()
+DeviceInfo::GetButtonPropertiesInverted() const
 {
     return m_buttonPropertiesInverted;
 }
@@ -439,7 +524,7 @@ DeviceInfo::SetButtonPropertiesInverted(bool invert)
 }
 
 std::list<DWORD>
-DeviceInfo::GetExposureTimes()
+DeviceInfo::GetExposureTimes() const
 {
     return m_exposureTimes;
 }
@@ -451,7 +536,7 @@ DeviceInfo::SetExposureTimes(std::list<DWORD> exposureTimes)
 }
 
 std::list<DWORD>
-DeviceInfo::GetISOs()
+DeviceInfo::GetISOs() const
 {
     return m_isos;
 }
@@ -463,7 +548,7 @@ DeviceInfo::SetISOs(std::list<DWORD> isos)
 }
 
 UINT32
-DeviceInfo::GetBitsPerPixel()
+DeviceInfo::GetBitsPerPixel() const
 {
     return m_bitsPerPixel;
 }

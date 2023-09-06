@@ -3,6 +3,7 @@
 #include "SonyCamera.h"
 #include "Logger.h"
 #include "Registry.h"
+static CameraManager* cameraManager = nullptr;
 
 CameraManager::CameraManager()
 {
@@ -15,7 +16,7 @@ CameraManager::~CameraManager()
 
     while (it != m_cameraMap.end())
     {
-        LOGWARN(L"-- deleting camera x%p with name %s", (it->first), (it->second)->GetDeviceInfo(false)->GetManufacturer().c_str());
+        LOGWARN(L"-- deleting camera x%p with name %s", (it->first), (it->second)->GetDeviceInfo().GetManufacturer().c_str());
         (*it).second->Close();
         delete (*it).second;
         it = m_cameraMap.erase(it);
@@ -823,7 +824,12 @@ CameraManager::CreateCamera(Device* device, DWORD flags)
         {
             camera = (*it).second;
             LOGTRACE(L"CameraManager::CreateCamera: Found existing camera with handle x%08x", (*it).first);
-            hResult = CompatibleHandle(camera->Open());
+
+            OpenCameraTask task;
+
+            task.Run(camera);
+
+            hResult = CompatibleHandle(task.GetHandle());
         }
     }
 
@@ -841,17 +847,16 @@ CameraManager::CreateCamera(Device* device, DWORD flags)
 
             camera = new SonyCamera(device);
 
-            hResult = AddCamera(camera->Open(), camera);
+            OpenCameraTask task;
+
+            task.Run(camera);
+
+            hResult = AddCamera(task.GetHandle(), camera);
         }
         else
         {
             LOGWARN(L"CameraManager::CreateCamera: Couldn't find what camera to make for '%s'", device->GetFriendlyName().c_str());
         }
-    }
-
-    if (camera)
-    {
-        camera->GetDevice()->StartNotifications();
     }
 
     LOGTRACE(L"Out: CameraManager::CreateCamera - returning x%p", hResult);
@@ -880,8 +885,6 @@ CameraManager::CompatibleHandle(HANDLE handle)
 #if _WIN64
     uint64_t temp = (uint64_t)handle & 0xffffffff;
 
-//    LOGTRACE(L"CameraManager::CompatibleHandle(x%p) = x%p", handle, temp);
-
     return (HANDLE)temp;
 #else
     return handle;
@@ -891,6 +894,7 @@ CameraManager::CompatibleHandle(HANDLE handle)
 void
 CameraManager::RemoveCamera(HANDLE hCamera)
 {
+    hCamera = CompatibleHandle(hCamera);
     LOGTRACE(L"In: CameraManager::RemoveCamera(x%p)", hCamera);
 
     m_cameraMap.erase(hCamera);
@@ -916,9 +920,32 @@ CameraManager::GetCameraForHandle(HANDLE hCamera)
 
         for (it = m_cameraMap.begin(); it != m_cameraMap.end(); it++)
         {
-            LOGWARN(L"-- got a x%p with name %s", (it->first), (it->second)->GetDeviceInfo(false)->GetManufacturer().c_str());
+            LOGWARN(L"-- got a x%p with name %s", (it->first), (it->second)->GetDeviceInfo().GetManufacturer().c_str());
         }
 
         return nullptr;
+    }
+}
+
+CameraManager*
+GetCameraManager()
+{
+    if (cameraManager == nullptr)
+    {
+        LOGINFO(L"GetCameraManager: First time thru, creating new CameraManager singleton");
+        cameraManager = new CameraManager();
+    }
+
+    return cameraManager;
+}
+
+void
+RemoveCameraManager()
+{
+    if (cameraManager)
+    {
+        LOGINFO(L"Destroying CameraManager");
+        delete cameraManager;
+        cameraManager = nullptr;
     }
 }

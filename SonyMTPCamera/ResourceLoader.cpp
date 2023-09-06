@@ -6,7 +6,7 @@ extern HINSTANCE dllInstance;
 
 std::unordered_map<DWORD, std::wstring> ResourceLoader::s_cache;
 
-std::wstring
+const std::wstring
 ResourceLoader::GetString(DWORD id)
 {
     std::unordered_map<DWORD, std::wstring>::iterator it = ResourceLoader::s_cache.find(id);

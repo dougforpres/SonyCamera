@@ -6,7 +6,7 @@
 class ResourceLoader
 {
 public:
-    static std::wstring GetString(DWORD id);
+    static const std::wstring GetString(DWORD id);
     static Version* GetVersion();
 
 protected:

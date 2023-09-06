@@ -73,7 +73,7 @@ MTPDevice::Open()
 
         LOGTRACE(L"Opening PortableDevice via COM");
 
-        HRESULT hr = CoCreateInstance(CLSID_PortableDeviceFTM,
+        HRESULT hr = CoCreateInstance(CLSID_PortableDevice,
             nullptr,
             CLSCTX_INPROC_SERVER,
             IID_PPV_ARGS(&m_device));
@@ -176,12 +176,12 @@ MTPDevice::Close()
 }
 
 bool
-MTPDevice::StartNotifications()
+MTPDevice::StartNotifications(Camera* camera)
 {
     if (!m_eventHandler)
     {
         // Set up event handler
-        m_eventHandler = new DeviceEventHandler(m_device);
+        m_eventHandler = new DeviceEventHandler(m_device, camera);
     }
 
     return true;

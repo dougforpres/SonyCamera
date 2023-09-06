@@ -1,6 +1,10 @@
 // SonySettingsMonitor.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
+
 #include <iostream>
 #include <Windows.h>
 #include "SonyMTPCamera.h"
@@ -34,12 +38,12 @@ watchSettings(HANDLE h, bool loop)
     {
         pv2 = pv1;
 
-        for (int i = 0; i < 120; i++)
+        for (int i = 0; i < 20; i++)
         {
             printf("---\n");
             Sleep(500);
 
-            RefreshPropertyList(h);
+//            RefreshPropertyList(h);
             GetAllPropertyValues(h, pv1, &count);
 
             if (pv2)
@@ -217,6 +221,7 @@ int main()
 
     std::cout << portableDeviceCount << " portable devices found\n\n";
     PORTABLEDEVICEINFO pdinfo;
+    std::wstring firstDevice;
 
     for (int p = 0; p < portableDeviceCount; p++)
     {
@@ -225,6 +230,11 @@ int main()
 
         if (GetPortableDeviceInfo(p, &pdinfo) == ERROR_SUCCESS)
         {
+            if (firstDevice.empty())
+            {
+                firstDevice = pdinfo.id;
+            }
+
             std::wcout << L"  Manufacturer: " << pdinfo.manufacturer << L"\n";
             std::wcout << L"  Model:        " << pdinfo.model << L"\n";
         }
@@ -235,15 +245,16 @@ int main()
 //    info.version = 1;
 //    GetDeviceInfo(0, &info);
 
-    HANDLE h = OpenDevice(pdinfo.id);
+    HANDLE h = OpenDevice((LPWSTR)firstDevice.c_str());
 
     // Uncomment to just keep pulling settings looking for changes
-    watchSettings(h, false);
+//    watchSettings(h, true);
 
     // Uncomment to try state-machiney thing to change exposure time
-//    testExposure(h);
+    testExposure(h);
 //    testSetISO(h);
 //    dumpExposureOptions(h);
 
     CloseDevice(h);
+    _CrtDumpMemoryLeaks();
 }

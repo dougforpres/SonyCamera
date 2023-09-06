@@ -23,71 +23,75 @@ enum class CropMode
 class DeviceInfo : public MessageReader
 {
 public:
+    DeviceInfo();
     DeviceInfo(Message* message);
+    DeviceInfo(const DeviceInfo& rhs);
     virtual ~DeviceInfo();
+    DeviceInfo operator=(const DeviceInfo& rhs);
 
-    void DumpToLog();
+    void DumpToLog() const;
 
-    std::wstring GetManufacturer();
-    std::wstring GetModel();
-    std::wstring GetSerialNumber();
+    std::wstring GetManufacturer() const;
+    std::wstring GetModel() const;
+    std::wstring GetSerialNumber() const;
 
     void SetSensorType(SensorType type);
-    SensorType GetSensorType();
+    SensorType GetSensorType() const;
     void SetSensorName(std::wstring name);
-    std::wstring GetSensorName();
+    std::wstring GetSensorName() const;
     void SetSensorXResolution(UINT32 resolution);
-    UINT32 GetSensorXResolution();
+    UINT32 GetSensorXResolution() const;
     void SetSensorYResolution(UINT32 resolution);
-    UINT32 GetSensorYResolution();
+    UINT32 GetSensorYResolution() const;
     void SetSensorXCroppedResolution(UINT32 resolution);
-    UINT32 GetSensorXCroppedResolution();
+    UINT32 GetSensorXCroppedResolution() const;
     void SetSensorYCroppedResolution(UINT32 resolution);
-    UINT32 GetSensorYCroppedResolution();
+    UINT32 GetSensorYCroppedResolution() const;
     void SetPreviewXResolution(UINT32 resolution);
-    UINT32 GetPreviewXResolution();
+    UINT32 GetPreviewXResolution() const;
     void SetPreviewYResolution(UINT32 resolution);
-    UINT32 GetPreviewYResolution();
+    UINT32 GetPreviewYResolution() const;
     void SetSensorPixelWidth(double width);
-    double GetSensorPixelWidth();
+    double GetSensorPixelWidth() const;
     void SetSensorPixelHeight(double height);
-    double GetSensorPixelHeight();
+    double GetSensorPixelHeight() const;
     void SetBayerXOffset(INT8 offset);
-    INT8 GetBayerXOffset();
+    INT8 GetBayerXOffset() const;
     void SetBayerYOffset(INT8 offset);
-    INT8 GetBayerYOffset();
+    INT8 GetBayerYOffset() const;
     void SetExposureTimeMin(double time);
-    double GetExposureTimeMin();
+    double GetExposureTimeMin() const;
     void SetExposureTimeMax(double time);
-    double GetExposureTimeMax();
+    double GetExposureTimeMax() const;
     void SetExposureTimeStep(double step);
-    double GetExposureTimeStep();
-    std::wstring GetVersion();
-    bool GetSupportsLiveview();
+    double GetExposureTimeStep() const;
+    std::wstring GetVersion() const;
+    bool GetSupportsLiveview() const;
     void SetSupportsLiveview(bool support);
-    CropMode GetCropMode();
+    CropMode GetCropMode() const;
     void SetCropMode(CropMode mode);
-    UINT16 GetLeftCrop();
+    UINT16 GetLeftCrop() const;
     void SetLeftCrop(UINT16 crop);
-    UINT16 GetBottomCrop();
+    UINT16 GetBottomCrop() const;
     void SetBottomCrop(UINT16 crop);
-    UINT16 GetRightCrop();
+    UINT16 GetRightCrop() const;
     void SetRightCrop(UINT16 crop);
-    UINT16 GetTopCrop();
+    UINT16 GetTopCrop() const;
     void SetTopCrop(UINT16 crop);
-    std::list<DWORD> GetExposureTimes();
+    std::list<DWORD> GetExposureTimes() const;
     void SetExposureTimes(std::list<DWORD> exposureTimes);
-    std::list<DWORD> GetISOs();
+    std::list<DWORD> GetISOs() const;
     void SetISOs(std::list<DWORD> isos);
-    UINT32 GetBitsPerPixel();
+    UINT32 GetBitsPerPixel() const;
     void SetBitsPerPixel(UINT32 bpp);
 
-    bool GetButtonPropertiesInverted();
+    bool GetButtonPropertiesInverted() const;
     void SetButtonPropertiesInverted(bool invert);
 
 private:
-    void DumpList(std::list<WORD> list);
-    void DumpList(std::list<DWORD> list);
+    void Copy(const DeviceInfo& rhs);
+    void DumpList(std::list<WORD> list) const;
+    void DumpList(std::list<DWORD> list) const;
 
     double m_standardVersion = 0;
     DWORD m_vendorExtensionId = 0;

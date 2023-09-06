@@ -7,9 +7,13 @@
 #include "Image.h"
 #include "CameraSupportedProperties.h"
 #include "Lockable.h"
-//#include "CaptureThread.h"
+#include "CameraWorker.h"
 
-// Special object handles for retrieval of images
+class CameraTask;
+class CameraWorker;
+class TakePhotoTask;
+class DownloadAndProcessImageTask;
+class TakePhotoTaskParams;
 
 // Latest full-size image taken by camera
 #define FULL_IMAGE                      0xffffc001
@@ -29,7 +33,7 @@
 #define COMMAND_GET_OBJECT              0x1009
 #define COMMAND_GET_THUMB               0x100a
 
-typedef std::unordered_map<Property, PropertyInfo*> PropertyInfoMap;
+typedef std::unordered_map<Property, PropertyInfo> PropertyInfoMap;
 
 enum class CaptureStatus
 {
@@ -43,83 +47,67 @@ enum class CaptureStatus
     Processing = 0x8003,
 };
 
+enum class ImageBufferStatus
+{
+    ImageNotReady,
+    ImageReady,
+};
+
 class Camera : public Lockable
 {
 public:
-    class CaptureThread
-    {
-    public:
-        CaptureThread(Camera* camera, OutputMode outputMode);
-        ~CaptureThread();
-
-        bool StartCapture(double duration);
-        bool CancelCapture();
-        CaptureStatus GetStatus();
-        Image* GetImage();
-        double GetDuration();
-        static DWORD WINAPI _run(LPVOID lpParameter);
-        DWORD Run();
-
-    private:
-        void SetStatus(CaptureStatus status);
-        bool ImageReady(CameraSettings* settings);
-
-        OutputMode m_outputMode;
-        Camera* m_camera = nullptr;
-        Image* m_image = nullptr;
-        HANDLE m_hThread = INVALID_HANDLE_VALUE;
-        HANDLE m_hWakeupEvent = INVALID_HANDLE_VALUE;
-        HANDLE m_hMutex = INVALID_HANDLE_VALUE;
-        double m_duration = 0.0;
-        DWORD m_threadId = 0;
-        CaptureStatus m_status = CaptureStatus::Created;
-        bool m_cancelled = false;
-    };
-
     Camera(Device* device);
     ~Camera();
 
-    const std::wstring GetId();
+    const std::wstring GetId() const;
     HANDLE Open();
     bool Close();
 
-    virtual DeviceInfo* GetDeviceInfo(bool refresh);
-    virtual bool SetProperty(Property id, PropertyValue* value) = 0;
+    virtual bool RefreshDeviceInfo();
+    const DeviceInfo GetDeviceInfo() const;
+    virtual bool SetProperty(const Property id, PropertyValue* value) = 0;
 
     Device* GetDevice();
     virtual bool Initialize() = 0;
     virtual Image* GetImage(DWORD imageId);
-    virtual CameraSettings* GetSettings(bool refresh) = 0;
+    CameraSettings* GetSettings() const;
+    CameraProperty* GetProperty(Property id) const;
+    virtual bool RefreshSettings() = 0;
     void LoadFakeProperties(CameraSettings* settings);
-    virtual PropertyInfoMap GetSupportedProperties();
+//    virtual const PropertyInfoMap GetSupportedProperties() const;
 
     bool StartCapture(double duration, OutputMode outputMode, DWORD flags);
-    CaptureStatus GetCaptureStatus();
+    const CaptureStatus GetCaptureStatus();
+    void SetCaptureStatus(CaptureStatus status);
     Image* GetCapturedImage();
     bool CancelCapture();
     void CleanupCapture();
-
-    static DWORD WINAPI _runHandlerThread(LPVOID lpParameter);
+//    bool RunTask(CameraTask* task);
+    bool IsInitialized() const;
+    CameraWorker* GetWorker();
+    void OnPropertiesUpdated();
+    void OnImageBufferStatus(ImageBufferStatus status);
 
     Lockable settingsLock;
 
 protected:
+    void DoRefreshProperties();
+    void SetInitialized(bool value);
     virtual ObjectInfo* GetImageInfo(DWORD imageId);
-    bool ProcessDeviceInfoOverrides();
+    bool ProcessDeviceInfoOverrides(DeviceInfo& deviceInfo);
 
-    DeviceInfo* m_deviceInfo = nullptr;
+    DeviceInfo m_deviceInfo;
     Device* m_device = nullptr;
-    CameraSettings* m_settings = nullptr;
-    CameraSupportedProperties* m_supportedProperties = nullptr;
-    CaptureThread* m_captureThread = nullptr;
+    CameraSettings* m_settings;
+    CameraSupportedProperties m_supportedProperties;
+    TakePhotoTask* m_takePhotoTask = nullptr;
+    DownloadAndProcessImageTask* m_downloadAndProcessImageTask = nullptr;
+    HANDLE m_hBusyMutex = INVALID_HANDLE_VALUE;
+    TakePhotoTaskParams* m_takePhotoTaskParams = nullptr;
+    CaptureStatus m_captureStatus = CaptureStatus::Created;
 
 private:
-    DWORD RunHandlerThread();
-
-    HANDLE m_hHandlerThread = INVALID_HANDLE_VALUE;
-    HANDLE m_hHandlerMutex = INVALID_HANDLE_VALUE;
-    HANDLE m_hBusyMutex = INVALID_HANDLE_VALUE;
-    HANDLE m_hWakeEvent = INVALID_HANDLE_VALUE;
-//    DWORD m_handlerThreadId = 0;
     bool m_shutdown = false;
+    CameraWorker* pWorker = nullptr;
+    bool initialized = false;
 };

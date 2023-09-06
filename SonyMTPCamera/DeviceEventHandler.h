@@ -1,11 +1,12 @@
 #pragma once
 #include "pch.h"
 #include <PortableDeviceApi.h>
+#include "Camera.h"
 
 class DeviceEventHandler : public IPortableDeviceEventCallback
 {
 public:
-    DeviceEventHandler(IPortableDevice* device);
+    DeviceEventHandler(IPortableDevice* device, Camera* camera);
     ~DeviceEventHandler();
 
     HRESULT __stdcall QueryInterface(REFIID  riid, LPVOID* ppvObj);
@@ -16,5 +17,6 @@ public:
 private:
     unsigned long m_cRef = 0;
     IPortableDevice* m_device = nullptr;
+    Camera* m_camera;
 };
 

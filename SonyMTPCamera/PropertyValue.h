@@ -6,6 +6,7 @@
 class PropertyValue
 {
 public:
+    PropertyValue();
     PropertyValue(const PropertyValue& rhs);
     PropertyValue(INT8 value);
     PropertyValue(UINT8 value);
@@ -17,19 +18,20 @@ public:
 
     virtual ~PropertyValue();
 
-    UINT8  GetUINT8();
-    INT8   GetINT8();
-    UINT16 GetUINT16();
-    INT16  GetINT16();
-    UINT32 GetUINT32();
-    INT32  GetINT32();
-    std::wstring GetString();
+    PropertyValue operator=(const PropertyValue& rhs);
 
-    size_t GetDataSize();
-    size_t Write(BYTE* buffer, DWORD bufferLen);
-    DataType GetType();
+    UINT8  GetUINT8() const;
+    INT8   GetINT8() const;
+    UINT16 GetUINT16() const;
+    INT16  GetINT16() const;
+    UINT32 GetUINT32() const;
+    INT32  GetINT32() const;
+    std::wstring GetString() const;
 
-    std::wstring ToString();
+    size_t GetDataSize() const;
+    size_t Write(BYTE* buffer, DWORD bufferLen) const;
+    DataType GetType() const;
+    std::wstring ToString() const;
 
     PROPVARIANT ToPROPVARIANT();
 
@@ -42,4 +44,7 @@ protected:
     UINT32 m_uint32 = 0;
     INT32  m_int32 = 0;
     std::wstring m_str;
+
+private:
+    void Copy(const PropertyValue& rhs);
 };
