@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include "CameraWorkerFunctions.h"
 #include "CameraTaskInfo.h"
+#include "Camera.h"
 
 #define CAMERA_TASK_NOT_STARTED -1
 #define CAMERA_TASK_COMPLETE -2
@@ -79,4 +80,89 @@ private:
     HANDLE waiter = INVALID_HANDLE_VALUE;
     HANDLE cancel = INVALID_HANDLE_VALUE;
     bool cancelled = false;
+};
+
+
+// Gets current properties from camera
+class
+    RefreshPropertiesTask : public CameraTask
+{
+public:
+    RefreshPropertiesTask();
+};
+
+// Gets current deviceinfo
+class RefreshDeviceInfoTask : public CameraTask
+{
+public:
+    RefreshDeviceInfoTask();
+};
+
+// Gets preview image from camera
+class GetPreviewTask : public CameraTask
+{
+public:
+    GetPreviewTask();
+
+    Image* GetImage();
+};
+
+class InitializeCameraTask : public CameraTask
+{
+public:
+    InitializeCameraTask();
+};
+
+class OpenCameraTask : public CameraTask
+{
+public:
+    OpenCameraTask();
+
+    HANDLE GetHandle();
+};
+
+class CloseCameraTask : public CameraTask
+{
+public:
+    CloseCameraTask(HANDLE hCamera);
+
+    bool Closed();
+};
+
+class SetPropertyTaskParams
+{
+public:
+    SetPropertyTaskParams(Property id, PropertyValue& value);
+
+    Property id;
+    PropertyValue value;
+};
+
+class SetPropertyTask : public CameraTask
+{
+public:
+    SetPropertyTask(SetPropertyTaskParams* params);
+};
+
+class TakePhotoTaskParams
+{
+public:
+    TakePhotoTaskParams(double exposureTime, OutputMode mode);
+
+    double exposureTime;
+    OutputMode mode;
+};
+
+class TakePhotoTask : public CameraTask
+{
+public:
+    TakePhotoTask(TakePhotoTaskParams* params);
+};
+
+class DownloadAndProcessImageTask : public CameraTask
+{
+public:
+    DownloadAndProcessImageTask(TakePhotoTaskParams* params);
+
+    Image* GetImage();
 };

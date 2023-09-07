@@ -415,7 +415,7 @@ Image::ProcessJPEGData()
         break;
 
     default:
-        LOGERROR(L"Unsupported output mode %d for JPEG file (only supports RGB, JPEG, PASSTHRU", m_outputMode);
+        LOGERROR(L"Unsupported output mode %d for JPEG file (only supports RGB, JPEG, PASSTHRU)", m_outputMode);
         break;
     }
 

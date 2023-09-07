@@ -294,6 +294,14 @@ CameraProperty::equals(CameraProperty* rhs) const
         */
     }
 
+    if (m_info->GetFormMode() == FormMode::ENUMERATION)
+    {
+        if (m_info->GetEnumeration().size() != rhs->GetInfo()->GetEnumeration().size())
+        {
+            same = false;
+        }
+    }
+
     return same;
 }
 
@@ -341,7 +349,7 @@ CameraProperty::Slurp(BYTE* data, DWORD offset)
     offset += 6;
 
     m_info->SetDefault(ReadData(data, offset, type));
-    m_current = ReadData(data, offset, type);
+    SetCurrentValue(ReadData(data, offset, type));
 
     m_info->SetFormMode((FormMode)GetBYTE(data, offset++));
 

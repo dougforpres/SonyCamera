@@ -43,10 +43,10 @@ private:
     FormMode m_form = FormMode::NONE;
     BYTE m_sonySpare = 0;
 
-    PropertyValue* m_default;
-    PropertyValue* m_rangeLo;
-    PropertyValue* m_rangeHi;
-    PropertyValue* m_rangeStep;
+    PropertyValue* m_default = nullptr;
+    PropertyValue* m_rangeLo = nullptr;
+    PropertyValue* m_rangeHi = nullptr;
+    PropertyValue* m_rangeStep = nullptr;
     std::list<PropertyValue*> m_enum;
 };
 

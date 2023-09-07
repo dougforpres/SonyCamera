@@ -694,7 +694,7 @@ printExposureTimes(HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortForm)
             if (shortForm)
             {
                 c++;
-                std::wcout << option.value << L", ";
+                std::wcout << option.value << L",";
 
                 if (c > 9)
                 {
@@ -739,7 +739,7 @@ printISOs(HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortForm)
             if (shortForm)
             {
                 c++;
-                std::wcout << option.value << L", ";
+                std::wcout << option.value << L",";
 
                 if (c > 9)
                 {

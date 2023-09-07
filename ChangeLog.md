@@ -1,4 +1,13 @@
 # Change Log
+## 1.0.1.0
+Major changes in this release!
+Performance seems to be slightly improved.
+
+* Updated driver to update camera properties only when camera indicates they have changed.  This means there is no longer a need to poll the camera for changes.
+* Updated driver to communicate with camera using a single worker thread (and a job queue).
+* Updated driver to use simple state-machine flows to perform all camera tasks.
+* Updated driver to auto-download photos when camera sends event that "photos are ready".  This means that you can now use the shutter-release button on the camera and the photo will be auto-downloaded.
+
 ## 1.0.0.43
 * ICLE-6700 (A6700): Added.
 

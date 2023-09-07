@@ -876,8 +876,10 @@ MTPDevice::Send(Message* out)
         method = Op::SendData;
     }
 
-    InternalSend(method, out);
+    // This method returns a message, so we need to ensure it's deleted
+    Message *in = InternalSend(method, out);
 
+    delete in;
 //    LOGTRACE(L"Out: MTPDevice::Send");
 
     return true;

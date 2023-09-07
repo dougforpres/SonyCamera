@@ -1,9 +1,9 @@
 // SonySettingsMonitor.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
-#define _CRTDBG_MAP_ALLOC
-#include <stdlib.h>
-#include <crtdbg.h>
+//#define _CRTDBG_MAP_ALLOC
+//#include <stdlib.h>
+//#include <crtdbg.h>
 
 #include <iostream>
 #include <Windows.h>
@@ -21,7 +21,7 @@ watchSettings(HANDLE h, bool loop)
     PROPERTYVALUE* pv2 = nullptr;
 
     // Dump current state of all properties
-    RefreshPropertyList(h);
+//    RefreshPropertyList(h);
     GetAllPropertyValues(h, pv1, &count);
 
     for (int i = 0; i < count; i++)
@@ -66,6 +66,17 @@ watchSettings(HANDLE h, bool loop)
                         // Expectation is same order for return data
                         printf("Id's don't match! x%04x != x%04x\n", t1->id, t2->id);
                     }
+                }
+            }
+
+            // Clean up text
+            for (int i = 0; i < count; i++)
+            {
+                PROPERTYVALUE* t2 = (pv2 + i);
+
+                if (t2->text)
+                {
+                    CoTaskMemFree(t2->text);
                 }
             }
 
@@ -124,6 +135,9 @@ testExposure(HANDLE h)
         std::cerr << "Error reading property value " << hr;
     }
 
+    CoTaskMemFree(value.text);
+    hr = GetSinglePropertyValue(h, SHUTTERSPEED, &value);
+
     std::wcout << "Shutter speed set to '" << value.text << "' (" << value.value << ")" << std::endl;
 
     std::cout << "Setting shutter speed to 1/100..." << std::endl;
@@ -134,6 +148,9 @@ testExposure(HANDLE h)
     {
         std::cerr << "Error setting property value " << hr;
     }
+
+    CoTaskMemFree(value.text);
+    hr = GetSinglePropertyValue(h, SHUTTERSPEED, &value);
 
     std::wcout << "Shutter speed now set to '" << value.text << "' (" << value.value << ")" << std::endl;
 
@@ -146,6 +163,9 @@ testExposure(HANDLE h)
         std::cerr << "Error setting property value " << hr;
     }
 
+    CoTaskMemFree(value.text);
+    hr = GetSinglePropertyValue(h, SHUTTERSPEED, &value);
+
     std::wcout << "Shutter speed now set to '" << value.text << "' (" << value.value << ")" << std::endl;
 
     std::cout << "Setting shutter speed to 1/3..." << std::endl;
@@ -156,6 +176,9 @@ testExposure(HANDLE h)
     {
         std::cerr << "Error setting property value " << hr;
     }
+
+    CoTaskMemFree(value.text);
+    hr = GetSinglePropertyValue(h, SHUTTERSPEED, &value);
 
     std::wcout << "Shutter speed now set to '" << value.text << "' (" << value.value << ")" << std::endl;
 
@@ -168,6 +191,9 @@ testExposure(HANDLE h)
         std::cerr << "Error setting property value " << hr;
     }
 
+    CoTaskMemFree(value.text);
+    hr = GetSinglePropertyValue(h, SHUTTERSPEED, &value);
+
     std::wcout << "Shutter speed now set to '" << value.text << "' (" << value.value << ")" << std::endl;
 
     std::cout << "Setting shutter speed to 1/4001..." << std::endl;
@@ -179,8 +205,10 @@ testExposure(HANDLE h)
         std::cerr << "Error setting property value " << hr;
     }
 
-    std::wcout << "Shutter speed now set to '" << value.text << "' (" << value.value << ")" << std::endl;
+    CoTaskMemFree(value.text);
+    hr = GetSinglePropertyValue(h, SHUTTERSPEED, &value);
 
+    std::wcout << "Shutter speed now set to '" << value.text << "' (" << value.value << ")" << std::endl;
 
     std::cout << "Setting shutter speed to 32..." << std::endl;
 
@@ -190,6 +218,9 @@ testExposure(HANDLE h)
     {
         std::cerr << "Error setting property value " << hr;
     }
+
+    CoTaskMemFree(value.text);
+    hr = GetSinglePropertyValue(h, SHUTTERSPEED, &value);
 
     std::wcout << "Shutter speed now set to '" << value.text << "' (" << value.value << ")" << std::endl;
 
@@ -202,8 +233,12 @@ testExposure(HANDLE h)
         std::cerr << "Error setting property value " << hr;
     }
 
+    CoTaskMemFree(value.text);
+    hr = GetSinglePropertyValue(h, SHUTTERSPEED, &value);
+
     std::wcout << "Shutter speed now set to '" << value.text << "' (" << value.value << ")" << std::endl;
 
+    CoTaskMemFree(value.text);
     std::cout << "Got it";
 }
 
@@ -215,7 +250,7 @@ testSetISO(HANDLE h)
 
 int main()
 {
-    HRESULT comhr = CoInitialize(nullptr);
+//    HRESULT comhr = CoInitialize(nullptr);
 
     int portableDeviceCount = GetPortableDeviceCount();
 
@@ -256,5 +291,7 @@ int main()
 //    dumpExposureOptions(h);
 
     CloseDevice(h);
-    _CrtDumpMemoryLeaks();
+//    CoUninitialize();
+//    _CrtDumpMemoryLeaks();
+    printf("Out\n");
 }

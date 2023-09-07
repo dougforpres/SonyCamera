@@ -12,7 +12,7 @@
 #include "ResourceLoader.h"
 #include "CameraException.h"
 #include "Locker.h"
-#include "CameraWorker.h"
+#include "CameraTask.h"
 
 #define MAX_MANUFACTURER_SIZE   0x64
 #define MAX_MODEL_SIZE          0x64
@@ -493,34 +493,34 @@ CancelCapture(HANDLE hCamera, IMAGEINFO* info)
 
 bool NudgePropertyAndWait(Camera* camera, CameraProperty* desired, bool up, int* compareResult)
 {
-    PropertyValue* val;
+    PropertyValue val;
     DWORD value = up ? 1 : -1;
 
     // Try to just do it
     switch (desired->GetInfo()->GetType())
     {
     case DataType::INT8:
-        val = new PropertyValue((INT8)value);
+        val = PropertyValue((INT8)value);
         break;
 
     case DataType::INT16:
-        val = new PropertyValue((INT16)value);
+        val = PropertyValue((INT16)value);
         break;
 
     case DataType::INT32:
-        val = new PropertyValue((INT32)value);
+        val = PropertyValue((INT32)value);
         break;
 
     case DataType::UINT8:
-        val = new PropertyValue((UINT8)value);
+        val = PropertyValue((UINT8)value);
         break;
 
     case DataType::UINT16:
-        val = new PropertyValue((UINT16)value);
+        val = PropertyValue((UINT16)value);
         break;
 
     case DataType::UINT32:
-        val = new PropertyValue((UINT32)value);
+        val = PropertyValue((UINT32)value);
         break;
 
     default:
@@ -530,7 +530,7 @@ bool NudgePropertyAndWait(Camera* camera, CameraProperty* desired, bool up, int*
     std::unique_ptr<CameraProperty> current(camera->GetProperty(desired->GetId()));
 
     // This will nudge the property in hopefully the correct direction
-    LOGTRACE(L"Property x%04x is set to %s, nudging %s toward %s", desired->GetId(), current->GetCurrentValue()->ToString().c_str(), val->ToString().c_str(), desired->GetCurrentValue()->ToString().c_str());
+    LOGTRACE(L"Property x%04x is set to %s, nudging %s toward %s", desired->GetId(), current->GetCurrentValue()->ToString().c_str(), val.ToString().c_str(), desired->GetCurrentValue()->ToString().c_str());
     SetPropertyTaskParams params(desired->GetId(), val);
     SetPropertyTask task(&params);
 
@@ -565,7 +565,6 @@ GetAvailablePropertyValues(HANDLE hCamera, Camera* camera, Property propertyId, 
     std::list<DWORD> values;
     PropertyValue* val;
     PropertyValue* desiredVal;
-    camera->RefreshSettings();
     std::unique_ptr<CameraSettings> cs(camera->GetSettings());
     CameraProperty* current = cs->GetProperty(propertyId);
     CameraProperty* desired = current->Clone();
@@ -609,16 +608,12 @@ GetAvailablePropertyValues(HANDLE hCamera, Camera* camera, Property propertyId, 
     // then down, and finally try the actual "detect" part.
     Sleep(1000);
 
-    // Just to ensure we're up-to-date
-    camera->RefreshSettings();
-
     NudgePropertyAndWait(camera, desired, true, &compareResult);
     NudgePropertyAndWait(camera, desired, false, &compareResult);
 
     // Moves to lowest possible value
     SetPropertyValue(hCamera, (DWORD)propertyId, startAt);
 
-    camera->RefreshSettings();
     std::unique_ptr<CameraSettings> updated(camera->GetSettings());
 
     current = updated->GetProperty(propertyId);
@@ -628,7 +623,6 @@ GetAvailablePropertyValues(HANDLE hCamera, Camera* camera, Property propertyId, 
 
     do
     {
-        camera->RefreshSettings();
         std::unique_ptr<CameraSettings> loop_cs(camera->GetSettings());
         val = loop_cs->GetPropertyValue(propertyId);
 
@@ -750,6 +744,7 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
                         IMAGEINFO iinfo;
 
                         memset((BYTE*)&iinfo, 0, sizeof(iinfo));
+                        iinfo.imageMode = (DWORD)OutputMode::RGB;
 
                         GetPreviewImage(hCamera, &iinfo);
 
@@ -828,8 +823,11 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
 
             task.Run(camera);
 
+            RefreshPropertiesTask rpTask;
+
+            task.Run(camera);
+
             deviceInfo = camera->GetDeviceInfo();
-            camera->RefreshSettings();
 
             info->flags = 0;
             info->flags |= deviceInfo.GetSupportsLiveview() ? CAMERAFLAGS_SUPPORTS_LIVEVIEW : 0;
@@ -1144,7 +1142,7 @@ SetPropertyValue(HANDLE hCamera, DWORD propertyId, DWORD value)
         Locker lock(camera);
 
         std::unique_ptr<CameraProperty> v(camera->GetProperty((Property)propertyId));
-        PropertyValue* val;
+        PropertyValue val;
 
         if (v)
         {
@@ -1152,27 +1150,27 @@ SetPropertyValue(HANDLE hCamera, DWORD propertyId, DWORD value)
             switch (v->GetInfo()->GetType())
             {
             case DataType::INT8:
-                val = new PropertyValue((INT8)value);
+                val = PropertyValue((INT8)value);
                 break;
 
             case DataType::INT16:
-                val = new PropertyValue((INT16)value);
+                val = PropertyValue((INT16)value);
                 break;
 
             case DataType::INT32:
-                val = new PropertyValue((INT32)value);
+                val = PropertyValue((INT32)value);
                 break;
 
             case DataType::UINT8:
-                val = new PropertyValue((UINT8)value);
+                val = PropertyValue((UINT8)value);
                 break;
 
             case DataType::UINT16:
-                val = new PropertyValue((UINT16)value);
+                val = PropertyValue((UINT16)value);
                 break;
 
             case DataType::UINT32:
-                val = new PropertyValue((UINT32)value);
+                val = PropertyValue((UINT32)value);
                 break;
 
             default:
@@ -1194,7 +1192,7 @@ SetPropertyValue(HANDLE hCamera, DWORD propertyId, DWORD value)
                 // non-supported value is given) the target
                 std::unique_ptr<CameraProperty> target(v->Clone());
 
-                target->SetCurrentValue(val);
+                target->SetCurrentValue(new PropertyValue(val));
 
                 int compare = v->Compare(target.get());
 

@@ -21,6 +21,12 @@ Camera::~Camera()
     delete pWorker;
     pWorker = nullptr;
 
+    if (m_settings)
+    {
+        delete m_settings;
+        m_settings = nullptr;
+    }
+
     CloseHandle(m_hBusyMutex);
 
     m_hBusyMutex = INVALID_HANDLE_VALUE;

@@ -75,6 +75,7 @@ CameraSettings::Copy(const CameraSettings& rhs)
                 LOGTRACE(L"Updating value for property x%04x [this = x%08p]", oldProp->GetId(), this);
 #endif
                 (*fit).second->SetCurrentValue(new PropertyValue(*newProp->GetCurrentValue()));
+                (*fit).second->SetInfo(new PropertyInfo(newProp->GetInfo()));
             }
         }
         else

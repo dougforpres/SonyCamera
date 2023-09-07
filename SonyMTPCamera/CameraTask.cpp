@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "CameraTask.h"
 #include "CameraWorker.h"
+#include "CameraWorkerFunctions.h"
 #include "Camera.h"
 
 class CameraWorker;
@@ -497,11 +498,10 @@ CloseCameraTask::Closed()
     return GetResult() != nullptr;
 }
 
-SetPropertyTaskParams::SetPropertyTaskParams(Property id, PropertyValue* value)
-    : id(id),
-    value(value)
+SetPropertyTaskParams::SetPropertyTaskParams(Property id, PropertyValue& value)
+    : id(id)
 {
-
+    this->value = PropertyValue(value);
 }
 
 SetPropertyTask::SetPropertyTask(SetPropertyTaskParams* params)
@@ -533,6 +533,7 @@ SetPropertyTask::SetPropertyTask(SetPropertyTaskParams* params)
     };
 
     SetSteps(steps);
+
     SetParam1((void*)params);
 }
 

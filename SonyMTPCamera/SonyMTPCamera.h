@@ -129,7 +129,6 @@ extern "C" {
     /* Returns basic info about the device */
     IMPEXP HRESULT GetPortableDeviceInfo(DWORD offset, PORTABLEDEVICEINFO* pdinfo);
 
-    IMPEXP HRESULT RefreshPropertyList(HANDLE hCamera);
     IMPEXP HRESULT GetPropertyList(HANDLE hCamera, DWORD* list, DWORD* listSize);
     IMPEXP HRESULT GetPropertyDescriptor(HANDLE hCamera, DWORD propertyId, PROPERTYDESCRIPTOR* descriptor);
     IMPEXP HRESULT GetPropertyValueOption(HANDLE hCamera, DWORD propertyId, PROPERTYVALUEOPTION* option, DWORD index);

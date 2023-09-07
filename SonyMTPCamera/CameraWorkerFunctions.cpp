@@ -62,7 +62,7 @@ StateResult
 setProperty(CameraTaskInfo& info)
 {
     SetPropertyTaskParams* params = (SetPropertyTaskParams*)info.pTask->GetParam1();
-    info.pCamera->SetProperty(params->id, params->value);
+    info.pCamera->SetProperty(params->id, &params->value);
 
     return StateResult::Success;
 }
