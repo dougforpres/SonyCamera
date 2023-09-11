@@ -3,6 +3,7 @@
 #include "CameraWorker.h"
 #include "CameraWorkerFunctions.h"
 #include "Camera.h"
+#include "Logger.h"
 
 class CameraWorker;
 

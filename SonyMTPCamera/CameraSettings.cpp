@@ -72,7 +72,7 @@ CameraSettings::Copy(const CameraSettings& rhs)
             if (!oldProp->equals(newProp))
             {
 #ifdef DEBUG
-                LOGTRACE(L"Updating value for property x%04x [this = x%08p]", oldProp->GetId(), this);
+                LOGTRACE(L"Property x%04x updated: Old=%s, New=%s", oldProp->GetId(), oldProp->ToString().c_str(), newProp->ToString().c_str());
 #endif
                 (*fit).second->SetCurrentValue(new PropertyValue(*newProp->GetCurrentValue()));
                 (*fit).second->SetInfo(new PropertyInfo(newProp->GetInfo()));

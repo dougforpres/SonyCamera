@@ -17,7 +17,7 @@ CameraProperty::CameraProperty()
 CameraProperty::CameraProperty(CameraProperty& rhs)
 {
 #ifdef DEBUG
-    LOGTRACE(L"CameraProperty::CameraProperty(& x%04x) [this = x%08p]", rhs->GetId(), this);
+    LOGTRACE(L"CameraProperty::CameraProperty(& x%04x) [this = x%08p]", rhs.GetId(), this);
 #endif
 
     SetInfo(new PropertyInfo(rhs.m_info));
@@ -445,6 +445,12 @@ CameraProperty::SetCurrentValue(PropertyValue* current)
     m_current = current;
 }
 
+bool
+CameraProperty::CanNudge() const
+{
+    return false;
+}
+
 ISOProperty::ISOProperty()
     : CameraProperty()
 {
@@ -493,6 +499,13 @@ ISOProperty::Compare(CameraProperty* rhs) const
 
     return lhsValue == rhsValue ? 0 : lhsValue < rhsValue ? -1 : 1;
 }
+
+bool
+ISOProperty::CanNudge() const
+{
+    return true;
+}
+
 
 ShutterTimingProperty::ShutterTimingProperty()
     : CameraProperty()
@@ -567,6 +580,12 @@ ShutterTimingProperty::Compare(CameraProperty* rhs) const
     float rhsFloat = (float)((rhsValue & 0xffff0000) >> 16) / (float)(rhsValue & 0x0000ffff);
 
     return lhsFloat == rhsFloat ? 0 : lhsFloat < rhsFloat ? -1 : 1;
+}
+
+bool
+ShutterTimingProperty::CanNudge() const
+{
+    return true;
 }
 
 Div10Property::Div10Property()

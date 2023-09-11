@@ -122,7 +122,7 @@ enum class Property {
     //Button                    = 0xd2ce,
     //Button                    = 0xd2cf,
     //Button                    = 0xd2d0,
-    //Button?                   = 0xd2d1,
+    FocusControl                = 0xd2d1,
     //Button                    = 0xd2d2,
     //Button                    = 0xd2d3,
     //Button                    = 0xd2d4,

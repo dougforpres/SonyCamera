@@ -364,6 +364,13 @@ GetPreviewImage(HANDLE hCamera, IMAGEINFO *info)
                     info->status = (DWORD)CaptureStatus::Failed;
                 }
 
+                info->metaDataSize = image->GetMetaDataSize();
+
+                if (info->metaDataSize)
+                {
+                    info->metaData = exportBytes(image->GetMetaData(), info->metaDataSize);
+                }
+
                 delete image;
             }
             else
@@ -1134,6 +1141,8 @@ SetPropertyValue(HANDLE hCamera, DWORD propertyId, DWORD value)
 
     if (!camera)
     {
+        LOGWARN(L"Out: SetPropertyValue(...) - unable to find camera");
+
         return ERROR_INVALID_HANDLE;
     }
 
@@ -1142,6 +1151,9 @@ SetPropertyValue(HANDLE hCamera, DWORD propertyId, DWORD value)
         Locker lock(camera);
 
         std::unique_ptr<CameraProperty> v(camera->GetProperty((Property)propertyId));
+
+        LOGINFO(L"Property x%04x = %s", propertyId, v->ToString().c_str());
+
         PropertyValue val;
 
         if (v)
@@ -1177,7 +1189,9 @@ SetPropertyValue(HANDLE hCamera, DWORD propertyId, DWORD value)
                 throw CameraException(L"Unable to set property, only properties with int/uint 8/16/32 supported");
             }
 
-            if (v->GetInfo()->GetSonySpare() == 0)
+            LOGINFO(L"Constructed value = %s", val.ToString().c_str());
+
+            if (!v->CanNudge())
             {
                 SetPropertyTaskParams params((Property)propertyId, val);
                 SetPropertyTask task(&params);
@@ -1228,6 +1242,8 @@ SetPropertyValue(HANDLE hCamera, DWORD propertyId, DWORD value)
         }
         else
         {
+            LOGTRACE(L"Out: SetPropertyValue - unable to find property x%08x", propertyId);
+
             return ERROR_NOT_FOUND;
         }
     }

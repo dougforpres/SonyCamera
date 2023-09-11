@@ -34,6 +34,7 @@ public:
     void SetInfo(PropertyInfo* info);
     PropertyValue* GetCurrentValue() const;
     void SetCurrentValue(PropertyValue* current);
+    virtual bool CanNudge() const;
 
 protected:
     BYTE GetBYTE(BYTE* data, DWORD offset) const;
@@ -53,8 +54,9 @@ public:
     ISOProperty();
 
     virtual CameraProperty* Clone();
-    std::wstring AsString(PropertyValue* in) const;
-    int Compare(CameraProperty* rhs) const;
+    virtual std::wstring AsString(PropertyValue* in) const;
+    virtual int Compare(CameraProperty* rhs) const;
+    virtual bool CanNudge() const;
 };
 
 class ShutterTimingProperty : virtual public CameraProperty
@@ -63,9 +65,10 @@ public:
     ShutterTimingProperty();
 
     virtual CameraProperty* Clone();
-    bool UpIsBigger() const;
-    std::wstring AsString(PropertyValue* in) const;
-    int Compare(CameraProperty* rhs) const;
+    virtual bool UpIsBigger() const;
+    virtual std::wstring AsString(PropertyValue* in) const;
+    virtual int Compare(CameraProperty* rhs) const;
+    virtual bool CanNudge() const;
 };
 
 class Div10Property : public CameraProperty
@@ -74,7 +77,7 @@ public:
     Div10Property();
 
     virtual CameraProperty* Clone();
-    std::wstring AsString(PropertyValue* in) const;
+    virtual std::wstring AsString(PropertyValue* in) const;
 };
 
 class Div100Property : public CameraProperty
@@ -83,7 +86,7 @@ public:
     Div100Property();
 
     virtual CameraProperty* Clone();
-    std::wstring AsString(PropertyValue* in) const;
+    virtual std::wstring AsString(PropertyValue* in) const;
 };
 
 class Div1000Property : public CameraProperty
@@ -92,7 +95,7 @@ public:
     Div1000Property();
 
     virtual CameraProperty* Clone();
-    std::wstring AsString(PropertyValue* in) const;
+    virtual std::wstring AsString(PropertyValue* in) const;
 };
 
 class PercentageProperty : public CameraProperty
@@ -101,7 +104,7 @@ public:
     PercentageProperty();
 
     virtual CameraProperty* Clone();
-    std::wstring AsString(PropertyValue* in) const;
+    virtual std::wstring AsString(PropertyValue* in) const;
 };
 
 class StringLookupProperty : public CameraProperty
@@ -110,7 +113,7 @@ public:
     StringLookupProperty();
 
     virtual CameraProperty* Clone();
-    std::wstring AsString(PropertyValue* in) const;
+    virtual std::wstring AsString(PropertyValue* in) const;
 
 protected:
     void AddResource(Property property, WORD value, WORD resid);

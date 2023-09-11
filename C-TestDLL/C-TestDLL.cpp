@@ -33,6 +33,78 @@ enum class CaptureStatus
     Processing = 0x8003,
 };
 
+void CompareBytes(BYTE* data1, DWORD size1, BYTE* data2, DWORD size2)
+{
+    if (size1 != size2)
+    {
+        printf("Cannot compare, sizes are different\n");
+
+        return;
+    }
+    //else
+    //{
+    //    if (memcmp(data1, data2, size1) == 0)
+    //    {
+    //        printf("Unchanged\n");
+    //    }
+    //}
+
+    // Do a custom dump
+    for (int row = 0; row < size1; row += 16)
+    {
+        printf("%04x:  ", row);
+
+        for (int col = 0; col < min(size1 - row, 16); col++)
+        {
+            printf("%02x ", data1[row + col]);
+
+            if (col % 8 == 7)
+            {
+                printf(" ");
+            }
+        }
+
+        for (int col = 0; col < min(size1 - row, 16); col++)
+        {
+            if (data1[row + col] == data2[row + col])
+            {
+                printf("   ");
+            }
+            else
+            {
+                printf("%02x ", data2[row + col]);
+            }
+
+            if (col % 8 == 7)
+            {
+                printf(" ");
+            }
+        }
+
+        printf("\n");
+    }
+}
+
+void HexDump(BYTE* data, DWORD size)
+{
+    for (int row = 0; row < size; row += 16)
+    {
+        printf("%04x:  ", row);
+
+        for (int col = 0; col < min(size - row, 16); col++)
+        {
+            printf("%02x ", data[row + col]);
+
+            if (col % 8 == 7)
+            {
+                printf(" ");
+            }
+        }
+
+        printf("\n");
+    }
+}
+
 int main()
 {
     HRESULT comhr = CoInitialize(nullptr);
@@ -68,7 +140,7 @@ int main()
     DWORD count = 0;
     IMAGEINFO iinfo;
 
-    bool previewOnly = true;
+    bool previewOnly = false;
 
     CAMERAINFO cameraInfo;
 
@@ -96,7 +168,10 @@ int main()
         printf("x%04x (%S), type = x%04x, flags = x%04x\n", ids[i], d.name, d.type, d.flags);
     }
 
-    for (int j = 0; j < 10; j++)
+    DWORD lastSize = 0;
+    BYTE* lastMetaData = nullptr;;
+
+    for (int j = 0; j < 50; j++)
     {
         memset(&iinfo, 0, sizeof(IMAGEINFO));
 
@@ -104,6 +179,32 @@ int main()
         {
             iinfo.imageMode = 2;
             GetPreviewImage(h, &iinfo);
+
+            if (iinfo.metaDataSize)
+            {
+                printf("\n\n");
+
+                if (lastMetaData)
+                {
+                    CompareBytes(lastMetaData, lastSize, iinfo.metaData, iinfo.metaDataSize);
+                }
+                else
+                {
+                    HexDump(iinfo.metaData, iinfo.metaDataSize);
+                }
+
+                lastSize = iinfo.metaDataSize;
+
+                if (lastMetaData)
+                {
+                    delete[] lastMetaData;
+                }
+
+                lastMetaData = new BYTE[lastSize];
+                memcpy(lastMetaData, iinfo.metaData, lastSize);
+            }
+
+            Sleep(2000);
         }
         else
         {

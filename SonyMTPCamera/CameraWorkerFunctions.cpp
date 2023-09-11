@@ -200,7 +200,7 @@ processImage(CameraTaskInfo& info)
             OutputMode mode = ((TakePhotoTaskParams*)info.pTask->GetParam1())->mode;
 
             image->SetOutputMode(mode);
-            image->SetDuration(*(float*)(info.pTask->GetParam1()));
+            image->SetDuration(((TakePhotoTaskParams*)info.pTask->GetParam1())->exposureTime);
 
             // Tell the image how it should be cropped
             DeviceInfo deviceInfo = info.pCamera->GetDeviceInfo();

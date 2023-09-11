@@ -66,6 +66,8 @@ typedef struct
     DWORD width;
     DWORD height;
     DWORD flags;
+    DWORD metaDataSize;
+    BYTE* metaData;
     double duration;
 } IMAGEINFO;
 

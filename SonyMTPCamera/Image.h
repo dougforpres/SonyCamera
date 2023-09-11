@@ -16,6 +16,8 @@ public:
     BYTE* GetData();
     DWORD GetImageDataSize();
     BYTE* GetImageData();
+    DWORD GetMetaDataSize();
+    BYTE* GetMetaData();
     DWORD GetWidth();
     DWORD GetHeight();
     DWORD GetRawWidth();
@@ -53,6 +55,8 @@ private:
     OutputMode m_outputMode = OutputMode::RGB;
     InputMode m_inputMode = InputMode::UNKNOWN;
     BYTE* m_pixelData = nullptr;
+    BYTE* m_metaData = nullptr;
+    int m_metaDataSize = 0;
     int m_cropTop = 0;
     int m_cropLeft = 0;
     int m_cropBottom = 0;

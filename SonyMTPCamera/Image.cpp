@@ -96,6 +96,22 @@ Image::GetImageData()
     return result;
 }
 
+DWORD
+Image::GetMetaDataSize()
+{
+    LOGTRACE(L"InOut: Image::GetMetaDataSize() = x%04x", m_metaDataSize);
+
+    return m_metaDataSize;
+}
+
+BYTE*
+Image::GetMetaData()
+{
+    LOGTRACE(L"InOut:: Image::GetMetaData() = x%08p", m_metaData);
+
+    return m_metaData;
+}
+
 void
 Image::SetCrop(int top, int left, int bottom, int right)
 {
@@ -347,6 +363,12 @@ Image::ProcessJPEGData()
     BYTE* temp = nullptr;
     int imageDataSize = GetDataLength() - m_imageOffset;
     BYTE* imageData = GetData() + m_imageOffset;
+
+    if (m_imageOffset)
+    {
+        m_metaDataSize = m_imageOffset;
+        m_metaData = GetData();
+    }
 
     // Don't care about these two, but are required
     int jpegSubsamp = 0;

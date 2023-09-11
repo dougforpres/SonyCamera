@@ -394,7 +394,7 @@ Camera::DoRefreshProperties()
 bool
 Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
 {
-    LOGTRACE(L"In: Camera::StartCapture(output = %d)", (DWORD)outputMode);
+    LOGTRACE(L"In: Camera::StartCapture(duration = %f, output = %d)", duration,(DWORD)outputMode);
 
     bool result = false;
 
