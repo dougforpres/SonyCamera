@@ -179,6 +179,10 @@
 #define IDS_FOCUSMODE_AF_C              0xfe03
 #define IDS_FOCUSMODE_AF_A              0xfe04
 #define IDS_FOCUSMODE_DMF               0xfe05
+#define IDS_PSEUDOPROP_FOCUS_POSITION   0xfffc
+#define IDS_PSEUDOPROP_TEMPERATURE      0xfffd
+#define IDS_PSEUDOPROP_ISOS             0xfffe
+#define IDS_PSEUDOPROP_EXPOSURE_TIMES   0xffff
 
 // Next default values for new objects
 // 

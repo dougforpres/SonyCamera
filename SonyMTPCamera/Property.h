@@ -129,8 +129,10 @@ enum class Property {
     //Button                    = 0xd2d9, // ?? set AWBL?  (1 off, 2 on)
 
     // Pseudo-properties added by driver
-    PossibleISOs                = 0xfffe,
-    PossibleExposureTimes       = 0xffff,
+    FocusPosition               = 0xfffc,   // Updated while processing exposures from EXIF data
+    BatteryTemperature          = 0xfffd,   // Updated while processing exposures from EXIF data
+    PossibleISOs                = 0xfffe,   // Populated during camera discovery via a live scan
+    PossibleExposureTimes       = 0xffff,   // Populated during camera discovery via a live scan
 };
 
 // ObjectAdded

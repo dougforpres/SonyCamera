@@ -120,7 +120,7 @@ PropertyValue::GetUINT16() const
 INT16
 PropertyValue::GetINT16() const
 {
-    return m_uint16;
+    return m_int16;
 }
 
 UINT32
@@ -132,7 +132,7 @@ PropertyValue::GetUINT32() const
 INT32
 PropertyValue::GetINT32() const
 {
-    return m_uint32;
+    return m_int32;
 }
 
 std::wstring

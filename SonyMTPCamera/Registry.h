@@ -1,5 +1,6 @@
 #pragma once
 #include "pch.h"
+#include <list>
 
 class Registry
 {
@@ -15,6 +16,8 @@ public:
     HKEY CreateKey(std::wstring path);
     bool DoesKeyExist(std::wstring path);
     void CloseKey(HKEY hk);
+    std::list<std::wstring> GetChildKeys(std::wstring path);
+
     bool SetString(HKEY hk, std::wstring value, std::wstring setting);
     bool SetString(std::wstring path, std::wstring value, std::wstring setting);
     bool SetDWORD(HKEY hk, std::wstring value, DWORD setting);

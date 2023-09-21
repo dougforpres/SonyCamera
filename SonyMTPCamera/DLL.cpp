@@ -1440,16 +1440,225 @@ SetExposureTime(HANDLE hCamera, float desired, PROPERTYVALUE* valueOut)
     }
     catch (CameraException& gfe)
     {
-        LOGERROR(L"Exception getting single property: %s", gfe.GetMessage().c_str());
+        LOGERROR(L"Exception setting exposure time: %s", gfe.GetMessage().c_str());
     }
 
     return ERROR_CAN_NOT_COMPLETE;
 }
 
-HRESULT
-TestFunc(HANDLE hCamera)
+DWORD
+GetFocusLimit(HANDLE hCamera)
 {
-    LOGERROR(L"Test log file by writing an error");
+    Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
+
+    if (!camera)
+    {
+        return ERROR_INVALID_HANDLE;
+    }
+
+    try
+    {
+        Locker lock(camera);
+
+        return camera->GetFocusLimit();
+    }
+    catch (CameraException& gfe)
+    {
+        LOGERROR(L"Exception getting focus limit: %s", gfe.GetMessage().c_str());
+    }
+
+    return ERROR_NOT_SUPPORTED;
+}
+
+DWORD
+GetFocusPosition(HANDLE hCamera)
+{
+    Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
+
+    if (!camera)
+    {
+        return ERROR_INVALID_HANDLE;
+    }
+
+    try
+    {
+        Locker lock(camera);
+
+        return camera->GetFocus();
+    }
+    catch (CameraException& gfe)
+    {
+        LOGERROR(L"Exception getting focus: %s", gfe.GetMessage().c_str());
+    }
+
+    return ERROR_NOT_SUPPORTED;
+}
+
+HRESULT
+SetFocusPosition(HANDLE hCamera, DWORD* focusPosition)
+{
+    //#ifdef DEBUG
+    LOGTRACE(L"In: SetFocusPosition(x%p, %d)", hCamera, *focusPosition);
+    //#endif
+
+    Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
+
+    if (!camera)
+    {
+        return ERROR_INVALID_HANDLE;
+    }
+
+    try
+    {
+        Locker lock(camera);
+
+        if (camera->GetFocusLimit() == 0)
+        {
+            throw new CameraException(L"Focus not configured");
+        }
+
+        *focusPosition = camera->SetFocus(*focusPosition);
+
+        //#ifdef DEBUG
+        LOGTRACE(L"Out: SetFocusPosition(...) - new focus position = %d)", *focusPosition);
+        //#endif
+
+        return ERROR_SUCCESS;
+    }
+    catch (CameraException& gfe)
+    {
+        LOGERROR(L"Exception setting focus: %s", gfe.GetMessage().c_str());
+    }
+
+    //#ifdef DEBUG
+    LOGTRACE(L"Out: SetFocusPosition(...) - problem setting focus");
+    //#endif
+
+    return ERROR_NOT_SUPPORTED;
+}
+
+IMPEXP DWORD GetLensCount()
+{
+    DWORD count = 0;
+
+    // Info about the lenses is in registry
+    registry.Open();
+
+    std::list<std::wstring> manufacturers = registry.GetChildKeys(L"Lenses");
+
+    for (std::list<std::wstring>::const_iterator it = manufacturers.begin(); it != manufacturers.end(); it++)
+    {
+        std::wostringstream lensPath;
+
+        lensPath << L"Lenses\\" << *it;
+
+        std::list<std::wstring> lenses = registry.GetChildKeys(lensPath.str());
+        count += lenses.size();
+    }
+
+    registry.Close();
+
+    return count;
+}
+
+IMPEXP HRESULT GetLensInfo(DWORD offset, LENSINFO* plinfo)
+{
+    // Info about the lenses is in registry
+    registry.Open();
+
+    int index = 0;
+    bool populated = false;
+    std::list<std::wstring> manufacturers = registry.GetChildKeys(L"Lenses");
+
+    for (std::list<std::wstring>::const_iterator it = manufacturers.begin(); it != manufacturers.end(); it++)
+    {
+        std::wostringstream lensPath;
+
+        lensPath << L"Lenses\\" << *it;
+
+        std::list<std::wstring> lenses = registry.GetChildKeys(lensPath.str());
+
+        for (std::list<std::wstring>::const_iterator lit = lenses.begin(); lit != lenses.end(); lit++)
+        {
+            std::wostringstream pathBuilder;
+            std::wostringstream lp2;
+
+            pathBuilder << *it << L"\\" << *lit;
+            lp2 << lensPath.str() << L"\\" << *lit;
+
+            if (index == offset)
+            {
+                plinfo->id = exportString(pathBuilder.str());
+                plinfo->manufacturer = exportString(*it);
+                plinfo->model = exportString(registry.GetString(lp2.str(), L"", *lit));
+                plinfo->lensPath = exportString(lp2.str());
+
+                populated = true;
+            }
+
+            index++;
+        }
+    }
+
+    registry.Close();
+
+    return populated ? ERROR_SUCCESS : ERROR_NOT_FOUND;
+}
+
+IMPEXP HRESULT SetAttachedLens(HANDLE hCamera, LPWSTR lensId)
+{
+    //#ifdef DEBUG
+    LOGTRACE(L"In: SetAttachedLens(x%p, %s)", hCamera, lensId);
+    //#endif
+
+    Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
+
+    if (!camera)
+    {
+        return ERROR_INVALID_HANDLE;
+    }
+
+    try
+    {
+        registry.Open();
+
+        std::wostringstream path;
+
+        path << L"Lenses\\" << lensId;
+
+        std::wstring steps = registry.GetString(path.str(), L"Steps", L"");
+
+        registry.Close();
+
+        if (steps.empty())
+        {
+            //#ifdef DEBUG
+            LOGTRACE(L"Out: SetAttachedLens(...) unable to find steps");
+            //#endif
+            return ERROR_NOT_FOUND;
+        }
+
+        camera->SetFocusSteps(steps);
+        //#ifdef DEBUG
+        LOGTRACE(L"Out: SetAttachedLens(...) success");
+        //#endif
+        return ERROR_SUCCESS;
+    }
+    catch (CameraException& gfe)
+    {
+        LOGERROR(L"Exception setting focus: %s", gfe.GetMessage().c_str());
+    }
+
+    //#ifdef DEBUG
+    LOGTRACE(L"Out: SetAttachedLens(...) Error");
+    //#endif
+    return ERROR_NOT_SUPPORTED;
+}
+
+HRESULT
+TestFunc(HANDLE hCamera, DWORD value)
+{
+    LOGERROR(L"Test marker %d", value);
 
     return ERROR_SUCCESS;
 }

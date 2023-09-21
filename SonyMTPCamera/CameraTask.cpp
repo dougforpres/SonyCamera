@@ -685,6 +685,16 @@ DownloadAndProcessImageTask::DownloadAndProcessImageTask(TakePhotoTaskParams* pa
     SetParam1((void*)params);
 }
 
+DownloadAndProcessImageTask::~DownloadAndProcessImageTask()
+{
+    Image* image = (Image*)GetResult();
+
+    if (image)
+    {
+        delete image;
+    }
+}
+
 Image*
 DownloadAndProcessImageTask::GetImage()
 {

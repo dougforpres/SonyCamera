@@ -103,6 +103,9 @@ DeviceInfo::Copy(const DeviceInfo& rhs)
     m_buttonPropertiesInverted = rhs.m_buttonPropertiesInverted;
     m_exposureTimes = rhs.m_exposureTimes;
     m_isos = rhs.m_isos;
+//    m_focusLimit = rhs.m_focusLimit;
+    m_focusSteps = rhs.m_focusSteps;
+    m_focusMagicNumber = rhs.m_focusMagicNumber;
 #ifdef DEBUG
     LOGTRACE(L"Out: DeviceInfo::DeviceInfo(copy)");
 #endif
@@ -215,12 +218,39 @@ DeviceInfo::DumpToLog() const
     LOGINFO(L"  Maximum Exposure Time         %f sec", m_exposureTimeMax);
     LOGINFO(L"  Exposure Time Step            %f sec", m_exposureTimeStep);
     LOGINFO(L"  Bits Per Pixel                %d bits", m_bitsPerPixel);
+
+    std::wstring startMode;
+
+    switch (m_focusStartMode)
+    {
+    case FocusStartMode::RESET_EVERY_TIME:
+        startMode = L"Every Time";
+        break;
+
+    case FocusStartMode::RESET_FIRST_TIME:
+        startMode = L"First Focus Only";
+        break;
+
+    case FocusStartMode::RESET_BIGGER_MOVE:
+        startMode = L"When change is higher than last time";
+        break;
+    }
+
+    LOGINFO(L"  Reset Focus To Infinite       %s", startMode.c_str());
+//    LOGINFO(L"  Focus Limit                   %d", m_focusLimit);
+    LOGINFO(L"  Focus Magic Number            %f", m_focusMagicNumber);
+    LOGINFO(L"  Focus Steps                   %d values", m_focusSteps.size());
+
+    for (std::vector<double>::const_iterator it = m_focusSteps.begin(); it != m_focusSteps.end(); it++)
+    {
+        LOGINFO(L"                              %d", *it);
+    }
 }
 
 void
 DeviceInfo::DumpList(std::list<WORD> list) const
 {
-    for (std::list<WORD>::iterator it = list.begin(); it != list.end(); it++)
+    for (std::list<WORD>::const_iterator it = list.begin(); it != list.end(); it++)
     {
         LOGINFO(L"                              %d (x%04x)", *it, *it);
     }
@@ -229,9 +259,18 @@ DeviceInfo::DumpList(std::list<WORD> list) const
 void
 DeviceInfo::DumpList(std::list<DWORD> list) const
 {
-    for (std::list<DWORD>::iterator it = list.begin(); it != list.end(); it++)
+    for (std::list<DWORD>::const_iterator it = list.begin(); it != list.end(); it++)
     {
         LOGINFO(L"                              %d (x%08x)", *it, *it);
+    }
+}
+
+void
+DeviceInfo::DumpList(std::list<std::wstring> list) const
+{
+    for (std::list<std::wstring>::const_iterator it = list.begin(); it != list.end(); it++)
+    {
+        LOGINFO(L"                              %s", (*it).c_str());
     }
 }
 
@@ -557,4 +596,52 @@ void
 DeviceInfo::SetBitsPerPixel(UINT32 bpp)
 {
     m_bitsPerPixel = bpp;
+}
+
+//UINT16
+//DeviceInfo::GetFocusLimit() const
+//{
+//    return m_focusLimit;
+//}
+//
+//void
+//DeviceInfo::SetFocusLimit(UINT16 limit)
+//{
+//    m_focusLimit = limit;
+//}
+
+std::vector<double>
+DeviceInfo::GetFocusSteps() const
+{
+    return m_focusSteps;
+}
+
+void
+DeviceInfo::SetFocusSteps(std::vector<double> steps)
+{
+    m_focusSteps = steps;
+}
+
+double
+DeviceInfo::GetFocusMagicNumber() const
+{
+    return m_focusMagicNumber;
+}
+
+void
+DeviceInfo::SetFocusMagicNumber(double magic)
+{
+    m_focusMagicNumber = magic;
+}
+
+FocusStartMode
+DeviceInfo::GetFocusStartMode()
+{
+    return m_focusStartMode;
+}
+
+void
+DeviceInfo::SetFocusStartMode(FocusStartMode mode)
+{
+    m_focusStartMode = mode;
 }

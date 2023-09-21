@@ -1,4 +1,21 @@
 # Change Log
+## 1.0.1.12
+Even more changes!
+
+* Added pseudo properties for Temperature and Focus Position.  Temperature is updated after a photo is taken, as it is read from the EXIF data, it is passed thru to ASCOM. Focus position isn't terribly useful.
+* ICLE-1 (A1): Added exposure information.
+* Fixed a massive memory leak that appeared since last version.
+* Updated focus control to emulate Absolute focuser. (Tested on NINA and APT and appears to work). Requires the specific lens model to be learnt.
+
+Currently has support for the following lenses:
+* Sony E 3.5-5.6/PZ 16-50 OSS (the kit lens that came with my a6400)
+* Sigma 16mm F1.4 DC DN | Contemporary 017 (my other lens)
+* Sigma 85mm F1.4 DG DN | A (thanks Fabian!)
+* Sigma 50mm F1.4 DG DN | A (thanks Fabian!)
+* Tamron 150-500mm F/5-6.7 Di III VC VXD (thanks Fabian!)
+
+Focuser support has been only minimally tested, YMMV
+
 ## 1.0.1.0
 Major changes in this release!
 Performance seems to be slightly improved.

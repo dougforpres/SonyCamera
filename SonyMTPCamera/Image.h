@@ -32,6 +32,8 @@ public:
     void SetDuration(double duration);
     double GetDuration();
     void SetCrop(int top, int left, int bottom, int right);
+    double GetBatteryTemperature();
+    DWORD GetFocusPosition();
 
 private:
     std::wstring WidenString(const char* shortString);
@@ -65,6 +67,8 @@ private:
     DWORD m_rawHeight = 0;
     DWORD m_croppedWidth = 0;
     DWORD m_croppedHeight = 0;
+    double m_batteryTemperature = 0.0;
+    DWORD m_focusPosition = 0xffff;
 
     static std::wstring s_savePath;
 };

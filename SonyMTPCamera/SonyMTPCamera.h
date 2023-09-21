@@ -100,6 +100,14 @@ typedef struct
     LPWSTR model;
     LPWSTR devicePath;
 } PORTABLEDEVICEINFO;
+
+typedef struct
+{
+    LPWSTR id;
+    LPWSTR manufacturer;
+    LPWSTR model;
+    LPWSTR lensPath;
+} LENSINFO;
 //#pragma pack(pop)
 
 #ifdef _SONYMTPCAMERA_DLL_BUILD
@@ -139,6 +147,15 @@ extern "C" {
     IMPEXP HRESULT SetPropertyValue(HANDLE hCamera, DWORD propertyId, DWORD value);
     IMPEXP HRESULT SetExposureTime(HANDLE hCamera, float exposureTime, PROPERTYVALUE* valueOut);
 
+    /* Functions for Focus Control */
+    IMPEXP HRESULT SetFocusPosition(HANDLE hCamera, DWORD* position);
+    IMPEXP DWORD GetFocusPosition(HANDLE hCamera);
+    IMPEXP DWORD GetFocusLimit(HANDLE hCamera);
+
+    IMPEXP DWORD GetLensCount();
+    IMPEXP HRESULT GetLensInfo(DWORD offset, LENSINFO* plinfo);
+    IMPEXP HRESULT SetAttachedLens(HANDLE hCamera, LPWSTR lensId);
+
     // General purpose test function
-    IMPEXP HRESULT TestFunc(HANDLE hCamera);
+    IMPEXP HRESULT TestFunc(HANDLE hCamera, DWORD value);
 }

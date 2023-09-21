@@ -1,6 +1,8 @@
 #pragma once
 #include "MessageReader.h"
 #include <string>
+#include <list>
+#include <vector>
 
 enum class SensorType
 {
@@ -18,6 +20,13 @@ enum class CropMode
     NONE = 0,
     AUTO = 1,
     USER = 2,
+};
+
+enum class FocusStartMode
+{
+    RESET_EVERY_TIME = 0,
+    RESET_FIRST_TIME = 1,
+    RESET_BIGGER_MOVE = 2,
 };
 
 class DeviceInfo : public MessageReader
@@ -84,6 +93,14 @@ public:
     void SetISOs(std::list<DWORD> isos);
     UINT32 GetBitsPerPixel() const;
     void SetBitsPerPixel(UINT32 bpp);
+//    UINT16 GetFocusLimit() const;
+//    void SetFocusLimit(UINT16 limit);
+    std::vector<double> GetFocusSteps() const;
+    void SetFocusSteps(std::vector<double> steps);
+    double GetFocusMagicNumber() const;
+    void SetFocusMagicNumber(double magic);
+    FocusStartMode GetFocusStartMode();
+    void SetFocusStartMode(FocusStartMode mode);
 
     bool GetButtonPropertiesInverted() const;
     void SetButtonPropertiesInverted(bool invert);
@@ -92,6 +109,7 @@ private:
     void Copy(const DeviceInfo& rhs);
     void DumpList(std::list<WORD> list) const;
     void DumpList(std::list<DWORD> list) const;
+    void DumpList(std::list<std::wstring> list) const;
 
     double m_standardVersion = 0;
     DWORD m_vendorExtensionId = 0;
@@ -137,5 +155,11 @@ private:
     bool m_buttonPropertiesInverted = false;
     std::list<DWORD> m_exposureTimes;
     std::list<DWORD> m_isos;
+
+    // For focus
+//    UINT16 m_focusLimit = 9999;
+    std::vector<double> m_focusSteps;
+    double m_focusMagicNumber = 0.0;
+    FocusStartMode m_focusStartMode = FocusStartMode::RESET_EVERY_TIME;
 };
 

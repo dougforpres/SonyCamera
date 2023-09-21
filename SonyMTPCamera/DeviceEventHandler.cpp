@@ -8,6 +8,8 @@
 #include <objbase.h>
 #include "ResourceLoader.h"
 
+#define DUMP_EVENT_PARAMS
+
 std::wstring g_strEventRegistrationCookie;
 
 DeviceEventHandler::DeviceEventHandler(IPortableDevice* device, Camera* camera)
@@ -249,34 +251,36 @@ DeviceEventHandler::OnEvent(IPortableDeviceValues* pEventParameters)
             }
         }
 
-        //IPortableDevicePropVariantCollection* pdpvc;
+#ifdef DUMP_EVENT_PARAMS
+        IPortableDevicePropVariantCollection* pdpvc;
 
-        //hr = pEventParameters->GetIPortableDevicePropVariantCollectionValue(WPD_PROPERTY_MTP_EXT_EVENT_PARAMS, &pdpvc);
+        hr = pEventParameters->GetIPortableDevicePropVariantCollectionValue(WPD_PROPERTY_MTP_EXT_EVENT_PARAMS, &pdpvc);
 
-        //if (SUCCEEDED(hr))
-        //{
-        //    pdpvc->AddRef();
-        //    DWORD count = 0;
-        //    pdpvc->GetCount(&count);
+        if (SUCCEEDED(hr))
+        {
+            pdpvc->AddRef();
+            DWORD count = 0;
+            pdpvc->GetCount(&count);
 
-        //    for (int i = 0; i < count; i++)
-        //    {
-        //        LOGTRACE(L"--- Property %d", i);
-        //        PROPVARIANT val;
-        //        pdpvc->GetAt(i, &val);
+            for (int i = 0; i < count; i++)
+            {
+                LOGTRACE(L"--- Property %d", i);
+                PROPVARIANT val;
+                pdpvc->GetAt(i, &val);
 
-        //        if (val.vt == VT_UI4)
-        //        {
-        //            LOGTRACE(L"    UI4 => x%08x (%s)", val.uiVal, ResourceLoader::GetString(val.uiVal).c_str());
-        //        }
-        //        else
-        //        {
-        //            LOGTRACE(L"    type = %d", val.vt);
-        //        }
-        //    }
-        //}
+                if (val.vt == VT_UI4)
+                {
+                    LOGTRACE(L"    UI4 => x%08x (%s)", val.uiVal, ResourceLoader::GetString(val.uiVal).c_str());
+                }
+                else
+                {
+                    LOGTRACE(L"    type = %d", val.vt);
+                }
+            }
+        }
 
-        //pdpvc->Release();
+        pdpvc->Release();
+#endif
     }
 
     LOGTRACE(L"DeviceEventHandler::OnEvent() - out, returning %08x", hr);

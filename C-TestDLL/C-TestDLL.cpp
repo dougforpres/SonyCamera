@@ -171,7 +171,7 @@ int main()
     DWORD lastSize = 0;
     BYTE* lastMetaData = nullptr;;
 
-    for (int j = 0; j < 50; j++)
+    for (int j = 0; j < 10; j++)
     {
         memset(&iinfo, 0, sizeof(IMAGEINFO));
 
@@ -202,6 +202,8 @@ int main()
 
                 lastMetaData = new BYTE[lastSize];
                 memcpy(lastMetaData, iinfo.metaData, lastSize);
+                CoTaskMemFree(iinfo.metaData);
+//                CoTaskMemFree(iinfo.data);
             }
 
             Sleep(2000);
@@ -218,6 +220,15 @@ int main()
                 GetCaptureStatus(h, &iinfo);
                 Sleep(50);
             }
+
+            PROPERTYVALUE v;
+
+            GetSinglePropertyValue(h, 0xfffd, &v);
+//            if (iinfo.data)
+//            {
+//                CoTaskMemFree(iinfo.data);
+////                delete[] iinfo.data;
+//            }
         }
 
         count++;

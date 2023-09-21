@@ -191,6 +191,12 @@ Image::ProcessARWData()
 
         if (libraw)
         {
+            // Pull some values from the makernotes that the camera doesn't expose via properties
+            libraw_makernotes_t meta = libraw->imgdata.makernotes;
+
+            m_batteryTemperature = (double)meta.common.BatteryTemperature;
+            m_focusPosition = meta.sony.FocusPosition;
+
             processed = libraw->dcraw_make_mem_image(&r);
 
             if (r != LIBRAW_SUCCESS)
@@ -231,6 +237,12 @@ Image::ProcessARWData()
 
         if (libraw)
         {
+            // Pull some values from the makernotes that the camera doesn't expose via properties
+            libraw_makernotes_t meta = libraw->imgdata.makernotes;
+
+            m_batteryTemperature = (double)meta.common.BatteryTemperature;
+            m_focusPosition = meta.sony.FocusPosition;
+
             r = libraw->raw2image();
 
             if (r != LIBRAW_SUCCESS)
@@ -807,4 +819,16 @@ DWORD
 Image::GetCroppedHeight()
 {
     return m_croppedHeight;
+}
+
+DWORD
+Image::GetFocusPosition()
+{
+    return m_focusPosition;
+}
+
+double
+Image::GetBatteryTemperature()
+{
+    return m_batteryTemperature;
 }

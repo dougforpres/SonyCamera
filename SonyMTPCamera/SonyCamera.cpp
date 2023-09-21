@@ -147,7 +147,11 @@ SonyCamera::RefreshSettings()
     {
         CameraSettings cs = CameraSettings(rx);
 
-        LoadFakeProperties(&cs);
+        // Only need to load up the fakes first time thru
+        if (!m_settings)
+        {
+            LoadFakeProperties(&cs);
+        }
 
         DWORD waitResult = WaitForSingleObject(m_hBusyMutex, 1000);
 
@@ -238,4 +242,174 @@ SonyCamera::SetProperty(const Property id, PropertyValue* value)
     LOGTRACE(L"Out: SonyCamera::SetProperty(x%08x, %s), - result = %d", (int)id, value->ToString().c_str(), result);
 
     return result;
+}
+
+UINT16
+SonyCamera::SetFocus(UINT16 focusPosition)
+{
+    DeviceInfo di = GetDeviceInfo();
+    UINT16 maxStepSize = m_focusSteps.rbegin()->first;
+    UINT16 focusDiff = abs(m_lastFocusPosition - focusPosition);
+
+    if (m_currentFocusPosition < 0 || m_currentFocusPosition > GetFocusLimit()
+        || di.GetFocusStartMode() == FocusStartMode::RESET_EVERY_TIME
+        || (di.GetFocusStartMode() == FocusStartMode::RESET_BIGGER_MOVE && focusDiff > m_lastFocusDiff))
+    {
+        // The "+1" covers situation where biggest step is not an integer
+        for (UINT16 resetPos = 0; resetPos < (GetFocusLimit() / m_focusSteps.rbegin()->second) + 1; resetPos++)
+        {
+            MoveFocus(maxStepSize);
+        }
+    }
+
+    m_lastFocusPosition = m_currentFocusPosition;
+    m_lastFocusDiff = abs(m_currentFocusPosition - focusPosition);
+
+    if (abs(m_currentFocusPosition - focusPosition) <= m_focusSteps.begin()->second)
+    {
+        LOGTRACE(L"Not altering focus, we're as close as we can get @ %d vs desired %d", m_currentFocusPosition, focusPosition);
+
+        return (UINT16)m_currentFocusPosition;
+    }
+
+    int attempts = 0;
+
+    while (abs(m_currentFocusPosition - focusPosition) >= m_focusSteps[1] && attempts < maxStepSize * 10)
+    {
+        attempts++;
+
+        // Calculate steps to get from here to there
+        INT16 diff = focusPosition - m_currentFocusPosition;
+
+        // We could just find largest step LESS than desired position,
+        // but it would be more efficient to find largest step CLOSEST
+        // to desired position, then repeat
+        INT16 idealStep = 1;
+
+        INT16 usize = abs(diff);
+        INT16 bestDiff = abs(usize - m_focusSteps[idealStep]);
+
+        for (UINT16 test_id = idealStep + 1; test_id <= maxStepSize; test_id += 1)
+        {
+            UINT diff2 = abs(usize - m_focusSteps[test_id]);
+
+            if (diff2 < bestDiff)
+            {
+                idealStep = test_id;
+                bestDiff = diff2;
+            }
+        }
+
+        if (diff < 0)
+        {
+            idealStep = -idealStep;
+        }
+
+        MoveFocus(idealStep);
+    }
+
+    return (UINT16)m_currentFocusPosition;
+}
+
+UINT16
+SonyCamera::GetFocusLimit()
+{
+    return m_focusLimit;
+}
+
+UINT16
+SonyCamera::GetFocus()
+{
+    return m_focusSteps.empty() ? GetFocusLimit() + 1 : (UINT16)m_currentFocusPosition;
+}
+
+void
+SonyCamera::SetFocusSteps(std::wstring steps)
+{
+    DeviceInfo di = GetDeviceInfo();
+
+    m_focusSteps.clear();
+
+    std::unique_ptr<CameraProperty> focusProp(GetProperty(Property::FocusControl));
+    std::vector<double> deviceSteps;
+    std::wstring s;
+    std::wistringstream values(steps);
+
+    // A list of comma separated pairs
+    while (std::getline(values, s, L',')) {
+        deviceSteps.push_back(_wtof(s.c_str()));
+    }
+
+    if (deviceSteps.empty() && di.GetFocusMagicNumber())
+    {
+        // Populate deviceSteps without scaling, then reprocess
+        UINT16 maxStepSize = focusProp->GetInfo()->GetRangeHi()->GetINT16();
+
+        for (UINT16 i = 0; i < maxStepSize; i++)
+        {
+            deviceSteps.push_back(pow(di.GetFocusMagicNumber(), i));
+        }
+    }
+
+    if (!deviceSteps.empty())
+    {
+        UINT16 index = 1;
+        m_focusLimit = *deviceSteps.begin();
+
+        for (std::vector<double>::const_iterator it = deviceSteps.begin(); it != deviceSteps.end(); it++)
+        {
+            m_focusSteps[index] = (double)m_focusLimit / *it;
+            index++;
+        }
+
+        for (std::map<UINT16, UINT16>::const_iterator it = m_focusSteps.begin(); it != m_focusSteps.end(); it++)
+        {
+            LOGINFO(L"Focus step %d = %d", (*it).first, (*it).second);
+        }
+
+        // We should probably reset focus so we know where we are
+        m_currentFocusPosition = -1;
+        SetFocus(m_focusLimit);
+    }
+}
+
+void
+SonyCamera::MoveFocus(INT16 step)
+{
+    short diff = m_focusSteps[abs(step)];
+
+    LOGTRACE(L"Moving focus by %d (current = %d, step_size = %d).. ", step, m_currentFocusPosition, diff);
+
+    PropertyValue pv(step);
+    SetProperty(Property::FocusControl, &pv);
+
+    //if (abs(step) == m_focusSteps.rbegin()->first)
+    //{
+    //    m_currentFocusPosition = step < 0 ? 0 : GetFocusLimit();
+    //}
+    //else
+    //{
+        if (step < 0)
+        {
+            m_currentFocusPosition -= diff;
+        }
+        else
+        {
+            m_currentFocusPosition += diff;
+        }
+
+        if (m_currentFocusPosition < 0)
+        {
+            m_currentFocusPosition = 0;
+        }
+
+        if (m_currentFocusPosition > GetFocusLimit())
+        {
+            m_currentFocusPosition = GetFocusLimit();
+        }
+//    }
+
+    LOGTRACE(L" new position = %d\n", m_currentFocusPosition);
+
+    Sleep(200 * abs(step));
 }

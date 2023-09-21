@@ -105,6 +105,46 @@ Registry::DoesKeyExist(std::wstring path)
     return false;
 }
 
+std::list<std::wstring>
+Registry::GetChildKeys(std::wstring path)
+{
+    std::list<std::wstring> results;
+
+    HKEY hk = nullptr;
+    LSTATUS hr = RegOpenKeyEx(m_hk, path.c_str(), 0, KEY_READ | KEY_QUERY_VALUE, &hk);
+
+    if (hr == ERROR_SUCCESS)
+    {
+        DWORD index = 0;
+        DWORD size = 0;
+
+        if (RegQueryInfoKey(hk, nullptr, nullptr, nullptr, nullptr, &size, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr) == ERROR_SUCCESS)
+        {
+            size += 1;
+            wchar_t* name = new wchar_t[size];
+
+            do
+            {
+                DWORD sizeIn = size;
+
+                hr = RegEnumKeyEx(hk, index, name, &sizeIn, nullptr, nullptr, nullptr, nullptr);
+
+                if (hr == ERROR_SUCCESS)
+                {
+                    results.push_back(name);
+                    index++;
+                }
+            } while (hr == ERROR_SUCCESS);
+
+            delete[] name;
+        }
+
+        RegCloseKey(hk);
+    }
+
+    return results;
+}
+
 HKEY
 Registry::CreateKey(std::wstring path)
 {

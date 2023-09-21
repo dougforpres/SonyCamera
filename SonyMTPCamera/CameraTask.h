@@ -163,6 +163,7 @@ class DownloadAndProcessImageTask : public CameraTask
 {
 public:
     DownloadAndProcessImageTask(TakePhotoTaskParams* params);
+    ~DownloadAndProcessImageTask();
 
     Image* GetImage();
 };

@@ -2,6 +2,7 @@
 #include "Camera.h"
 #include "CameraSupportedProperties.h"
 #include <unordered_map>
+#include <map>
 #include "PropertyInfo.h"
 
 // Sony Commands - Seem to have a handle on these ones
@@ -40,7 +41,18 @@ public:
     bool Initialize();
     bool RefreshSettings();
     bool SetProperty(const Property id, PropertyValue* value);
+    virtual UINT16 SetFocus(UINT16 focusPosition);
+    virtual UINT16 GetFocusLimit();
+    virtual UINT16 GetFocus();
+    virtual void SetFocusSteps(std::wstring steps);
 
 private:
+    void MoveFocus(INT16 step);
+
+    std::map<UINT16, UINT16> m_focusSteps;
+    INT16 m_currentFocusPosition = -1;
+    UINT16 m_lastFocusPosition = 0;
+    UINT16 m_lastFocusDiff = 0;
+    UINT16 m_focusLimit = 0;
 };
 

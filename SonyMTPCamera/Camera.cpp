@@ -174,11 +174,39 @@ Camera::LoadFakeProperties(CameraSettings* settings)
     // Add Magic infos
     CameraPropertyFactory f;
 
-    CameraProperty* p = f.Create(Property::PossibleExposureTimes);
+    CameraProperty* p = f.Create(Property::BatteryTemperature);
+    p->SetCurrentValue(new PropertyValue((INT16)0xffff));
+
+    PropertyInfo* inf = new PropertyInfo();
+
+    inf->SetDefault(new PropertyValue((INT16)0xffff));
+    inf->SetId(Property::BatteryTemperature);
+    inf->SetType(DataType::INT16);
+    inf->SetFormMode(FormMode::NONE);
+
+    p->SetInfo(inf);
+
+    settings->AddProperty(p);
+
+    p = f.Create(Property::FocusPosition);
+    p->SetCurrentValue(new PropertyValue((UINT16)0xffff));
+
+    inf = new PropertyInfo();
+
+    inf->SetDefault(new PropertyValue((UINT16)0xffff));
+    inf->SetId(Property::FocusPosition);
+    inf->SetType(DataType::UINT16);
+    inf->SetFormMode(FormMode::NONE);
+
+    p->SetInfo(inf);
+
+    settings->AddProperty(p);
+
+    p = f.Create(Property::PossibleExposureTimes);
     DeviceInfo deviceInfo = GetDeviceInfo();
     p->SetCurrentValue(new PropertyValue(0));
 
-    PropertyInfo* inf = new PropertyInfo();
+    inf = new PropertyInfo();
 
     inf->SetDefault(new PropertyValue((UINT32)0));
     inf->SetId(Property::PossibleExposureTimes);
@@ -302,10 +330,13 @@ Camera::ProcessDeviceInfoOverrides(DeviceInfo& deviceInfo)
     deviceInfo.SetBottomCrop((UINT16)registry.GetDWORD(cameraPath, L"Crop Bottom", deviceInfo.GetBottomCrop()));
     deviceInfo.SetButtonPropertiesInverted((bool)registry.GetDWORD(cameraPath, L"Button Properties Inverted", deviceInfo.GetButtonPropertiesInverted()));
     deviceInfo.SetBitsPerPixel(registry.GetDWORD(cameraPath, L"Bits Per Pixel", deviceInfo.GetBitsPerPixel()));
+//    deviceInfo.SetFocusLimit((UINT16)registry.GetDWORD(cameraPath, L"Focus Limit", deviceInfo.GetFocusLimit()));
+    deviceInfo.SetFocusMagicNumber(registry.GetDouble(cameraPath, L"Focus Magic Number", deviceInfo.GetFocusMagicNumber()));
+    deviceInfo.SetFocusStartMode((FocusStartMode)registry.GetDWORD(cameraPath, L"Focus Start Mode", (DWORD)deviceInfo.GetFocusStartMode()));
 
+    std::wstring s;
     std::wistringstream exposureTimes(registry.GetString(cameraPath, L"Exposure Times", L""));
     std::list<DWORD> times;
-    std::wstring s;
 
     while (std::getline(exposureTimes, s, L',')) {
         times.push_back(_wtoi(s.c_str()));
@@ -684,6 +715,39 @@ Camera::GetCapturedImage()
 
     if (image)
     {
+        // Update a couple of settings based on some EXIF data read from the image
+        DWORD waitResult = WaitForSingleObject(m_hBusyMutex, 1000);
+        CameraSettings* result = nullptr;
+
+        if (waitResult == WAIT_OBJECT_0)
+        {
+            LOGTRACE(L"Updating temperature and focus properties from EXIF");
+
+            CameraProperty* existing = m_settings->GetProperty(Property::BatteryTemperature);
+
+            if (existing)
+            {
+                existing->SetCurrentValue(new PropertyValue((INT16)(image->GetBatteryTemperature() * 10)));
+            }
+            else
+            {
+                LOGERROR(L"Unable to find BatteryTemperature property");
+            }
+
+            existing = m_settings->GetProperty(Property::FocusPosition);
+
+            if (existing)
+            {
+                existing->SetCurrentValue(new PropertyValue((UINT16)image->GetFocusPosition()));
+            }
+            else
+            {
+                LOGERROR(L"Unable to find FocusPosition property");
+            }
+        }
+
+        ReleaseMutex(m_hBusyMutex);
+
         return image;
     }
 

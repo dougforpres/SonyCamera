@@ -604,9 +604,25 @@ std::wstring
 Div10Property::AsString(PropertyValue* in) const
 {
     std::wostringstream builder;
-    UINT16 value = in->GetUINT16();
 
-    builder << value / 10.0;
+    switch (in->GetType())
+    {
+    case DataType::UINT16:
+    {
+        UINT16 value = in->GetUINT16();
+
+        builder << value / 10.0;
+    }
+    break;
+
+    case DataType::INT16:
+    {
+        INT16 value = in->GetINT16();
+
+        builder << value / 10.0;
+    }
+    break;
+    }
 
     return builder.str();
 }
@@ -932,6 +948,7 @@ CameraPropertyFactory::CameraPropertyFactory()
     AddCreator(Property::FlashExposureLock, &pCreate<StringLookupProperty>);
     AddCreator(Property::AutoExposureLock, &pCreate<StringLookupProperty>);
     AddCreator(Property::AutoWhileBalanceLock, &pCreate<StringLookupProperty>);
+    AddCreator(Property::BatteryTemperature, &pCreate<Div10Property>);
     AddCreator(Property::PossibleExposureTimes, &pCreate<ShutterTimingProperty>);
     AddCreator(Property::PossibleISOs, &pCreate<ISOProperty>);
 }

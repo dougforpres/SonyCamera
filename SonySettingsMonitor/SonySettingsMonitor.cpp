@@ -7,14 +7,342 @@
 
 #include <iostream>
 #include <Windows.h>
+#include <conio.h>
+#include <map>
+#include <math.h>
 #include "SonyMTPCamera.h"
+
+#define FOCUS_PROP 0xd2d1
+
+#define FOCUS_FULL_CLOSE 0xfff9
+#define FOCUS_BIG_CLOSE 0xfffd
+#define FOCUS_MEDIUM_CLOSE 0xfffe
+#define FOCUS_SMALL_CLOSE 0xffff
+#define FOCUS_SMALL_FAR 0x0001
+#define FOCUS_MEDIUM_FAR 0x0002
+#define FOCUS_BIG_FAR 0x0003
+#define FOCUS_FULL_FAR 0x0007
+
+void
+scanFocus(HANDLE h, DWORD stepSize, int steps, bool slow)
+{
+    // First, set focus to infinite
+    printf("Setting full near\n");
+    TestFunc(h, FOCUS_FULL_CLOSE);
+    SetPropertyValue(h, FOCUS_PROP, FOCUS_FULL_CLOSE);
+
+    Sleep(slow ? 5000 : 1000);
+
+    printf("Stepping in %d steps of %d\n", steps, stepSize);
+
+    for (int i = 0; i < steps; i++)
+    {
+        printf("%d/%d of %d\n", i + 1, steps, stepSize);
+
+        TestFunc(h, i);
+        SetPropertyValue(h, FOCUS_PROP, stepSize);
+        Sleep(150);
+        if (slow)
+        {
+            printf("Press a key\n");
+            if (_getch() != 32)
+            {
+                TestFunc(h, 9999);
+            }
+        }
+    }
+
+    printf("Sleeping before next run...\n");
+    Sleep(5000);
+
+    //TestFunc(h, FOCUS_FULL_FAR);
+    //SetPropertyValue(h, FOCUS_PROP, FOCUS_FULL_FAR);
+
+    //Sleep(1000);
+
+    //for (int small_steps = 0; small_steps < 270; small_steps++)
+    //{
+    //    printf("%d - small step in\n", small_steps);
+    //    TestFunc(h, small_steps);
+    //    SetPropertyValue(h, FOCUS_PROP, FOCUS_SMALL_CLOSE);
+    //    Sleep(100);
+    //    //if (_getch() != 32)
+    //    //{
+    //    //    TestFunc(h, 9999);
+    //    //}
+    //}
+}
+
+const short min_position = 0;
+const short max_position = 9999;
+const double step_growth_rate = 2.53;
+const unsigned short max_step_size = 7;
+
+bool always_reset_to_infinite = true;
+
+short current_position = -1;
+
+std::map<unsigned short, short> steps;
+
+double calculate_step(unsigned short step_size)
+{
+    double scale = double(max_position) / pow(step_growth_rate, max_step_size - 1);
+
+    return pow(step_growth_rate, step_size) * scale;
+}
+
+void populate_sizes()
+{
+    for (int i = 0; i < max_step_size; i++)
+    {
+        steps[i + 1] = calculate_step(i);
+    }
+}
+
+void move(HANDLE hCamera, short step)
+{
+    short diff = steps[abs(step)];
+
+    printf("Moving focus by %d (current = %d, step_size = %d).. ", step, current_position, diff);
+    SetPropertyValue(hCamera, FOCUS_PROP, step);
+
+    if (abs(step) == max_step_size)
+    {
+        current_position = step < 0 ? min_position : max_position;
+    }
+    else
+    {
+        if (step < 0)
+        {
+            current_position -= diff;
+        }
+        else
+        {
+            current_position += diff;
+        }
+
+        if (current_position < min_position)
+        {
+            current_position = min_position;
+        }
+
+        if (current_position > max_position)
+        {
+            current_position = max_position;
+        }
+    }
+
+    printf(" new position = %d\n", current_position);
+
+    Sleep(200);
+}
+
+short nearest_step(short size)
+{
+    size = abs(size);
+
+    short best_id = 1;
+    short best_diff = abs(size - steps[best_id]);
+
+    for (short test_id = best_id + 1; test_id < max_step_size; test_id += 1)
+    {
+        short diff = abs(size - steps[test_id]);
+
+        if (diff < best_diff)
+        {
+            best_id = test_id;
+            best_diff = diff;
+        }
+    }
+
+    return best_id;
+}
+
+void set_focus(HANDLE hCamera, short position)
+{
+    if (current_position == -1 || always_reset_to_infinite)
+    {
+        move(hCamera, max_step_size);
+    }
+
+    while (abs(current_position - position) >= steps[1])
+    {
+        // Calculate steps to get from here to there
+        short diff = position - current_position;
+
+        // We could just find largest step LESS than desired position,
+        // but it would be more efficient to find largest step CLOSEST
+        // to desired position, then repeat
+        short ideal_step = nearest_step(diff);
+
+        if (diff < 0)
+        {
+            ideal_step = -ideal_step;
+        }
+
+        move(hCamera, ideal_step);
+    }
+}
+
+void
+testFocus(HANDLE h)
+{
+//    populate_sizes();
+
+    for (int t = 0; t < 10; t++)
+    {
+        DWORD pos = rand() % (max_position + 1);
+
+        printf("About to test random move to %d\n", pos);
+//        set_focus(h, pos);
+        SetFocusPosition(h, &pos);
+    }
+}
+
+void
+resetFocus(HANDLE h)
+{
+    for (int i = 0; i < 10; i++)
+    {
+        SetPropertyValue(h, FOCUS_PROP, 7);
+        Sleep(500);
+    }
+}
+
+void
+calcFocusRanges(HANDLE h)
+{
+    std::map<int, float> values;
+    PROPERTYDESCRIPTOR pd;
+    double growth = 2.0;
+
+    GetPropertyDescriptor(h, FOCUS_PROP, &pd);
+
+    printf("Scanning focus, largest step first!\nAfter that, assuming a > %.1fx growth rate\n\n");
+
+    for (int size = 7; size > 0; size--)
+    {
+        printf("\n-----\nSTEP SIZE %d\nResetting focus to far-right\n", size);
+        resetFocus(h);
+        Sleep(1000);
+
+        float steps = 0.0;
+
+        if (size < 7)
+        {
+            int pre = values[size + 1] * growth;
+
+            // the pre value is very accurate, and we don't want to go over, so we'll trim say 5% off
+            pre = pre * 0.95;
+
+            // Move some portion of distance to assumed next step
+            printf("Based on previous setting, pre-moving %d steps (so you don't have to)\n", pre);
+
+            for (int s = 0; s < pre; s++)
+            {
+                printf("\r%d/%d...", s+1, pre);
+                SetPropertyValue(h, FOCUS_PROP, -size);
+                Sleep(200);
+                steps++;
+            }
+        }
+
+        printf("\nGoing to repeatedly move in steps of size %d - press a key when ready to start...", size);
+        _getch();
+        printf("\n");
+
+        do
+        {
+            steps++;
+            SetPropertyValue(h, FOCUS_PROP, -size);
+            Sleep(200);
+            printf("\nStep %d... press 'Y' if focus is at left-hand side, else press something else", (int)steps);
+        } while (toupper(_getch()) != 'Y');
+
+        printf("\nIf the last move was only a partial move (i.e. %d.2) enter that here, otherwise enter %d : ", (int)(steps - 1), (int)steps);
+
+        scanf_s("%f", &steps);
+        values[size] = steps;
+
+        if (size < 7)
+        {
+            // Recalculate growth
+            double new_growth = steps / values[size + 1];
+            double avg = (growth + new_growth) / 2;
+
+            printf("Growth rate was %.2f, updating to %.2f\n", growth, avg);
+            growth = avg;
+        }
+    }
+
+    printf("Results:\n");
+
+    for (int i = 1; i <= 7; i++)
+    {
+        printf("Step size %d - count %.1f\n", i, values[i]);
+    }
+
+    do
+    {
+        printf("\n\nPress 'X' to exit");
+    } while (toupper(_getch() != 'X'));
+
+    //scanFocus(h, 7, 1, false);  // All the way - 1 step end-to-end
+    //scanFocus(h, 6, 3, false);  // 45% - not super useful - 3 steps end-to-end
+    //scanFocus(h, 5, 6, false);  // 16% - not super useful - 6 steps end-to-end
+    //scanFocus(h, 4, 16, false);  // 6.25% - not super useful - 16 steps end-to-end
+    //scanFocus(h, 3, 41, false);   // 41 steps end-to-end
+    //scanFocus(h, 2, 103, false);   // sony, wtf, 103 steps?
+    //scanFocus(h, 1, 264, false);
+}
+
+void testFocusAPI(HANDLE h)
+{
+    DWORD count = GetLensCount();
+
+    printf("There appear to be %d lenses available to choose from\n", count);
+
+    LENSINFO lense;
+
+    // Test get info method
+    DWORD infoCount = count;
+
+    for (int i = 0; i < count; i++)
+    {
+        GetLensInfo(i, &lense);
+
+//        SetAttachedLens(h, lense.id);
+
+        //if (i == 0)
+        //{
+        //    DWORD position;
+
+        //    position = 0;
+
+        //    // Test focus
+        //    SetFocusPosition(h, &position);
+
+        //    position = 300;
+
+        //    SetFocusPosition(h, &position);
+
+        //    position = 600;
+
+        //    SetFocusPosition(h, &position);
+
+        //    position = GetFocusLimit(h);
+
+        //    SetFocusPosition(h, &position);
+        //}
+    }
+}
 
 void
 watchSettings(HANDLE h, bool loop)
 {
     DWORD count = 0;
     IMAGEINFO iinfo;
-
+    
     GetPropertyList(h, nullptr, &count);
 
     PROPERTYVALUE* pv1 = new PROPERTYVALUE[count];
@@ -286,7 +614,11 @@ int main()
 //    watchSettings(h, true);
 
     // Uncomment to try state-machiney thing to change exposure time
-    testExposure(h);
+//    testExposure(h);
+// 
+//     testFocus(h);
+    testFocusAPI(h);
+//    calcFocusRanges(h);
 //    testSetISO(h);
 //    dumpExposureOptions(h);
 
