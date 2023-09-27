@@ -3,9 +3,12 @@
 #include <iostream>
 #include <Windows.h>
 #include <string>
+#include <vector>
 #include <sstream>
 #include <psapi.h>
-#include "vector"
+#include <iomanip>
+
+//#include "vector"
 
 #define INFOFLAG_ACTIVE                 0x0001
 #define INFOFLAG_INCLUDE_SETTINGS       0x0002
@@ -117,6 +120,8 @@ typedef HRESULT (*PGETDEVICEINFO)(HANDLE hCamera, DEVICEINFO* info);
 typedef HRESULT (*PGETPROPERTYDESCRIPTOR)(HANDLE hCamera, DWORD propertyId, PROPERTYDESCRIPTOR* descriptor);
 typedef HRESULT (*PGETPROPERTYVALUEOPTION)(HANDLE hCamera, DWORD propertyId, PROPERTYVALUEOPTION* option, DWORD index);
 typedef HRESULT (*PGETSINGLEPROPERTYVALUE)(HANDLE hCamera, DWORD propertyId, PROPERTYVALUE* value);
+typedef HRESULT (*PGETPROPERTYLIST)(HANDLE hCamera, DWORD* list, DWORD* listSize);
+typedef HRESULT (*PGETALLPROPERTYVALUES)(HANDLE hCamera, PROPERTYVALUE* values, DWORD* count);
 typedef HRESULT (*PTESTFUNC)(HANDLE hCamera);
 
 PGETPORTABLEDEVICECOUNT fGetPortableDeviceCount;
@@ -128,6 +133,8 @@ PGETDEVICEINFO fGetDeviceInfo;
 PGETPROPERTYDESCRIPTOR fGetPropertyDescriptor;
 PGETPROPERTYVALUEOPTION fGetPropertyValueOption;
 PGETSINGLEPROPERTYVALUE fGetSinglePropertyValue;
+PGETPROPERTYLIST fGetPropertyList;
+PGETALLPROPERTYVALUES fGetAllPropertyValues;
 PTESTFUNC fTestFunc;
 
 
@@ -291,6 +298,8 @@ loadDLLs()
             fGetPortableDeviceCount = (PGETPORTABLEDEVICECOUNT)GetProcAddress(hSonyCamera, "GetPortableDeviceCount");
             fGetPortableDeviceInfo = (PGETPORTABLEDEVICEINFO)GetProcAddress(hSonyCamera, "GetPortableDeviceInfo");
             fOpenDeviceEx = (POPENDEVICEEX)GetProcAddress(hSonyCamera, "OpenDeviceEx");
+            fGetPropertyList = (PGETPROPERTYLIST)GetProcAddress(hSonyCamera, "GetPropertyList");
+            fGetAllPropertyValues = (PGETALLPROPERTYVALUES)GetProcAddress(hSonyCamera, "GetAllPropertyValues");
         }
     }
 
@@ -299,114 +308,63 @@ loadDLLs()
 }
 
 bool
-ensureExposureMode(HANDLE hCamera)
+inList(DWORD value, std::vector<DWORD> list)
 {
-    // Get settings...
-    HRESULT hr = ERROR_SUCCESS;
-    PROPERTYVALUE pv;
-    bool modeOk = false;
-    std::wstring smode;
+    bool found = false;
 
-    while (!modeOk && hr == ERROR_SUCCESS)
+    for (std::vector<DWORD>::const_iterator it = list.begin(); it != list.end() && !found; it++)
     {
-        hr = fGetSinglePropertyValue(hCamera, 0x500e, &pv);
-
-        if (hr == ERROR_SUCCESS)
+        if (*it == value)
         {
-            smode = pv.text;
-
-            if (smode == L"M")
-            {
-                modeOk = true;
-            }
-            else
-            {
-                std::wcout << L"\n    Exposure mode currently set to '" << pv.text << L"', please set to 'M'";
-                Sleep(2500);
-            }
-        }
-        else
-        {
-            std::wcout << L"Error getting exposure mode from camera - error " << hr << L"\n";
+            found = true;
         }
     }
 
-    std::wcout << "\n  Exposure mode set to:  " << smode.c_str();
-
-    return modeOk;
+    return found;
 }
 
 bool
-ensureFocusMode(HANDLE hCamera)
+ensureSetting(HANDLE hCamera, DWORD propertyId, std::vector<DWORD> expectedValues, std::wstring expectedText)
 {
-    // Get settings...
+    // First, get property descriptor, so we can display the name of the setting
     HRESULT hr = ERROR_SUCCESS;
     PROPERTYVALUE pv;
-    bool modeOk = false;
+    bool settingOk = false;
+    PROPERTYDESCRIPTOR descriptor;
 
-    while (!modeOk && hr == ERROR_SUCCESS)
+    hr = fGetPropertyDescriptor(hCamera, propertyId, &descriptor);
+
+    if (hr != ERROR_SUCCESS)
     {
-        hr = fGetSinglePropertyValue(hCamera, 0x500a, &pv);
+        std::wcout << L"Error getting descriptor for property " << propertyId << L" from camera - error " << hr << L"\n";
+    }
+
+    while (!settingOk && hr == ERROR_SUCCESS)
+    {
+        hr = fGetSinglePropertyValue(hCamera, propertyId, &pv);
 
         if (hr == ERROR_SUCCESS)
         {
-            if (pv.value == 1)
+            if (inList(pv.value, expectedValues))
             {
-                modeOk = true;
+                settingOk = true;
             }
             else
             {
-                std::wcout << L"\n    Focus mode currently set to '" << pv.text << L"', please set to 'MF'";
+                std::wcout << L"\n    " << descriptor.name << L" currently set to '" << pv.text << L"', please set to '" << expectedText.c_str() << L"'";
                 Sleep(2500);
             }
         }
         else
         {
-            std::wcout << L"Error getting focus mode from camera - error " << hr << L"\n";
+            std::wcout << L"Error getting " << descriptor.name << L" from camera - error " << hr << L"\n";
+            Sleep(2500);
         }
     }
 
-    std::wcout << "\n  Focus mode set to:  " << pv.text;
+    std::wcout << "\n  " << descriptor.name << L" set to : " << pv.text;
 
-    return modeOk;
-}
-
-bool
-ensureStorageMode(HANDLE hCamera)
-{
-    // Get settings...
-    HRESULT hr = ERROR_SUCCESS;
-    PROPERTYVALUE pv;
-    bool modeOk = false;
-    std::wstring smode;
-
-    while (!modeOk && hr == ERROR_SUCCESS)
-    {
-        hr = fGetSinglePropertyValue(hCamera, 0x5004, &pv);
-
-        if (hr == ERROR_SUCCESS)
-        {
-            smode = pv.text;
-
-            if (smode == L"RAW" || smode == L"RAW+JPEG")
-            {
-                modeOk = true;
-            }
-            else
-            {
-                std::wcout << L"\n    Storage mode currently set to '" << pv.text << L"', please set to either 'RAW' or 'RAW+JPEG'";
-                Sleep(2500);
-            }
-        }
-        else
-        {
-            std::wcout << L"Error getting shutter speed from camera - error " << hr << L"\n";
-        }
-    }
-
-    std::wcout << "\n  Storage mode set to:   " << smode.c_str();
-
-    return modeOk;
+    return settingOk;
 }
 
 void
@@ -587,6 +545,91 @@ checkCrop(HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int value)
 }
 
 void
+printProperty(PROPERTYVALUE* value, PROPERTYDESCRIPTOR* descriptors, DWORD count)
+{
+    // Find descriptor
+    PROPERTYDESCRIPTOR* descr = nullptr;
+    DWORD id = value->id;
+
+    for (DWORD index = 0; index < count && descr == nullptr; index++)
+    {
+        if ((descriptors + index)->id == id)
+        {
+            descr = descriptors + index;
+        }
+    }
+
+    if (descr)
+    {
+        std::wcout << L"x" << std::hex << std::setw(4) << std::setfill(L'0') << id << L":  " << descr->name << L" = " << value->text << L"\n";
+    }
+    else
+    {
+        std::wcout << L"x" << std::hex << std::setw(4) << std::setfill(L'0') << id << L":  (unknown) = " << value->text << L"\n";
+    }
+}
+
+void
+monitorProperties(HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int value)
+{
+    DWORD count = 0;
+    HRESULT hr = fGetPropertyList(hCamera, nullptr, &count);
+    DWORD* ids = new DWORD[count];
+
+    hr = fGetPropertyList(hCamera, ids, &count);
+
+    PROPERTYDESCRIPTOR* descriptors = new PROPERTYDESCRIPTOR[count];
+    PROPERTYVALUE* values = new PROPERTYVALUE[count];
+
+    for (DWORD index = 0; index < count; index++)
+    {
+        HRESULT hr = fGetPropertyDescriptor(hCamera, ids[index], descriptors + index);
+    }
+
+    hr = fGetAllPropertyValues(hCamera, values, &count);
+
+    // Print current properties
+    std::wcout << L"\nCurrent camera settings:\n";
+
+    for (DWORD index = 0; index < count; index++)
+    {
+        printProperty(values + index, descriptors, count);
+    }
+
+    if (value)
+    {
+        PROPERTYVALUE* lastValues = values;
+
+        std::wcout << L"\n" << "Monitoring for changes, Press CTRL-C to exit\n";
+
+        while (true)
+        {
+            values = new PROPERTYVALUE[count];
+            hr = fGetAllPropertyValues(hCamera, values, &count);
+
+            for (DWORD index = 0; index < count; index++)
+            {
+                PROPERTYVALUE* a = nullptr;
+                PROPERTYVALUE* b = lastValues + index;
+
+                for (DWORD index2 = 0; index2 < count && a == nullptr; index2++)
+                {
+                    if (b->id == (values + index2)->id)
+                    {
+                        a = values + index2;
+                    }
+                }
+
+                if (a && (a->value != b->value))
+                {
+                    printProperty(a, descriptors, count);
+                }
+            }
+        }
+    }
+}
+
+void
 setCrop(HANDLE hCamera, PORTABLEDEVICEINFO *pdinfo, int cropMode)
 {
     if (cropMode == 1)
@@ -666,6 +709,7 @@ printHelp()
     std::wcout << L"\n/h        Print this help\n/s        Scan for connected cameras (default)\n/l        List supported cameras\n/d        Show debug setting (see /d[0-5] to set)\n/c        Show crop setting for connected cameras\n/e        Show list of exposure times supported by device\n/i        Show list of ISO values supported by device\n";
     std::wcout << L"/c[0-2]   Change crop-mode of images for connected cameras\n          0 = No Crop (all pixels)\n          1 = Auto Crop (To what image editing apps would see)\n          2 = User Crop (Manual, requires registry editing)\n";
     std::wcout << L"/d[0-5]   Change debug logging of driver\n          0 = Off (no logging)\n          1 = Log everything\n          ...\n          5 = Errors Only\n          Note that this option will write debugging to a file called\n          'sonycamera.txt' that will appear on your desktop\n";
+    std::wcout << L"/m[0-1]   Dump camera properties and optionally monitor for changes\n";
     std::wcout << L"/v        Dump version information for every DLL loaded by this driver\n          Note that this will include other DLL's that come with windows\n";
 }
 
@@ -785,9 +829,21 @@ performScan(HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortForm)
 
         if (!previewOk || !fullImageOk || !croppedImageOk || !exposureTimesOk || !isosOk)
         {
-            ensureExposureMode(hCamera);
-            ensureStorageMode(hCamera);
-            ensureFocusMode(hCamera);
+            std::vector<DWORD> one;
+            std::vector<DWORD> sm;
+
+            one.push_back(1);
+            sm.push_back(0x10);
+            sm.push_back(0x11);
+            sm.push_back(0x12);
+            sm.push_back(0x13);
+            sm.push_back(0x14);
+
+            ensureSetting(hCamera, 0x500e, one, L"M");
+            ensureSetting(hCamera, 0x5004, sm, L"RAW or RAW+JPEG");
+            ensureSetting(hCamera, 0x500a, one, L"MF");
+
+            std::wcout << L"\n\n";
 
             std::wcout << std::endl << std::endl << L"Performing the following actions." << std::endl;
 
@@ -1110,7 +1166,9 @@ main(int argc, char* argv[])
     bool do_debug = false;
     short debug_option = 0;
     bool do_versions = false;
+    bool do_monitor = false;
     bool needKeyToExit = separate_console();
+    short monitor_option = 0;
 
     for (int i = 1; i < argc; i++)
     {
@@ -1171,6 +1229,12 @@ main(int argc, char* argv[])
                     do_versions = true;
                     break;
 
+                case 'm':
+                    // Monitor property changes
+                    option_specified = true;
+                    do_monitor = true;
+                    break;
+
                 default:
                     std::cerr << "'" << v.c_str() << "' is not a valid option\n";
                     error = true;
@@ -1218,6 +1282,24 @@ main(int argc, char* argv[])
                     default:
                         std::cerr << "Valid options are 0, 1, 2, 3, 4, or 5";
                         error = true;
+                    }
+                    break;
+
+                case 'm':
+                    // Monitor properties
+                    switch (v[2])
+                    {
+                    case '1':
+                        option_specified = true;
+                        do_monitor = true;
+                        monitor_option = 1;
+                        break;
+
+                    default:
+                        option_specified = true;
+                        do_monitor = true;
+                        monitor_option = 0;
+                        break;
                     }
                     break;
 
@@ -1300,6 +1382,11 @@ main(int argc, char* argv[])
     if (do_isos)
     {
         iterateDevices("Listing supported ISO values", printISOs, 0);
+    }
+
+    if (do_monitor)
+    {
+        iterateDevices("Dump and/or monitor camera properties", monitorProperties, monitor_option);
     }
 
     if (needKeyToExit)

@@ -200,9 +200,9 @@ testFocus(HANDLE h)
 }
 
 void
-resetFocus(HANDLE h)
+resetFocus(HANDLE h, int count)
 {
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < count; i++)
     {
         SetPropertyValue(h, FOCUS_PROP, 7);
         Sleep(500);
@@ -223,7 +223,7 @@ calcFocusRanges(HANDLE h)
     for (int size = 7; size > 0; size--)
     {
         printf("\n-----\nSTEP SIZE %d\nResetting focus to far-right\n", size);
-        resetFocus(h);
+        resetFocus(h, size < 7 ? (int)values[7] + 2 : 25);
         Sleep(1000);
 
         float steps = 0.0;
@@ -617,8 +617,8 @@ int main()
 //    testExposure(h);
 // 
 //     testFocus(h);
-    testFocusAPI(h);
-//    calcFocusRanges(h);
+//    testFocusAPI(h);
+    calcFocusRanges(h);
 //    testSetISO(h);
 //    dumpExposureOptions(h);
 

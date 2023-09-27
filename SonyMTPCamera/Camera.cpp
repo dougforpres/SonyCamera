@@ -256,6 +256,7 @@ Camera::LoadFakeProperties(CameraSettings* settings)
     // continue to work
     if (!settings->GetProperty(Property::ShutterHalfDown))
     {
+        LOGTRACE(L"Adding fake 'ShutterHalfDown' property as camera forgot to enumerate");
         p = f.Create(Property::ShutterHalfDown);
 
         p->SetCurrentValue(new PropertyValue((UINT8)0));
@@ -275,6 +276,7 @@ Camera::LoadFakeProperties(CameraSettings* settings)
 
     if (!settings->GetProperty(Property::ShutterFullDown))
     {
+        LOGTRACE(L"Adding fake 'ShutterFullDown' property as camera forgot to enumerate");
         p = f.Create(Property::ShutterFullDown);
 
         p->SetCurrentValue(new PropertyValue((UINT8)0));
@@ -287,6 +289,27 @@ Camera::LoadFakeProperties(CameraSettings* settings)
         inf->SetFormMode(FormMode::NONE);
         inf->SetAccess(Accessibility::WRITE_ONLY_BUTTON);
         inf->SetSonySpare(1);
+        p->SetInfo(inf);
+        settings->AddProperty(p);
+    }
+
+    // Some cameras don't return the focus-control property
+    if (!settings->GetProperty(Property::FocusControl))
+    {
+        LOGTRACE(L"Adding fake 'ShutterControl' property as camera forgot to enumerate");
+        p = f.Create(Property::FocusControl);
+
+        p->SetCurrentValue(new PropertyValue((INT16)0));
+
+        inf = new PropertyInfo();
+
+        inf->SetDefault(new PropertyValue((UINT16)0));
+        inf->SetId(Property::FocusControl);
+        inf->SetType(DataType::INT16);
+        inf->SetFormMode(FormMode::RANGE);
+        inf->SetAccess(Accessibility::UNKNOWN_82);
+        inf->SetSonySpare(1);
+        inf->SetRange(new PropertyValue((UINT16)1), new PropertyValue((UINT16)7), new PropertyValue((UINT16)0xfff9));
         p->SetInfo(inf);
         settings->AddProperty(p);
     }

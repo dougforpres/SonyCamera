@@ -1,4 +1,10 @@
 # Change Log
+## 1.0.1.13
+* Some cameras (I'm looking at you A7 IV) don't expose the "Focus Control" property even though they support it. This update includes creation of a fake descriptor.
+* Small change to SonyCameraInfo to make it better able to handle "must set" properties.
+* Added /m[0-1] to SonyCameraInfo to dump/monitor camera properties.
+* Added lens support for Sigma DG DN 100-400mm (thanks Joshua!)
+
 ## 1.0.1.12
 Even more changes!
 

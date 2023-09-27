@@ -179,7 +179,7 @@ DummyDevice::ReadSettings(Message* out)
 {
     MessageWriter w(COMMAND_RESULT_SUCCESS);
 
-    w.WriteDWORD(6); // Number of properties
+    w.WriteDWORD(7); // Number of properties
     w.WriteDWORD(0); // Some other value
 
     AddCameraProperty(w, Property::PhotoBufferStatus, new PropertyValue((UINT16)(m_photoReady ? 0x8001 : 0)), false); // Ready
@@ -190,6 +190,7 @@ DummyDevice::ReadSettings(Message* out)
     AddCameraProperty(w, Property::ShutterButtonStatus, new PropertyValue((UINT8)1), false); // Shutter button UP
     AddCameraProperty(w, Property::FocusMode, new PropertyValue((UINT16)1), false); // Focus Manual
     AddCameraProperty(w, Property::ISO, new PropertyValue((UINT32)400), false);
+    AddCameraProperty(w, Property::ExposureProgramMode, new PropertyValue((UINT16)1), false);
 
     return w.GetMessageObj();
 }
