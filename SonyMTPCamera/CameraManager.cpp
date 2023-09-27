@@ -805,6 +805,37 @@ CameraManager::SetupSupportedDevices()
     registry.SetStringDefault(key, L"Exposure Times", L"0,19660810,16384010,13107210,9830410,8519690,6553610,5242890,3932170,3276810,2621450,2097162,1638410,1310730,1048586,851978,655370,524298,393226,327690,262154,65539,65540,65541,65542,65544,65546,65549,65551,65556,65561,65566,65576,65586,65596,65616,65636,65661,65696,65736,65786,65856,65936,66036,66176,66336,66536,66786,67136,67536,68036,68736,69536");
     registry.SetStringDefault(key, L"ISOs", L"16777215,50,64,80,100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000,5000,6400,8000,10000,12800,16000,20000,25600,32000,40000,51200");
 
+    // Now for lenses
+    key = L"Lenses\\Sony\\SELP1650";
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"E 3.5-5.6/PZ 16-50 OSS");
+    registry.SetStringDefault(key, L"Steps", L"264,101,40.5,15.5,6.25,2.2,1");
+
+    key = L"Lenses\\Tamron\\a057";
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"150-500mm F/5-6.7 Di III VC VXD");
+    registry.SetStringDefault(key, L"Steps", L"3120,1230,511,195,71.1,25.1,9.2");
+
+    key = L"Lenses\\Sigma\\50_14";
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"50mm F1.4 DG DN | A");
+    registry.SetStringDefault(key, L"Steps", L"1753,740,352,137,53,17.4,6.5");
+
+    key = L"Lenses\\Sigma\\85_14";
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"85mm F1.4 DG DN | A");
+    registry.SetStringDefault(key, L"Steps", L"2551,985,384,145.5,55.2,21,8");
+
+    key = L"Lenses\\Sigma\\c017_16_14";
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"16mm F1.4 DC DN | Contemporary 017");
+    registry.SetStringDefault(key, L"Steps", L"1185,458,177,68.3,26.4,10.2,3.9");
+
+    key = L"Lenses\\Sigma\\c100400f5-63";
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"100-400MM F5-6.3 DG DN OS | C");
+    registry.SetStringDefault(key, L"Steps", L"5554,2313,932,359,137,52,19.6");
+
     registry.Close();
 
     LOGINFO(L"Out: CameraManager::SetupSupportedDevices()");
