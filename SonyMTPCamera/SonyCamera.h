@@ -44,15 +44,18 @@ public:
     virtual UINT16 SetFocus(UINT16 focusPosition);
     virtual UINT16 GetFocusLimit();
     virtual UINT16 GetFocus();
-    virtual void SetFocusSteps(std::wstring steps);
+    virtual void SetFocusSteps(std::wstring steps, std::wstring sleeps, bool handsOff);
 
 private:
+    void ResetFocus();
     void MoveFocus(INT16 step);
 
     std::map<UINT16, UINT16> m_focusSteps;
+    std::map<UINT16, UINT16> m_focusSleeps;
     INT16 m_currentFocusPosition = -1;
     UINT16 m_lastFocusPosition = 0;
     UINT16 m_lastFocusDiff = 0;
     UINT16 m_focusLimit = 0;
+    bool m_focusHandsOff = false;
 };
 

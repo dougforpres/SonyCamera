@@ -1456,18 +1456,18 @@ GetFocusLimit(HANDLE hCamera)
         return ERROR_INVALID_HANDLE;
     }
 
-    try
-    {
-        Locker lock(camera);
+//    try
+//    {
+//        Locker lock(camera);
 
         return camera->GetFocusLimit();
-    }
-    catch (CameraException& gfe)
-    {
-        LOGERROR(L"Exception getting focus limit: %s", gfe.GetMessage().c_str());
-    }
+//    }
+//    catch (CameraException& gfe)
+//    {
+//        LOGERROR(L"Exception getting focus limit: %s", gfe.GetMessage().c_str());
+//    }
 
-    return ERROR_NOT_SUPPORTED;
+//    return ERROR_NOT_SUPPORTED;
 }
 
 DWORD
@@ -1480,18 +1480,18 @@ GetFocusPosition(HANDLE hCamera)
         return ERROR_INVALID_HANDLE;
     }
 
-    try
-    {
-        Locker lock(camera);
+//    try
+//    {
+//        Locker lock(camera);
 
         return camera->GetFocus();
-    }
-    catch (CameraException& gfe)
-    {
-        LOGERROR(L"Exception getting focus: %s", gfe.GetMessage().c_str());
-    }
+//    }
+//    catch (CameraException& gfe)
+//    {
+//        LOGERROR(L"Exception getting focus: %s", gfe.GetMessage().c_str());
+//    }
 
-    return ERROR_NOT_SUPPORTED;
+//    return ERROR_NOT_SUPPORTED;
 }
 
 HRESULT
@@ -1627,6 +1627,8 @@ IMPEXP HRESULT SetAttachedLens(HANDLE hCamera, LPWSTR lensId)
         path << L"Lenses\\" << lensId;
 
         std::wstring steps = registry.GetString(path.str(), L"Steps", L"");
+        std::wstring sleeps = registry.GetString(path.str(), L"Sleeps", L"");
+        DWORD handsOff = registry.GetDWORD(path.str(), L"Hands Off", 0);
 
         registry.Close();
 
@@ -1638,7 +1640,7 @@ IMPEXP HRESULT SetAttachedLens(HANDLE hCamera, LPWSTR lensId)
             return ERROR_NOT_FOUND;
         }
 
-        camera->SetFocusSteps(steps);
+        camera->SetFocusSteps(steps, sleeps, handsOff ? true : false);
         //#ifdef DEBUG
         LOGTRACE(L"Out: SetAttachedLens(...) success");
         //#endif

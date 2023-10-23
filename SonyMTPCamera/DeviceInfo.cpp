@@ -104,8 +104,10 @@ DeviceInfo::Copy(const DeviceInfo& rhs)
     m_exposureTimes = rhs.m_exposureTimes;
     m_isos = rhs.m_isos;
 //    m_focusLimit = rhs.m_focusLimit;
-    m_focusSteps = rhs.m_focusSteps;
-    m_focusMagicNumber = rhs.m_focusMagicNumber;
+//    m_focusSteps = rhs.m_focusSteps;
+//    m_focusMagicNumber = rhs.m_focusMagicNumber;
+    m_focusStartMode = rhs.m_focusStartMode;
+//    m_handsOffFocus = rhs.m_handsOffFocus;
 #ifdef DEBUG
     LOGTRACE(L"Out: DeviceInfo::DeviceInfo(copy)");
 #endif
@@ -237,14 +239,15 @@ DeviceInfo::DumpToLog() const
     }
 
     LOGINFO(L"  Reset Focus To Infinite       %s", startMode.c_str());
+//    LOGINFO(L"  Hands-Off Focus               %s", m_handsOffFocus ? L"Yes" : L"No");
 //    LOGINFO(L"  Focus Limit                   %d", m_focusLimit);
-    LOGINFO(L"  Focus Magic Number            %f", m_focusMagicNumber);
-    LOGINFO(L"  Focus Steps                   %d values", m_focusSteps.size());
-
-    for (std::vector<double>::const_iterator it = m_focusSteps.begin(); it != m_focusSteps.end(); it++)
-    {
-        LOGINFO(L"                              %d", *it);
-    }
+//    LOGINFO(L"  Focus Magic Number            %f", m_focusMagicNumber);
+//    LOGINFO(L"  Focus Steps                   %d values", m_focusSteps.size());
+//
+//    for (std::vector<double>::const_iterator it = m_focusSteps.begin(); it != m_focusSteps.end(); it++)
+//    {
+//        LOGINFO(L"                              %d", *it);
+//    }
 }
 
 void
@@ -598,41 +601,29 @@ DeviceInfo::SetBitsPerPixel(UINT32 bpp)
     m_bitsPerPixel = bpp;
 }
 
-//UINT16
-//DeviceInfo::GetFocusLimit() const
+//std::vector<double>
+//DeviceInfo::GetFocusSteps() const
 //{
-//    return m_focusLimit;
+//    return m_focusSteps;
 //}
 //
 //void
-//DeviceInfo::SetFocusLimit(UINT16 limit)
+//DeviceInfo::SetFocusSteps(std::vector<double> steps)
 //{
-//    m_focusLimit = limit;
+//    m_focusSteps = steps;
 //}
-
-std::vector<double>
-DeviceInfo::GetFocusSteps() const
-{
-    return m_focusSteps;
-}
-
-void
-DeviceInfo::SetFocusSteps(std::vector<double> steps)
-{
-    m_focusSteps = steps;
-}
-
-double
-DeviceInfo::GetFocusMagicNumber() const
-{
-    return m_focusMagicNumber;
-}
-
-void
-DeviceInfo::SetFocusMagicNumber(double magic)
-{
-    m_focusMagicNumber = magic;
-}
+//
+//double
+//DeviceInfo::GetFocusMagicNumber() const
+//{
+//    return m_focusMagicNumber;
+//}
+//
+//void
+//DeviceInfo::SetFocusMagicNumber(double magic)
+//{
+//    m_focusMagicNumber = magic;
+//}
 
 FocusStartMode
 DeviceInfo::GetFocusStartMode()
@@ -645,3 +636,15 @@ DeviceInfo::SetFocusStartMode(FocusStartMode mode)
 {
     m_focusStartMode = mode;
 }
+
+//bool
+//DeviceInfo::GetHandsOffFocus()
+//{
+//    return m_handsOffFocus;
+//}
+//
+//void
+//DeviceInfo::SetHandsOffFocus(bool handsOff)
+//{
+//    m_handsOffFocus = handsOff;
+//}

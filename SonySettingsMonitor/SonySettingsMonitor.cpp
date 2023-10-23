@@ -311,8 +311,13 @@ void testFocusAPI(HANDLE h)
     {
         GetLensInfo(i, &lense);
 
-//        SetAttachedLens(h, lense.id);
+        if (std::wstring(lense.lensPath) == L"Lenses\\Sigma\\c017_16_14")
+        {
+            DWORD position = 500;
 
+            SetAttachedLens(h, lense.id);
+            SetFocusPosition(h, &position);
+        }
         //if (i == 0)
         //{
         //    DWORD position;
@@ -617,8 +622,8 @@ int main()
 //    testExposure(h);
 // 
 //     testFocus(h);
-//    testFocusAPI(h);
-    calcFocusRanges(h);
+    testFocusAPI(h);
+//    calcFocusRanges(h);
 //    testSetISO(h);
 //    dumpExposureOptions(h);
 

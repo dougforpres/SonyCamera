@@ -21,8 +21,8 @@ public:
 protected:
     Message* InternalSend(Op kind, Message* out);
 
-    bool StartNotifications();
-    bool StopNotifications();
+    virtual bool StartNotifications(Camera* camera);
+    virtual bool StopNotifications();
 
 private:
     Message* GetDeviceInfo(Message* out);
@@ -46,5 +46,6 @@ private:
     UINT16 m_shutterHalf = 1;
     UINT16 m_shutterFull = 1;
     bool m_photoReady = false;
+    Camera* m_camera = nullptr;
 };
 

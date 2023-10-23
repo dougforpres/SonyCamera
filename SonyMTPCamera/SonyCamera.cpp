@@ -244,6 +244,31 @@ SonyCamera::SetProperty(const Property id, PropertyValue* value)
     return result;
 }
 
+void
+SonyCamera::ResetFocus()
+{
+    DeviceInfo di = GetDeviceInfo();
+    UINT16 maxStepSize = m_focusSteps.rbegin()->first;
+    UINT16 numResetSteps = 0;
+    UINT16 f = 0;
+
+    // If we can assume the user hasn't messed with focus ring manually, we can rely on focus position, speeding reset to infinite
+    if (m_focusHandsOff)
+    {
+        f = m_currentFocusPosition > 0 ? m_currentFocusPosition : 0;
+    }
+
+    // The "+1" covers situation where biggest step is not an integer
+    numResetSteps = (GetFocusLimit() - f) / m_focusSteps.rbegin()->second + 1;
+
+    LOGTRACE(L"Resetting focus, %d moves of size %d to get from %d to %d", numResetSteps, maxStepSize, f, GetFocusLimit());
+
+    for (UINT16 resetPos = 0; resetPos < numResetSteps; resetPos++)
+    {
+        MoveFocus(maxStepSize);
+    }
+}
+
 UINT16
 SonyCamera::SetFocus(UINT16 focusPosition)
 {
@@ -255,11 +280,7 @@ SonyCamera::SetFocus(UINT16 focusPosition)
         || di.GetFocusStartMode() == FocusStartMode::RESET_EVERY_TIME
         || (di.GetFocusStartMode() == FocusStartMode::RESET_BIGGER_MOVE && focusDiff > m_lastFocusDiff))
     {
-        // The "+1" covers situation where biggest step is not an integer
-        for (UINT16 resetPos = 0; resetPos < (GetFocusLimit() / m_focusSteps.rbegin()->second) + 1; resetPos++)
-        {
-            MoveFocus(maxStepSize);
-        }
+        ResetFocus();
     }
 
     m_lastFocusPosition = m_currentFocusPosition;
@@ -324,52 +345,70 @@ SonyCamera::GetFocus()
 }
 
 void
-SonyCamera::SetFocusSteps(std::wstring steps)
+SonyCamera::SetFocusSteps(std::wstring steps, std::wstring sleeps, bool handsOff)
 {
-    DeviceInfo di = GetDeviceInfo();
+    // Steps is expected to have one value for each ascending step size (1..n)
+    // Sleeps should have the same if all sleeps are different. If all sleeps are the same, just a single value is needed
+    // If no value is present for sleeps, we'll use 100mS * step size
+    m_focusHandsOff = handsOff;
 
     m_focusSteps.clear();
+    m_focusSleeps.clear();
 
-    std::unique_ptr<CameraProperty> focusProp(GetProperty(Property::FocusControl));
     std::vector<double> deviceSteps;
+    std::vector<std::wstring> deviceSleeps;
     std::wstring s;
-    std::wistringstream values(steps);
+    std::wistringstream stepstream(steps);
 
     // A list of comma separated pairs
-    while (std::getline(values, s, L',')) {
+    while (std::getline(stepstream, s, L',')) {
         deviceSteps.push_back(_wtof(s.c_str()));
     }
 
-    if (deviceSteps.empty() && di.GetFocusMagicNumber())
+    if (sleeps.empty())
     {
-        // Populate deviceSteps without scaling, then reprocess
-        UINT16 maxStepSize = focusProp->GetInfo()->GetRangeHi()->GetINT16();
+        sleeps = L"*100";
+    }
 
-        for (UINT16 i = 0; i < maxStepSize; i++)
-        {
-            deviceSteps.push_back(pow(di.GetFocusMagicNumber(), i));
-        }
+    std::wistringstream sleepstream(sleeps);
+
+    // A list of comma separated pairs
+    while (std::getline(sleepstream, s, L',')) {
+        deviceSleeps.push_back(s);
     }
 
     if (!deviceSteps.empty())
     {
-        UINT16 index = 1;
+//        UINT16 index = 1;
         m_focusLimit = *deviceSteps.begin();
 
-        for (std::vector<double>::const_iterator it = deviceSteps.begin(); it != deviceSteps.end(); it++)
+        for (UINT16 index = 1; index <= deviceSteps.size(); index++)//std::vector<double>::const_iterator it = deviceSteps.begin(); it != deviceSteps.end(); it++)
         {
-            m_focusSteps[index] = (double)m_focusLimit / *it;
-            index++;
+            double st = deviceSteps[index - 1];
+            double v = (double)m_focusLimit / st;// *it;
+            m_focusSteps[index] = v;
+
+            // Now try to calculate the appropriate sleep for this step size
+            std::wstring sl = deviceSleeps[index <= deviceSleeps.size() ? index - 1 : deviceSleeps.size() - 1];
+
+            if (*sl.begin() == L'*')
+            {
+                // It's a multiplier
+                m_focusSleeps[index] = index * _wtoi(sl.substr(1).c_str());
+            }
+            else
+            {
+                m_focusSleeps[index] = _wtoi(sl.c_str());
+            }
+
+            LOGINFO(L"Focus step %d = %d (%d / %f) - post-move-sleep = %d", index, (int)v, m_focusLimit, st, m_focusSleeps[index]);// *it);
+
+//            index++;
         }
 
-        for (std::map<UINT16, UINT16>::const_iterator it = m_focusSteps.begin(); it != m_focusSteps.end(); it++)
-        {
-            LOGINFO(L"Focus step %d = %d", (*it).first, (*it).second);
-        }
-
-        // We should probably reset focus so we know where we are
+        // We should probably reset focus as we don't know where it is
         m_currentFocusPosition = -1;
-        SetFocus(m_focusLimit);
+//        SetFocus(m_focusLimit);
     }
 }
 
@@ -411,5 +450,5 @@ SonyCamera::MoveFocus(INT16 step)
 
     LOGTRACE(L" new position = %d\n", m_currentFocusPosition);
 
-    Sleep(200 * abs(step));
+    Sleep(m_focusSleeps[abs(step)]);
 }

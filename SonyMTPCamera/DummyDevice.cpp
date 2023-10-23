@@ -74,14 +74,16 @@ DummyDevice::GetHandle()
 }
 
 bool
-DummyDevice::StartNotifications()
+DummyDevice::StartNotifications(Camera* camera)
 {
+    m_camera = camera;
     return true;
 }
 
 bool
 DummyDevice::StopNotifications()
 {
+    m_camera = nullptr;
     return true;
 }
 
@@ -260,6 +262,11 @@ DummyDevice::GetObject(Message* out)
 
     m_photoReady = false;
 
+    if (m_camera)
+    {
+        m_camera->OnImageBufferStatus(ImageBufferStatus::ImageNotReady);
+    }
+
     return w.GetMessageObj();
 }
 
@@ -284,6 +291,11 @@ DummyDevice::SetProperty(Message* out)
         }
 
         m_shutterHalf = value;
+
+        if (m_camera)
+        {
+            m_camera->OnImageBufferStatus(ImageBufferStatus::ImageReady);
+        }
         break;
 
     default:

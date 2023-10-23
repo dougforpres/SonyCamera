@@ -836,6 +836,26 @@ CameraManager::SetupSupportedDevices()
     registry.SetStringDefault(key, L"", L"100-400MM F5-6.3 DG DN OS | C");
     registry.SetStringDefault(key, L"Steps", L"5554,2313,932,359,137,52,19.6");
 
+    key = L"Lenses\\Sony\\SEL200600G";
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"FE 5.6-6.3/200-600 G OSS");
+    registry.SetStringDefault(key, L"Steps", L"7896,3361,1325,523,200,77,29");
+
+    key = L"Lenses\\Sony\\SEL70200GM";
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"FE 2.8/70-200 GM OSS II");
+    registry.SetStringDefault(key, L"Steps", L"7319,3114,1227,484,184,71,27");
+
+    key = L"Lenses\\Sony\\SEL24105G/2";
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"FE 4/24-105 G OSS");
+    registry.SetStringDefault(key, L"Steps", L"423,178,70,27,11,4,1.3");
+
+    key = L"Lenses\\Sony\\SEL90M28G";
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"FE 2.8/90 MACRO G OSS");
+    registry.SetStringDefault(key, L"Steps", L"12194,5180,2038,800,306,117,45");
+
     registry.Close();
 
     LOGINFO(L"Out: CameraManager::SetupSupportedDevices()");

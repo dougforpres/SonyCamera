@@ -95,12 +95,14 @@ public:
     void SetBitsPerPixel(UINT32 bpp);
 //    UINT16 GetFocusLimit() const;
 //    void SetFocusLimit(UINT16 limit);
-    std::vector<double> GetFocusSteps() const;
-    void SetFocusSteps(std::vector<double> steps);
-    double GetFocusMagicNumber() const;
-    void SetFocusMagicNumber(double magic);
+//    std::vector<double> GetFocusSteps() const;
+//    void SetFocusSteps(std::vector<double> steps);
+//    double GetFocusMagicNumber() const;
+//    void SetFocusMagicNumber(double magic);
     FocusStartMode GetFocusStartMode();
     void SetFocusStartMode(FocusStartMode mode);
+//    bool GetHandsOffFocus();
+//    void SetHandsOffFocus(bool handsOff);
 
     bool GetButtonPropertiesInverted() const;
     void SetButtonPropertiesInverted(bool invert);
@@ -158,8 +160,9 @@ private:
 
     // For focus
 //    UINT16 m_focusLimit = 9999;
-    std::vector<double> m_focusSteps;
-    double m_focusMagicNumber = 0.0;
+//    std::vector<double> m_focusSteps;
+//    double m_focusMagicNumber = 0.0;
     FocusStartMode m_focusStartMode = FocusStartMode::RESET_EVERY_TIME;
+//    bool m_handsOffFocus = false;
 };
 

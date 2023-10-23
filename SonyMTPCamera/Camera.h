@@ -87,7 +87,7 @@ public:
     CameraWorker* GetWorker();
     void OnPropertiesUpdated();
     void OnImageBufferStatus(ImageBufferStatus status);
-    virtual void SetFocusSteps(std::wstring steps) = 0;
+    virtual void SetFocusSteps(std::wstring steps, std::wstring sleeps, bool handsOff) = 0;
     virtual UINT16 SetFocus(UINT16 focusPosition) = 0;
     virtual UINT16 GetFocusLimit() = 0;
     virtual UINT16 GetFocus() = 0;

@@ -354,8 +354,9 @@ Camera::ProcessDeviceInfoOverrides(DeviceInfo& deviceInfo)
     deviceInfo.SetButtonPropertiesInverted((bool)registry.GetDWORD(cameraPath, L"Button Properties Inverted", deviceInfo.GetButtonPropertiesInverted()));
     deviceInfo.SetBitsPerPixel(registry.GetDWORD(cameraPath, L"Bits Per Pixel", deviceInfo.GetBitsPerPixel()));
 //    deviceInfo.SetFocusLimit((UINT16)registry.GetDWORD(cameraPath, L"Focus Limit", deviceInfo.GetFocusLimit()));
-    deviceInfo.SetFocusMagicNumber(registry.GetDouble(cameraPath, L"Focus Magic Number", deviceInfo.GetFocusMagicNumber()));
+//    deviceInfo.SetFocusMagicNumber(registry.GetDouble(cameraPath, L"Focus Magic Number", deviceInfo.GetFocusMagicNumber()));
     deviceInfo.SetFocusStartMode((FocusStartMode)registry.GetDWORD(cameraPath, L"Focus Start Mode", (DWORD)deviceInfo.GetFocusStartMode()));
+//    deviceInfo.SetHandsOffFocus(registry.GetDWORD(cameraPath, L"Hands Off Focus", deviceInfo.GetHandsOffFocus() ? 1 : 0) ? true : false);
 
     std::wstring s;
     std::wistringstream exposureTimes(registry.GetString(cameraPath, L"Exposure Times", L""));
