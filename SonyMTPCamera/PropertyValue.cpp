@@ -142,7 +142,7 @@ PropertyValue::GetString() const
 }
 
 PROPVARIANT
-PropertyValue::ToPROPVARIANT()
+PropertyValue::ToPROPVARIANT() const
 {
     PROPVARIANT result = { 0 };
 

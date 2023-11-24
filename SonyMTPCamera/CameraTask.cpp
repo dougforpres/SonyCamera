@@ -136,7 +136,7 @@ CameraTask::GetResult()
 }
 
 HANDLE
-CameraTask::GetCancelEventHandle()
+CameraTask::GetCancelEventHandle() const
 {
     return cancel;
 }
@@ -166,13 +166,13 @@ CameraTask::GetParam2()
 }
 
 bool
-CameraTask::IsCancelled()
+CameraTask::IsCancelled() const
 {
     return cancelled;
 }
 
 bool
-CameraTask::IsComplete()
+CameraTask::IsComplete() const
 {
     return this->status.currentStep == CAMERA_TASK_COMPLETE;
 }
@@ -246,7 +246,7 @@ CameraTask::Step(CameraTaskInfo& info)
             case StateResult::Retry:
                 if (stepInfo.retryCount >= stepInfo.maxRetries)
                 {
-                    result == StateResult::Fail;
+                    result = StateResult::Fail;
                     status.currentStep = stepInfo.failId;
                 }
                 break;

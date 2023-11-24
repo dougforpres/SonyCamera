@@ -262,10 +262,11 @@ DeviceEventHandler::OnEvent(IPortableDeviceValues* pEventParameters)
             DWORD count = 0;
             pdpvc->GetCount(&count);
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < (int)count; i++)
             {
                 LOGTRACE(L"--- Property %d", i);
                 PROPVARIANT val;
+
                 pdpvc->GetAt(i, &val);
 
                 if (val.vt == VT_UI4)

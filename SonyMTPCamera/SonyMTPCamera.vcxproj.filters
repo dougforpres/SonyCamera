@@ -318,23 +318,6 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Library Include="libraw\libraw.lib">
-      <Filter>Libraries</Filter>
-    </Library>
-    <Library Include="libjpeg\turbojpeg.lib">
-      <Filter>Libraries</Filter>
-    </Library>
-    <Library Include="..\..\..\..\..\..\libjpeg-turbo64\lib\turbojpeg.lib">
-      <Filter>Libraries\x64</Filter>
-    </Library>
-    <Library Include="..\..\..\..\..\..\LibRaw-0.19.5-Win64\LibRaw-0.19.5\lib\libraw.lib">
-      <Filter>Libraries\x64</Filter>
-    </Library>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="libjpeg\turbojpeg.dll">
-      <Filter>Libraries</Filter>
-    </None>
     <None Include="..\ChangeLog.md">
       <Filter>Docs</Filter>
     </None>

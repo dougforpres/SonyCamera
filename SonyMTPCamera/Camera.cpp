@@ -5,9 +5,9 @@
 #include "CameraException.h"
 #include <iostream>
 
-#define THREAD_WAIT_EXIT_LOOPS 20
-#define THREAD_WAIT_EXIT_SLEEP 100
-#define MUTEX_TIMEOUT 10000
+constexpr auto THREAD_WAIT_EXIT_LOOPS = 20;
+constexpr auto THREAD_WAIT_EXIT_SLEEP = 100;
+constexpr auto MUTEX_TIMEOUT = 10000;
 
 Camera::Camera(Device* device)
     : m_device(device)
@@ -169,7 +169,7 @@ Camera::RefreshDeviceInfo()
 }
 
 void
-Camera::LoadFakeProperties(CameraSettings* settings)
+Camera::LoadFakeProperties(CameraSettings* settings) const
 {
     // Add Magic infos
     CameraPropertyFactory f;
@@ -792,6 +792,8 @@ Camera::CancelCapture()
             m_takePhotoTask = nullptr;
         }
     }
+
+    SetCaptureStatus(CaptureStatus::Cancelled);
 
     ReleaseMutex(m_hBusyMutex);
 

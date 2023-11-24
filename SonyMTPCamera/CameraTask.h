@@ -7,8 +7,8 @@
 #include "CameraTaskInfo.h"
 #include "Camera.h"
 
-#define CAMERA_TASK_NOT_STARTED -1
-#define CAMERA_TASK_COMPLETE -2
+constexpr auto CAMERA_TASK_NOT_STARTED = -1;
+constexpr auto CAMERA_TASK_COMPLETE = -2;
 
 class Camera;
 class CameraTask;
@@ -58,9 +58,9 @@ public:
     bool QueueAndForget(Camera* camera);
     DWORD Cancel(DWORD timeout);
     DWORD WaitFor(DWORD timeout);
-    HANDLE GetCancelEventHandle();
-    bool IsCancelled();
-    bool IsComplete();
+    HANDLE GetCancelEventHandle() const;
+    bool IsCancelled() const;
+    bool IsComplete() const;
     CameraTaskStatus GetTaskStatus();
 
 protected:

@@ -22,7 +22,7 @@
 #undef GetMessage
 
 // Standard Result Codes
-#define COMMAND_RESULT_SUCCESS          0x2001
+constexpr auto COMMAND_RESULT_SUCCESS = 0x2001;
 
 extern HINSTANCE dllInstance;
 

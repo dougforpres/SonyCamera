@@ -1,7 +1,7 @@
 #pragma once
 #include "Lockable.h"
 
-#define DEFAULT_LOCK_WAIT 20000
+constexpr auto DEFAULT_LOCK_WAIT = 20000;
 
 class Locker
 {

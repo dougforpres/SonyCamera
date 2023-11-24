@@ -25,11 +25,11 @@ public:
 
     std::wstring GetFilename();
 
-    DWORD GetWidth();
-    DWORD GetHeight();
-    DWORD GetBitDepth();
-    InputMode GetFormat();
-    DWORD GetCompressedSize();
+    DWORD GetWidth() const;
+    DWORD GetHeight() const;
+    DWORD GetBitDepth() const;
+    InputMode GetFormat() const;
+    DWORD GetCompressedSize() const;
 
     void SetWidth(DWORD width);
     void SetHeight(DWORD height);

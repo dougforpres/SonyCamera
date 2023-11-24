@@ -14,14 +14,14 @@
 #include "Locker.h"
 #include "CameraTask.h"
 
-#define MAX_MANUFACTURER_SIZE   0x64
-#define MAX_MODEL_SIZE          0x64
-#define MAX_SERIAL_NUMBER_SIZE  0x64
-#define MAX_DEVICE_NAME_SIZE    0x64
+constexpr auto MAX_MANUFACTURER_SIZE = 0x64;
+constexpr auto MAX_MODEL_SIZE = 0x64;
+constexpr auto MAX_SERIAL_NUMBER_SIZE = 0x64;
+constexpr auto MAX_DEVICE_NAME_SIZE = 0x64;
 
-#define MAX_CAPTURE_MUTEX_WAIT 20000
+constexpr auto MAX_CAPTURE_MUTEX_WAIT = 20000;
 
-#define MAX_EXPOSURE_SAME_COUNT 20
+constexpr auto MAX_EXPOSURE_SAME_COUNT = 20;
 
 static DeviceManager* deviceManager = nullptr;
 
@@ -52,7 +52,7 @@ Shutdown()
     }
 }
 
-LPWSTR
+static LPWSTR
 exportString(std::wstring input)
 {
     /* you must use CoTaskMemAlloc to allocate the memory, not malloc, new, or anything else */
@@ -66,7 +66,7 @@ exportString(std::wstring input)
     return returnedString;
 }
 
-BYTE*
+static BYTE*
 exportBytes(BYTE* buffer, DWORD bufferLen)
 {
     BYTE* returnedBytes = nullptr;
@@ -84,7 +84,7 @@ exportBytes(BYTE* buffer, DWORD bufferLen)
     return returnedBytes;
 }
 
-void
+static void
 RenderProperty(Property id, const CameraProperty* property, PROPERTYVALUE* output)
 {
     if (property)
@@ -127,7 +127,7 @@ RenderProperty(Property id, const CameraProperty* property, PROPERTYVALUE* outpu
     }
 }
 
-Camera*
+static Camera*
 FindCamera(HANDLE hCamera)
 {
     Camera *result = GetCameraManager()->GetCameraForHandle(hCamera);
@@ -498,7 +498,7 @@ CancelCapture(HANDLE hCamera, IMAGEINFO* info)
     return ERROR_SUCCESS;
 }
 
-bool NudgePropertyAndWait(Camera* camera, CameraProperty* desired, bool up, int* compareResult)
+static bool NudgePropertyAndWait(Camera* camera, CameraProperty* desired, bool up, int* compareResult)
 {
     PropertyValue val;
     DWORD value = up ? 1 : -1;
@@ -566,7 +566,7 @@ bool NudgePropertyAndWait(Camera* camera, CameraProperty* desired, bool up, int*
     return result;
 }
 
-std::list<DWORD>
+static std::list<DWORD>
 GetAvailablePropertyValues(HANDLE hCamera, Camera* camera, Property propertyId, DWORD startAt, DWORD stopAt)
 {
     std::list<DWORD> values;
@@ -671,7 +671,7 @@ GetAvailablePropertyValues(HANDLE hCamera, Camera* camera, Property propertyId, 
     return values;
 }
 
-std::wstring
+static std::wstring
 ListToString(std::list<DWORD> list)
 {
     // Generate a string with all values as CSV
@@ -1074,7 +1074,7 @@ GetPropertyValueOption(HANDLE hCamera, DWORD propertyId, PROPERTYVALUEOPTION* op
                 std::advance(it, index);
 
                 PropertyValue* v = *it;
-                option->name = exportString(prop->AsString());
+                option->name = exportString(prop->AsString(v));
 
                 switch (v->GetType())
                 {
@@ -1326,7 +1326,7 @@ GetAllPropertyValues(HANDLE hCamera, PROPERTYVALUE* values, DWORD* count)
     return ERROR_SUCCESS;
 }
 
-float
+static float
 ExposureDWORDToFloat(DWORD exposure, float bulbValue)
 {
     DWORD num = 0;
@@ -1369,7 +1369,7 @@ SetExposureTime(HANDLE hCamera, float desired, PROPERTYVALUE* valueOut)
         CameraSettings* cs = nullptr;
         CameraProperty* v = nullptr;
         DWORD currentExposure = 0;
-        float lastRead = -9e9;
+        float lastRead = (float) -9e9;
         float current = 0.0;
         std::list<DWORD> exposureTimes = camera->GetDeviceInfo().GetExposureTimes();
         short sameCount = 0;
@@ -1383,15 +1383,15 @@ SetExposureTime(HANDLE hCamera, float desired, PROPERTYVALUE* valueOut)
         std::list<DWORD>::iterator i = exposureTimes.begin();
 
         i++;
-        longestNonBulb = ExposureDWORDToFloat(*i, 9e9);
+        longestNonBulb = ExposureDWORDToFloat(*i, (float)9e9);
 
-        desired = desired == 0.0 ? 9e9 : round(desired * 100000) / 100000;
+        desired = desired == (float)0.0 ? (float)9e9 : round(desired * 100000) / 100000;
 
         DWORD setting = 0xffffffff;  // Invalid value
 
         if (desired > longestNonBulb)
         {
-            desired = 9e9;
+            desired = (float)9e9;
             setting = *exposureTimes.begin();
         }
 
@@ -1406,7 +1406,7 @@ SetExposureTime(HANDLE hCamera, float desired, PROPERTYVALUE* valueOut)
         while (setting == 0xffffffff && i != exposureTimes.end())
         {
             test1 = *i;
-            fTest1 = ExposureDWORDToFloat(test1, 9e9);
+            fTest1 = ExposureDWORDToFloat(test1, (float)9e9);
 
             if (fTest1 < desired)
             {
@@ -1422,7 +1422,7 @@ SetExposureTime(HANDLE hCamera, float desired, PROPERTYVALUE* valueOut)
             else
             {
                 test2 = *i;
-                fTest2 = ExposureDWORDToFloat(test2, 9e9);
+                fTest2 = ExposureDWORDToFloat(test2, (float)9e9);
 
                 fDiff1 = abs(desired - fTest1);
                 fDiff2 = abs(desired - fTest2);
@@ -1517,7 +1517,7 @@ SetFocusPosition(HANDLE hCamera, DWORD* focusPosition)
             throw new CameraException(L"Focus not configured");
         }
 
-        *focusPosition = camera->SetFocus(*focusPosition);
+        *focusPosition = camera->SetFocus((UINT16)*focusPosition);
 
         //#ifdef DEBUG
         LOGTRACE(L"Out: SetFocusPosition(...) - new focus position = %d)", *focusPosition);

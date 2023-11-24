@@ -626,7 +626,7 @@ DeviceInfo::SetBitsPerPixel(UINT32 bpp)
 //}
 
 FocusStartMode
-DeviceInfo::GetFocusStartMode()
+DeviceInfo::GetFocusStartMode() const
 {
     return m_focusStartMode;
 }
@@ -636,15 +636,3 @@ DeviceInfo::SetFocusStartMode(FocusStartMode mode)
 {
     m_focusStartMode = mode;
 }
-
-//bool
-//DeviceInfo::GetHandsOffFocus()
-//{
-//    return m_handsOffFocus;
-//}
-//
-//void
-//DeviceInfo::SetHandsOffFocus(bool handsOff)
-//{
-//    m_handsOffFocus = handsOff;
-//}

@@ -1,4 +1,11 @@
 # Change Log
+## 1.0.1.16
+* Ensure Capture Status is set to Cancelled when CancelCapture is called (regardless of whether a capture needed to be cancelled).
+* Fixed a bug where GetPropertyOptionValue would not return correct text for different values.
+* Fixed a typo in the retry logic for some worker functions (not that retry is used much/at all).
+* A few misc cleanups: adding some class default values, making some functions const or static, etc.
+* Upgraded to VS 2022, plus some C++20 changes.
+
 ## 1.0.1.13
 * Some cameras (I'm looking at you A7 IV) don't expose the "Focus Control" property even though they support it. This update includes creation of a fake descriptor.
 * Small change to SonyCameraInfo to make it better able to handle "must set" properties.

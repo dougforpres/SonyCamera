@@ -16,22 +16,22 @@ class DownloadAndProcessImageTask;
 class TakePhotoTaskParams;
 
 // Latest full-size image taken by camera
-#define FULL_IMAGE                      0xffffc001
+constexpr auto FULL_IMAGE = 0xffffc001;
 
 // Latest live-preview
-#define PREVIEW_IMAGE                   0xffffc002
+constexpr auto PREVIEW_IMAGE = 0xffffc002;
 
 // Standard Commands
-#define COMMAND_GET_DEVICE_INFO         0x1001
-#define COMMAND_OPEN_SESSION            0x1002
-#define COMMAND_CLOSE_SESSION           0x1003
-#define COMMAND_GET_STORAGE_IDS         0x1004
-#define COMMAND_GET_STORAGE_INFO        0x1005
-#define COMMAND_GET_NUM_OBJECTS         0x1006
-#define COMMAND_GET_OBJECT_HANDLES      0x1007
-#define COMMAND_GET_OBJECT_INFO         0x1008
-#define COMMAND_GET_OBJECT              0x1009
-#define COMMAND_GET_THUMB               0x100a
+constexpr auto COMMAND_GET_DEVICE_INFO = 0x1001;
+constexpr auto COMMAND_OPEN_SESSION = 0x1002;
+constexpr auto COMMAND_CLOSE_SESSION = 0x1003;
+constexpr auto COMMAND_GET_STORAGE_IDS = 0x1004;
+constexpr auto COMMAND_GET_STORAGE_INFO = 0x1005;
+constexpr auto COMMAND_GET_NUM_OBJECTS = 0x1006;
+constexpr auto COMMAND_GET_OBJECT_HANDLES = 0x1007;
+constexpr auto COMMAND_GET_OBJECT_INFO = 0x1008;
+constexpr auto COMMAND_GET_OBJECT = 0x1009;
+constexpr auto COMMAND_GET_THUMB = 0x100a;
 
 typedef std::unordered_map<Property, PropertyInfo> PropertyInfoMap;
 
@@ -73,7 +73,7 @@ public:
     CameraSettings* GetSettings() const;
     CameraProperty* GetProperty(Property id) const;
     virtual bool RefreshSettings() = 0;
-    void LoadFakeProperties(CameraSettings* settings);
+    void LoadFakeProperties(CameraSettings* settings) const;
 //    virtual const PropertyInfoMap GetSupportedProperties() const;
 
     bool StartCapture(double duration, OutputMode outputMode, DWORD flags);
@@ -102,7 +102,7 @@ protected:
 
     DeviceInfo m_deviceInfo;
     Device* m_device = nullptr;
-    CameraSettings* m_settings;
+    CameraSettings* m_settings = nullptr;
     CameraSupportedProperties m_supportedProperties;
     TakePhotoTask* m_takePhotoTask = nullptr;
     DownloadAndProcessImageTask* m_downloadAndProcessImageTask = nullptr;

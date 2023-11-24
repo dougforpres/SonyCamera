@@ -2,7 +2,7 @@
 #include "MessageWriter.h"
 #include "Logger.h"
 
-#define DATALEN_INCREMENT 128
+constexpr auto DATALEN_INCREMENT = 128;
 
 MessageWriter::MessageWriter(WORD command)
     : m_command(command)
@@ -21,7 +21,7 @@ MessageWriter::~MessageWriter()
 }
 
 Message*
-MessageWriter::GetMessageObj()
+MessageWriter::GetMessageObj() const
 {
     Message* result = new Message(m_command);
 
@@ -80,7 +80,7 @@ MessageWriter::WriteDWORD(const DWORD value)
 void
 MessageWriter::WriteString(const std::wstring value)
 {
-    WriteBYTE(value.size());
+    WriteBYTE((BYTE)value.size());
 
     if (!value.empty())
     {

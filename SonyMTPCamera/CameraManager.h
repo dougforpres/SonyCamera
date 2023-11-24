@@ -4,7 +4,7 @@
 #include "Camera.h"
 #include "Device.h"
 
-#define OPEN_OVERRIDE 0x00000001
+constexpr auto OPEN_OVERRIDE = 0x00000001;
 
 class CameraManager
 {

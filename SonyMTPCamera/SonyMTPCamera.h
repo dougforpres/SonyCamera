@@ -1,20 +1,20 @@
 #pragma once
 #include <minwindef.h>
 
-#define IMAGEFLAG_SAVE_RAW_DATA         0x0001
+constexpr auto IMAGEFLAG_SAVE_RAW_DATA = 0x0001;
 
-#define INFOFLAG_PASSIVE                0x0000
-#define INFOFLAG_ACTIVE                 0x0001
-#define INFOFLAG_INCLUDE_SETTINGS       0x0002
+constexpr auto INFOFLAG_PASSIVE = 0x0000;
+constexpr auto INFOFLAG_ACTIVE = 0x0001;
+constexpr auto INFOFLAG_INCLUDE_SETTINGS = 0x0002;
 
-#define PROPERTYVALUE_TYPE_UINT16       0x0004
-#define PROPERTYVALUE_TYPE_UINT32       0x0006
+constexpr auto PROPERTYVALUE_TYPE_UINT16 = 0x0004;
+constexpr auto PROPERTYVALUE_TYPE_UINT32 = 0x0006;
 
-#define PROPERTYVALUE_FLAG_WRITABLE     0x0002
+constexpr auto PROPERTYVALUE_FLAG_WRITABLE = 0x0002;
 
-#define OPENDEVICEEX_OPEN_ANY_DEVICE    0x0001
+constexpr auto OPENDEVICEEX_OPEN_ANY_DEVICE = 0x0001;
 
-#define CAMERAFLAGS_SUPPORTS_LIVEVIEW   0x00000001
+constexpr auto CAMERAFLAGS_SUPPORTS_LIVEVIEW = 0x00000001;
 
 //#pragma pack(push, 1)
 typedef struct

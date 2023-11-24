@@ -5,8 +5,8 @@
 #include "CameraState.h"
 #include "CameraTask.h"
 
-#define WORKER_THREAD_WAIT_FOR_EXIT 1000
-#define WORKER_THREAD_WAIT_FOR_EXIT_RETRIES 5
+constexpr auto WORKER_THREAD_WAIT_FOR_EXIT = 1000;
+constexpr auto WORKER_THREAD_WAIT_FOR_EXIT_RETRIES = 5;
 
 class Camera;
 

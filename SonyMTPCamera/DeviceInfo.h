@@ -99,7 +99,7 @@ public:
 //    void SetFocusSteps(std::vector<double> steps);
 //    double GetFocusMagicNumber() const;
 //    void SetFocusMagicNumber(double magic);
-    FocusStartMode GetFocusStartMode();
+    FocusStartMode GetFocusStartMode() const;
     void SetFocusStartMode(FocusStartMode mode);
 //    bool GetHandsOffFocus();
 //    void SetHandsOffFocus(bool handsOff);

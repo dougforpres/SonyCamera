@@ -213,7 +213,7 @@ SonyCamera::SetProperty(const Property id, PropertyValue* value)
             throw CameraException(L"Property is not writable");
         }
 
-        tx = new Message(messageType);
+        tx = new Message((WORD)messageType);
 
         tx->AddParam((DWORD)id);
 
@@ -312,7 +312,7 @@ SonyCamera::SetFocus(UINT16 focusPosition)
 
         for (UINT16 test_id = idealStep + 1; test_id <= maxStepSize; test_id += 1)
         {
-            UINT diff2 = abs(usize - m_focusSteps[test_id]);
+            INT16 diff2 = abs(usize - (INT16)m_focusSteps[test_id]);
 
             if (diff2 < bestDiff)
             {
@@ -380,13 +380,13 @@ SonyCamera::SetFocusSteps(std::wstring steps, std::wstring sleeps, bool handsOff
     if (!deviceSteps.empty())
     {
 //        UINT16 index = 1;
-        m_focusLimit = *deviceSteps.begin();
+        m_focusLimit = (UINT16)*deviceSteps.begin();
 
         for (UINT16 index = 1; index <= deviceSteps.size(); index++)//std::vector<double>::const_iterator it = deviceSteps.begin(); it != deviceSteps.end(); it++)
         {
             double st = deviceSteps[index - 1];
             double v = (double)m_focusLimit / st;// *it;
-            m_focusSteps[index] = v;
+            m_focusSteps[index] = (UINT16)v;
 
             // Now try to calculate the appropriate sleep for this step size
             std::wstring sl = deviceSleeps[index <= deviceSleeps.size() ? index - 1 : deviceSleeps.size() - 1];

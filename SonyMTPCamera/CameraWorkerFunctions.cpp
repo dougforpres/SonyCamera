@@ -102,7 +102,7 @@ doCapture(CameraTaskInfo& info)
     return StateResult::Success;
 }
 
-bool
+static bool
 isImageReady(CameraSettings* cs)
 {
     CameraProperty* bufferStatus = cs->GetProperty(Property::PhotoBufferStatus);

@@ -4,7 +4,7 @@
 #include "libjpeg//turbojpeg.h"
 #include "Logger.h"
 #include "Registry.h"
-#include <codecvt>
+#include "CameraException.h"
 
 static const DWORD EXIF_IDENT = 0x002a4949;
 static const DWORD JPEG_IDENT = 0xe1ffd8ff;
@@ -97,7 +97,7 @@ Image::GetImageData()
 }
 
 DWORD
-Image::GetMetaDataSize()
+Image::GetMetaDataSize() const
 {
     LOGTRACE(L"InOut: Image::GetMetaDataSize() = x%04x", m_metaDataSize);
 
@@ -439,7 +439,7 @@ Image::ProcessJPEGData()
 
     case OutputMode::JPEG:
         m_outputMode = OutputMode::PASSTHRU;
-        // fall thru
+        [[fallthrough]];
 
     case OutputMode::PASSTHRU:
         LOGINFO(L"Output mode PASSTHRU...");
@@ -499,7 +499,7 @@ Image::EnsurePixelsProcessed()
 }
 
 OutputMode
-Image::GetOutputMode()
+Image::GetOutputMode() const
 {
     return m_outputMode;
 }
@@ -511,7 +511,7 @@ Image::SetOutputMode(OutputMode mode)
 }
 
 InputMode
-Image::GetInputMode()
+Image::GetInputMode() const
 {
     return m_inputMode;
 }
@@ -543,9 +543,31 @@ Image::GetData()
 std::wstring
 Image::WidenString(const char* shortString)
 {
-    static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    std::wstring result;
 
-    return converter.from_bytes(shortString);
+    int size = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, shortString, -1, nullptr, 0);
+
+    if (size <= 0)
+    {
+        LOGERROR(L"Unable to get size for widen string, got error %d", size);
+        throw CameraException(L"Unable to widen string");
+    }
+    else
+    {
+        result.resize(size + 10);
+        size = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, shortString, -1, &result[0], (int)result.size());
+
+        if (size <= 0)
+        {
+            LOGERROR(L"Unable to widen string, got error %d", size);
+            throw CameraException(L"Unable to widen string");
+        }
+    }
+
+    return result;
+//    static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+
+//    return converter.from_bytes(shortString);
 }
 
 std::wstring
@@ -768,6 +790,10 @@ Image::EnsureDirectory(const std::wstring dir)
 
                 return result ? ERROR_SUCCESS : GetLastError();
             }
+            else
+            {
+                return GetLastError();
+            }
         }
         else
         {
@@ -792,43 +818,43 @@ Image::SetDuration(double duration)
 }
 
 double
-Image::GetDuration()
+Image::GetDuration() const
 {
     return m_duration;
 }
 
 DWORD
-Image::GetRawWidth()
+Image::GetRawWidth() const
 {
     return m_rawWidth;
 }
 
 DWORD
-Image::GetRawHeight()
+Image::GetRawHeight() const
 {
     return m_rawHeight;
 }
 
 DWORD
-Image::GetCroppedWidth()
+Image::GetCroppedWidth() const
 {
     return m_croppedWidth;
 }
 
 DWORD
-Image::GetCroppedHeight()
+Image::GetCroppedHeight() const
 {
     return m_croppedHeight;
 }
 
 DWORD
-Image::GetFocusPosition()
+Image::GetFocusPosition() const
 {
     return m_focusPosition;
 }
 
 double
-Image::GetBatteryTemperature()
+Image::GetBatteryTemperature() const
 {
     return m_batteryTemperature;
 }

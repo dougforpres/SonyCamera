@@ -22,7 +22,7 @@ public:
 
     void Write(const void* data, DWORD dataSize);
 
-    Message* GetMessageObj();
+    Message* GetMessageObj() const;
 
 private:
     WORD m_command = 0;

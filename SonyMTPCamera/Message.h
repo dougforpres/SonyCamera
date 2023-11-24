@@ -4,7 +4,7 @@
 
 #include "Property.h"
 
-#define PARAMS_TERMINATOR 0x0000
+constexpr auto PARAMS_TERMINATOR = 0x0000;
 
 class Message
 {
@@ -20,8 +20,8 @@ public:
 
     void Allocate(DWORD size);
     void SetCommand(WORD command);
-    WORD GetCommand();
-    DWORD GetDataLen();
+    WORD GetCommand() const;
+    DWORD GetDataLen() const;
     BYTE* GetData();
 
     /* Property Setters */
@@ -31,7 +31,7 @@ public:
 
     std::list<DWORD> GetParams();
 
-    bool IsSuccess();
+    bool IsSuccess() const;
 
 private:
     WORD m_command = 0;

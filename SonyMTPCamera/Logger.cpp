@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "Logger.h"
 
-#define MAX_LOGFILE_NAME_LENGTH 1024
+constexpr auto MAX_LOGFILE_NAME_LENGTH = 1024;
 
 HANDLE Logger::s_logFileHandle = INVALID_HANDLE_VALUE;
 std::wstring Logger::s_logfileName = L"";

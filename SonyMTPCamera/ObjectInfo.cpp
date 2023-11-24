@@ -65,7 +65,7 @@ ObjectInfo::GetFilename()
 }
 
 DWORD
-ObjectInfo::GetWidth()
+ObjectInfo::GetWidth() const
 {
     return m_imagePixWidth;
 }
@@ -77,7 +77,7 @@ ObjectInfo::SetWidth(DWORD width)
 }
 
 DWORD
-ObjectInfo::GetHeight()
+ObjectInfo::GetHeight() const
 {
     return m_imagePixHeight;
 }
@@ -89,19 +89,19 @@ ObjectInfo::SetHeight(DWORD height)
 }
 
 DWORD
-ObjectInfo::GetBitDepth()
+ObjectInfo::GetBitDepth() const
 {
     return m_imageBitDepth;
 }
 
 InputMode
-ObjectInfo::GetFormat()
+ObjectInfo::GetFormat() const
 {
     return m_objectFormatCode;
 }
 
 DWORD
-ObjectInfo::GetCompressedSize()
+ObjectInfo::GetCompressedSize() const
 {
     return m_objectCompressedSize;
 }

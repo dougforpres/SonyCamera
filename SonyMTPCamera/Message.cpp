@@ -55,7 +55,7 @@ Message::SetCommand(WORD command)
 }
 
 WORD
-Message::GetCommand()
+Message::GetCommand() const
 {
     return m_command;
 }
@@ -67,7 +67,7 @@ Message::GetData()
 }
 
 DWORD
-Message::GetDataLen()
+Message::GetDataLen() const
 {
     return m_dataLen;
 }
@@ -139,7 +139,7 @@ Message::Dump()
 }
 
 bool
-Message::IsSuccess()
+Message::IsSuccess() const
 {
     return m_command == COMMAND_RESULT_SUCCESS;
 }

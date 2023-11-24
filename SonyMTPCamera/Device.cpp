@@ -6,7 +6,7 @@
 Device::Device(std::wstring DeviceId)
   : m_id(DeviceId)
 {
-    LOGTRACE(L"In: Device::Device(devicdId='%s')", m_id.c_str());
+    LOGTRACE(L"In: Device::Device(deviceId='%s')", m_id.c_str());
 
     LOGTRACE(L"Out: Device::Device(deviceId='%s')", DeviceId.c_str());
 }
@@ -36,7 +36,7 @@ Device::GetHandle()
 }
 
 int
-Device::GetOpenCount()
+Device::GetOpenCount() const
 {
     return m_openCount;
 }

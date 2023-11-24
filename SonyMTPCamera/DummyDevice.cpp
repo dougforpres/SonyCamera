@@ -5,6 +5,7 @@
 #include "MessageWriter.h"
 #include "Registry.h"
 #include "Camera.h"
+#include "CameraException.h"
 
 DummyDevice::DummyDevice(const std::wstring deviceId, const std::wstring friendlyName, const std::wstring manufacturer, const std::wstring description)
     : MTPDevice(nullptr, deviceId)
@@ -122,8 +123,13 @@ DummyDevice::InternalSend(Op kind, Message* out)
         return SetProperty(out);
 
     default:
-        LOGERROR(L"Don't know how to process command x%04x", out->GetCommand());
-        break;
+        std::wostringstream msg;
+
+        msg << L"Don't know how to process command " << std::hex << std::setw(2) << std::setfill(L'0') << out->GetCommand();
+
+        LOGERROR(msg.str().c_str());
+
+        throw CameraException(msg.str().c_str());
     }
 }
 

@@ -2,10 +2,10 @@
 #include "pch.h"
 #include "Message.h"
 
-#define CLIENT_NAME L"Retro.kiwi Sony Camera"
-#define CLIENT_MAJOR_VER 0
-#define CLIENT_MINOR_VER 1
-#define CLIENT_REVISION 1
+constexpr auto CLIENT_NAME = L"Retro.kiwi Sony Camera";
+constexpr auto CLIENT_MAJOR_VER = 0;
+constexpr auto CLIENT_MINOR_VER = 1;
+constexpr auto CLIENT_REVISION = 1;
 
 class Camera;
 
@@ -46,7 +46,7 @@ public:
     bool IsSupported();
     virtual std::wstring GetRegistryPath() = 0;
     virtual bool NeedsSession();
-    int GetOpenCount();
+    int GetOpenCount() const;
 
 protected:
     std::wstring m_id;

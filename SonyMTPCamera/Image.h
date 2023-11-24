@@ -16,24 +16,24 @@ public:
     BYTE* GetData();
     DWORD GetImageDataSize();
     BYTE* GetImageData();
-    DWORD GetMetaDataSize();
+    DWORD GetMetaDataSize() const;
     BYTE* GetMetaData();
     DWORD GetWidth();
     DWORD GetHeight();
-    DWORD GetRawWidth();
-    DWORD GetRawHeight();
-    DWORD GetCroppedWidth();
-    DWORD GetCroppedHeight();
-    OutputMode GetOutputMode();
+    DWORD GetRawWidth() const;
+    DWORD GetRawHeight() const;
+    DWORD GetCroppedWidth() const;
+    DWORD GetCroppedHeight() const;
+    OutputMode GetOutputMode() const;
     void SetOutputMode(OutputMode mode);
     void SaveFile(std::wstring path = L"");
-    InputMode GetInputMode();
+    InputMode GetInputMode() const;
     bool EnsurePixelsProcessed();
     void SetDuration(double duration);
-    double GetDuration();
+    double GetDuration() const;
     void SetCrop(int top, int left, int bottom, int right);
-    double GetBatteryTemperature();
-    DWORD GetFocusPosition();
+    double GetBatteryTemperature() const;
+    DWORD GetFocusPosition() const;
 
 private:
     std::wstring WidenString(const char* shortString);

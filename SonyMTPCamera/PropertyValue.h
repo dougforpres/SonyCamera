@@ -33,7 +33,7 @@ public:
     DataType GetType() const;
     std::wstring ToString() const;
 
-    PROPVARIANT ToPROPVARIANT();
+    PROPVARIANT ToPROPVARIANT() const;
 
 protected:
     DataType m_type = DataType::UNKNOWN;

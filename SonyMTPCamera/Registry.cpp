@@ -58,7 +58,7 @@ Registry::GetString(std::wstring path, std::wstring value, std::wstring def)
         LSTATUS s = RegGetValue(m_hk, path.c_str(), value.c_str(), RRF_RT_REG_SZ, nullptr, str, &dataSize);
 
         result = std::wstring(str, dataSize / sizeof(wchar_t) - 1);
-        delete (BYTE*)str;
+        delete[] (BYTE*)str;
     }
 
     return result.empty() ? def : result;
@@ -67,7 +67,7 @@ Registry::GetString(std::wstring path, std::wstring value, std::wstring def)
 DWORD
 Registry::GetDWORD(std::wstring path, std::wstring value, DWORD def)
 {
-    DWORD result;
+    DWORD result = 0;
     DWORD dataSize = sizeof(DWORD);
 
     LSTATUS regresult = RegGetValue(m_hk, path.c_str(), value.c_str(), RRF_RT_REG_DWORD, nullptr, &result, &dataSize);

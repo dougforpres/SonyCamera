@@ -20,6 +20,9 @@ PTPContainer::PTPContainer(PTPContainer::Type containerType, unsigned short opco
    various properties are extracted from the header of the data, and the remaining data is then saved
  */
 PTPContainer::PTPContainer(unsigned long dataLen, BYTE * data)
+    : _containerType(Type::Data),
+      _opcode(0),
+      _sequenceNumber(0)
 {
     // PTP Packet must be minimum of 12 bytes long, any shorter and
     // we should throw an error
@@ -86,7 +89,7 @@ void PTPContainer::setData(unsigned long dataLen, BYTE * data)
     }
 }
 
-unsigned long PTPContainer::getDataLen()
+unsigned long PTPContainer::getDataLen() const
 {
     return this->_dataLen;
 }
@@ -97,19 +100,19 @@ BYTE * PTPContainer::getData()
 }
 
 PTPContainer::Type
-PTPContainer::getContainerType()
+PTPContainer::getContainerType() const
 {
     return _containerType;
 }
 
 unsigned long
-PTPContainer::getSequenceNumber()
+PTPContainer::getSequenceNumber() const
 {
     return _sequenceNumber;
 }
 
 unsigned short
-PTPContainer::getOpCode()
+PTPContainer::getOpCode() const
 {
     return _opcode;
 }
