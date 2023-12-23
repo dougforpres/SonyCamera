@@ -2,6 +2,7 @@
 #include "CameraWorker.h"
 #include "CameraTask.h"
 #include "CameraManager.h"
+#include "CameraWorkerFunctions.h"
 #include "Logger.h"
 #include "CameraException.h"
 
@@ -87,6 +88,8 @@ DWORD CameraWorker::Run()
 
     CameraTask* currentTask = nullptr;
     HANDLE waiter = INVALID_HANDLE_VALUE;
+    bool isIdleTask = false;
+    int idleCount = 0;
 
     HRESULT coInit = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 
@@ -118,11 +121,19 @@ DWORD CameraWorker::Run()
         }
 
         // We can start something
-        if (!currentTask)
+        if (currentTask)
+        {
+            isIdleTask = false;
+            idleCount = 0;
+        }
+        else
         {
 #ifdef DEBUG
-            LOGTRACE(L"Nothing to do, waiting a bit");
+            LOGTRACE(L"Nothing to do, queuing up a refresh properties task");
 #endif
+            currentTask = new RefreshPropertiesTask();
+            isIdleTask = true;
+            idleCount++;
 
             Sleep(25);
         }
@@ -152,6 +163,22 @@ DWORD CameraWorker::Run()
                     // one auto-generated when there is nothing to do
                     LOGTRACE(L"Deleting un-waited-for task %s", currentTask->Name().c_str());
                     delete currentTask;
+                }
+
+                if (isIdleTask && idleCount % 40 == 0) {
+                    // Check to see if there's a photo waiting that we didn't get notified of
+                    // This will just queue up a download - when the download completes
+#ifdef DEBUG
+                    LOGTRACE(L"Checking to see if an image is waiting we haven't been told about");
+#endif
+                    std::unique_ptr<CameraSettings> cs(info.pCamera->GetSettings());
+
+                    if (isImageReady(cs.get())) {
+#ifdef DEBUG
+                        LOGINFO(L"There is an image ready, but we didn't get told about it!");
+#endif
+                        camera->OnImageBufferStatus(ImageBufferStatus::ImageReady);
+                    }
                 }
 
                 currentTask = nullptr;

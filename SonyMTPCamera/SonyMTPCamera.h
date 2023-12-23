@@ -139,6 +139,13 @@ extern "C" {
     /* Returns basic info about the device */
     IMPEXP HRESULT GetPortableDeviceInfo(DWORD offset, PORTABLEDEVICEINFO* pdinfo);
 
+    /* These two functions operate similarly to GetPortableDevice... but only consider known cameras */
+    /* Returns count of known camera devices currently connected to this computer.  Does not filter the list like GetDeviceCount does */
+    IMPEXP DWORD GetSupportedDeviceCount();
+
+    /* Returns basic info about the device */
+    IMPEXP HRESULT GetSupportedDeviceInfo(DWORD offset, PORTABLEDEVICEINFO* pdinfo);
+
     IMPEXP HRESULT GetPropertyList(HANDLE hCamera, DWORD* list, DWORD* listSize);
     IMPEXP HRESULT GetPropertyDescriptor(HANDLE hCamera, DWORD propertyId, PROPERTYDESCRIPTOR* descriptor);
     IMPEXP HRESULT GetPropertyValueOption(HANDLE hCamera, DWORD propertyId, PROPERTYVALUEOPTION* option, DWORD index);

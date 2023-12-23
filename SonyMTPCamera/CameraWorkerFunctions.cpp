@@ -3,6 +3,7 @@
 #include "CameraTask.h"
 #include "Logger.h"
 #include "Camera.h"
+#include "CameraWorkerFunctions.h"
 
 StateResult
 refreshSettings(CameraTaskInfo& info)
@@ -102,7 +103,7 @@ doCapture(CameraTaskInfo& info)
     return StateResult::Success;
 }
 
-static bool
+bool
 isImageReady(CameraSettings* cs)
 {
     CameraProperty* bufferStatus = cs->GetProperty(Property::PhotoBufferStatus);

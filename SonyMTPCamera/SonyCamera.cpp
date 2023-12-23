@@ -123,7 +123,16 @@ SonyCamera::Initialize()
     delete tx;
     delete rx;
 
-    RefreshSettings();
+    try
+    {
+        RefreshSettings();
+    }
+    catch (CameraException& ex)
+    {
+        // Failed to refresh settings - assumption is we're not connected to a camera, so return false
+        LOGWARN(L"Unable to refresh camera settings: %s", ex.GetMessage().c_str());
+        result = false;
+    }
 
     LOGTRACE(L"Out: SonyCamera::Initialize() - result %d", result);
 

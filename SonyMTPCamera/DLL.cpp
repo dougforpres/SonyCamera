@@ -202,11 +202,11 @@ OpenDeviceEx(LPWSTR deviceName, DWORD flags)
                 else
                 {
                     LOGERROR(L"Unable to initialize camera");
-                    result = INVALID_HANDLE_VALUE;
                     camera->Close();
                     GetCameraManager()->RemoveCamera(result);
                     delete camera;
                     camera = nullptr;
+                    result = INVALID_HANDLE_VALUE;
                 }
             }
             catch (CameraException & gfe)
@@ -864,6 +864,9 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
     return result;
 }
 
+// The GetPortable.... methods return ALL portable devices detected - this can include USB drives, etc
+// and is primarily used in determining whether a device is indeed a camera. Use GetSupported.... methods
+// to get only supported cameras
 DWORD
 GetPortableDeviceCount()
 {
@@ -914,6 +917,57 @@ GetPortableDeviceInfo(DWORD offset, PORTABLEDEVICEINFO* pdinfo)
     }
 }
 
+DWORD
+GetSupportedDeviceCount()
+{
+    LOGTRACE(L"In: GetSupportedDeviceCount()");
+
+    // Refresh before getting list
+    deviceManager->GetAllDevices(true);
+    DWORD result = deviceManager->GetFilteredDevices().size();
+
+    LOGTRACE(L"Out: GetSupportedDeviceCount() - returning %d", result);
+
+    return result;
+}
+
+HRESULT
+GetSupportedDeviceInfo(DWORD offset, PORTABLEDEVICEINFO* pdinfo)
+{
+    LOGTRACE(L"In: GetSupportedDeviceInfo()");
+
+    if (!pdinfo)
+    {
+        LOGWARN(L"Out: GetSupportedDeviceInfo(x%08x, ...) pdinfo is null", offset);
+
+        return ERROR_INCORRECT_SIZE;
+    }
+
+    std::list<Device*> deviceList = deviceManager->GetFilteredDevices();
+    std::list<Device*>::iterator it = deviceList.begin();
+
+    std::advance(it, offset);
+
+    if (it != deviceList.end())
+    {
+        Device* device = (*it);
+
+        pdinfo->id = exportString((*it)->GetId());
+        pdinfo->manufacturer = exportString(device->GetManufacturer());
+        pdinfo->model = exportString(device->GetFriendlyName());
+        pdinfo->devicePath = exportString(device->GetRegistryPath());
+
+        LOGTRACE(L"Out: GetSupportedDeviceInfo(x%08x, @ x%08p) - Returning data", offset, pdinfo);
+
+        return ERROR_SUCCESS;
+    }
+    else
+    {
+        LOGWARN(L"Out: GetSupportedDeviceInfo(x%08x, @ x%08p) - Device Not Found", offset, pdinfo);
+
+        return ERROR_NOT_FOUND;
+    }
+}
 
 HRESULT
 GetPropertyList(HANDLE hCamera, DWORD* list, DWORD* listSize)

@@ -1,4 +1,12 @@
 # Change Log
+## 1.0.1.18
+* Fixed issue where new 1.0.1.x branch would fail to enumerate cameras properly if non-camera portable devices were present (i.e. a USB drive).
+* ILX-LR1 (ILX-LRa): Added.
+
+## 1.0.1.17
+* Added a couple of new methods that allow a listing of verified "camera" devices to be retrieved. This will speed startup as we won't need to attempt to open each device until it's actually required.
+* Added code to fetch the updated properties periodically when nothing is happening. It seems that if there is no traffic the camera will stop sending notifications of changes (which seems counter-intuitive).
+
 ## 1.0.1.16
 * Ensure Capture Status is set to Cancelled when CancelCapture is called (regardless of whether a capture needed to be cancelled).
 * Fixed a bug where GetPropertyOptionValue would not return correct text for different values.

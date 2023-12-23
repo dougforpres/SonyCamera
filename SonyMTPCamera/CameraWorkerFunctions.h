@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "CameraTask.h"
 #include "CameraTaskInfo.h"
+#include "CameraSettings.h"
 
 enum class StateResult
 {
@@ -10,6 +11,8 @@ enum class StateResult
     Cancel,
     Retry,
 };
+
+bool isImageReady(CameraSettings* cs);
 
 StateResult refreshSettings(CameraTaskInfo& info);
 StateResult getPreview(CameraTaskInfo& info);
