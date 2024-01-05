@@ -1,4 +1,10 @@
 # Change Log
+## 1.0.1.19
+* Fixed issue where SonyCameraInfo wouldn't output learnt Exposure and ISO info until the next run.
+* ICLE-7CM2 (a7C Mk II): Added.
+* More lenses (up to 16 supported at this time).
+* Started modernizing internals to be aligned closer to recent C++ standards.
+
 ## 1.0.1.18
 * Fixed issue where new 1.0.1.x branch would fail to enumerate cameras properly if non-camera portable devices were present (i.e. a USB drive).
 * ILX-LR1 (ILX-LRa): Added.

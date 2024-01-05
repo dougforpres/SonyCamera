@@ -111,7 +111,6 @@ private:
     void Copy(const DeviceInfo& rhs);
     void DumpList(std::list<WORD> list) const;
     void DumpList(std::list<DWORD> list) const;
-    void DumpList(std::list<std::wstring> list) const;
 
     double m_standardVersion = 0;
     DWORD m_vendorExtensionId = 0;

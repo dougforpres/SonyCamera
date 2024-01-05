@@ -239,41 +239,23 @@ DeviceInfo::DumpToLog() const
     }
 
     LOGINFO(L"  Reset Focus To Infinite       %s", startMode.c_str());
-//    LOGINFO(L"  Hands-Off Focus               %s", m_handsOffFocus ? L"Yes" : L"No");
-//    LOGINFO(L"  Focus Limit                   %d", m_focusLimit);
-//    LOGINFO(L"  Focus Magic Number            %f", m_focusMagicNumber);
-//    LOGINFO(L"  Focus Steps                   %d values", m_focusSteps.size());
-//
-//    for (std::vector<double>::const_iterator it = m_focusSteps.begin(); it != m_focusSteps.end(); it++)
-//    {
-//        LOGINFO(L"                              %d", *it);
-//    }
 }
 
 void
 DeviceInfo::DumpList(std::list<WORD> list) const
 {
-    for (std::list<WORD>::const_iterator it = list.begin(); it != list.end(); it++)
+    for (auto value: list)
     {
-        LOGINFO(L"                              %d (x%04x)", *it, *it);
+        LOGINFO(L"                              %d (x%04x)", value, value);
     }
 }
 
 void
 DeviceInfo::DumpList(std::list<DWORD> list) const
 {
-    for (std::list<DWORD>::const_iterator it = list.begin(); it != list.end(); it++)
+    for (auto value : list)
     {
-        LOGINFO(L"                              %d (x%08x)", *it, *it);
-    }
-}
-
-void
-DeviceInfo::DumpList(std::list<std::wstring> list) const
-{
-    for (std::list<std::wstring>::const_iterator it = list.begin(); it != list.end(); it++)
-    {
-        LOGINFO(L"                              %s", (*it).c_str());
+        LOGINFO(L"                              %d (x%08x)", value, value);
     }
 }
 
@@ -600,30 +582,6 @@ DeviceInfo::SetBitsPerPixel(UINT32 bpp)
 {
     m_bitsPerPixel = bpp;
 }
-
-//std::vector<double>
-//DeviceInfo::GetFocusSteps() const
-//{
-//    return m_focusSteps;
-//}
-//
-//void
-//DeviceInfo::SetFocusSteps(std::vector<double> steps)
-//{
-//    m_focusSteps = steps;
-//}
-//
-//double
-//DeviceInfo::GetFocusMagicNumber() const
-//{
-//    return m_focusMagicNumber;
-//}
-//
-//void
-//DeviceInfo::SetFocusMagicNumber(double magic)
-//{
-//    m_focusMagicNumber = magic;
-//}
 
 FocusStartMode
 DeviceInfo::GetFocusStartMode() const

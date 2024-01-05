@@ -22,9 +22,9 @@ public:
     CameraProperty* GetProperty(Property id) const;
     PropertyValue* GetPropertyValue(Property id) const;
 
-    CAMERAPROP::const_iterator begin();
-    CAMERAPROP::const_iterator end();
-    CAMERAPROP::const_iterator find(Property id) const;
+    CAMERAPROP::const_iterator cbegin();
+    CAMERAPROP::const_iterator cend();
+    CAMERAPROP::const_iterator cfind(Property id) const;
 
     int size() const;
 

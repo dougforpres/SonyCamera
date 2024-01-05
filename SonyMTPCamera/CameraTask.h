@@ -88,7 +88,7 @@ class
     RefreshPropertiesTask : public CameraTask
 {
 public:
-    RefreshPropertiesTask();
+    RefreshPropertiesTask(bool refreshFakePropertiesToo);
 };
 
 // Gets current deviceinfo

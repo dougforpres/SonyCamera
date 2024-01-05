@@ -283,7 +283,7 @@ CameraTask::SetUserStatus(int userStatus)
     status.userStatus = userStatus;
 }
 
-RefreshPropertiesTask::RefreshPropertiesTask()
+RefreshPropertiesTask::RefreshPropertiesTask(bool refreshFakePropertiesToo)
     : CameraTask(L"RefreshPropertiesTask")
 {
     StateStepInfo steps[] = {
@@ -311,6 +311,7 @@ RefreshPropertiesTask::RefreshPropertiesTask()
         },
     };
 
+    SetParam1((void *)(refreshFakePropertiesToo ? 1 : 0));
     SetSteps(steps);
 }
 

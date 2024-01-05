@@ -131,7 +131,7 @@ DWORD CameraWorker::Run()
 #ifdef DEBUG
             LOGTRACE(L"Nothing to do, queuing up a refresh properties task");
 #endif
-            currentTask = new RefreshPropertiesTask();
+            currentTask = new RefreshPropertiesTask(false);
             isIdleTask = true;
             idleCount++;
 
@@ -211,9 +211,9 @@ CameraWorker::QueueTask(CameraTask* task, HANDLE waiter)
     // queue and only add if there isn't one of same type
     if (!waiter)
     {
-        for (std::list<std::pair<CameraTask*, HANDLE>>::const_iterator it = queue.begin(); it != queue.end(); it++)
+        for (const auto queued: queue)
         {
-            if ((*it).first->Name() == task->Name())
+            if (queued.first->Name() == task->Name())
             {
                 LOGINFO(L"Not queuing task %s as there is already one in queue", task->Name().c_str());
                 task = nullptr;

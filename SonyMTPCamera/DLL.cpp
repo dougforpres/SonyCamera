@@ -167,12 +167,11 @@ OpenDeviceEx(LPWSTR deviceName, DWORD flags)
 
     HANDLE result = INVALID_HANDLE_VALUE;
     std::list<Device*> deviceList = (flags & OPENDEVICEEX_OPEN_ANY_DEVICE) ? deviceManager->GetAllDevices(false) : deviceManager->GetFilteredDevices();
-    std::list<Device*>::iterator it;
     std::wstring deviceId = deviceName;
 
     LOGINFO(L"OpenDevice: Found %d devices... iterating...", deviceList.size());
 
-    for (it = deviceList.begin(); it != deviceList.end() && result == INVALID_HANDLE_VALUE; it++)
+    for (auto it = deviceList.begin(); it != deviceList.end() && result == INVALID_HANDLE_VALUE; it++)
     {
         std::wstring id = (*it)->GetId();
         LOGINFO(L"OpenCamera: Scanning %s (%s)", (*it)->GetFriendlyName().c_str(), (*it)->GetId().c_str());
@@ -194,9 +193,9 @@ OpenDeviceEx(LPWSTR deviceName, DWORD flags)
                     // It will be useful to dump a list of camera properties
                     std::unique_ptr<CameraSettings> cs(camera->GetSettings());
 
-                    for (CAMERAPROP::const_iterator it =cs->begin(); it != cs->end(); it++)
+                    for (auto propIt = cs->cbegin(); propIt != cs->cend(); it++)
                     {
-                        LOGDEBUG(L"Camera property: %04x = %s", (*it).first, (*it).second->ToString().c_str());
+                        LOGDEBUG(L"Camera property: %04x = %s", (*propIt).first, (*propIt).second->ToString().c_str());
                     }
                 }
                 else
@@ -677,9 +676,9 @@ ListToString(std::list<DWORD> list)
     // Generate a string with all values as CSV
     std::wostringstream regString;
 
-    for (std::list<DWORD>::iterator it = list.begin(); it != list.end(); it++)
+    for (auto str: list)
     {
-        regString << *it << L",";
+        regString << str << L",";
     }
 
     // Trim off trailing ","
@@ -748,9 +747,9 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
                     {
                         // Need to get a preview image
                         LOGINFO(L"Getting preview image so we can determine size...");
-                        IMAGEINFO iinfo;
+                        IMAGEINFO iinfo{};
 
-                        memset((BYTE*)&iinfo, 0, sizeof(iinfo));
+//                        memset((BYTE*)&iinfo, 0, sizeof(iinfo));
                         iinfo.imageMode = (DWORD)OutputMode::RGB;
 
                         GetPreviewImage(hCamera, &iinfo);
@@ -778,9 +777,9 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
 
                         // Need to take a full-size image
                         LOGINFO(L"Getting full-size image so we can determine size...");
-                        IMAGEINFO iinfo;
+                        IMAGEINFO iinfo{};
 
-                        memset((BYTE*)&iinfo, 0, sizeof(iinfo));
+//                        memset((BYTE*)&iinfo, 0, sizeof(iinfo));
 
                         // We should be on fastest exposure time, which is perfect for the test shot
                         camera->StartCapture(0.1, OutputMode::RGGB, 0);
@@ -830,9 +829,9 @@ GetCameraInfo(HANDLE hCamera, CAMERAINFO* info, DWORD flags)
 
             task.Run(camera);
 
-            RefreshPropertiesTask rpTask;
+            RefreshPropertiesTask rpTask(true);
 
-            task.Run(camera);
+            rpTask.Run(camera);
 
             deviceInfo = camera->GetDeviceInfo();
 
@@ -1007,9 +1006,8 @@ GetPropertyList(HANDLE hCamera, DWORD* list, DWORD* listSize)
 
         int offset = 0;
 
-        for (CAMERAPROP::const_iterator it = cs->begin(); it != cs->end(); it++)
+        for (auto it = cs->cbegin(); it != cs->cend(); it++)
         {
-//            LOGTRACE(L"Adding property x%04x to list", (*it).first);
             list[offset++] = (DWORD)((*it).first);
         }
     }
@@ -1365,7 +1363,7 @@ GetAllPropertyValues(HANDLE hCamera, PROPERTYVALUE* values, DWORD* count)
 
         DWORD offset = 0;
 
-        for (CAMERAPROP::const_iterator it = cs->begin(); it != cs->end() && offset < *count; it++)
+        for (auto it = cs->cbegin(); it != cs->cend() && offset < *count; it++)
         {
             RenderProperty((*it).first, (*it).second, &values[offset]);
 
@@ -1434,7 +1432,7 @@ SetExposureTime(HANDLE hCamera, float desired, PROPERTYVALUE* valueOut)
             return ERROR_NOT_SUPPORTED;
         }
 
-        std::list<DWORD>::iterator i = exposureTimes.begin();
+        auto i = exposureTimes.begin();
 
         i++;
         longestNonBulb = ExposureDWORDToFloat(*i, (float)9e9);
@@ -1510,18 +1508,7 @@ GetFocusLimit(HANDLE hCamera)
         return ERROR_INVALID_HANDLE;
     }
 
-//    try
-//    {
-//        Locker lock(camera);
-
-        return camera->GetFocusLimit();
-//    }
-//    catch (CameraException& gfe)
-//    {
-//        LOGERROR(L"Exception getting focus limit: %s", gfe.GetMessage().c_str());
-//    }
-
-//    return ERROR_NOT_SUPPORTED;
+    return camera->GetFocusLimit();
 }
 
 DWORD
@@ -1534,18 +1521,7 @@ GetFocusPosition(HANDLE hCamera)
         return ERROR_INVALID_HANDLE;
     }
 
-//    try
-//    {
-//        Locker lock(camera);
-
-        return camera->GetFocus();
-//    }
-//    catch (CameraException& gfe)
-//    {
-//        LOGERROR(L"Exception getting focus: %s", gfe.GetMessage().c_str());
-//    }
-
-//    return ERROR_NOT_SUPPORTED;
+    return camera->GetFocus();
 }
 
 HRESULT
@@ -1568,7 +1544,7 @@ SetFocusPosition(HANDLE hCamera, DWORD* focusPosition)
 
         if (camera->GetFocusLimit() == 0)
         {
-            throw new CameraException(L"Focus not configured");
+            throw CameraException(L"Focus not configured");
         }
 
         *focusPosition = camera->SetFocus((UINT16)*focusPosition);
@@ -1600,11 +1576,11 @@ IMPEXP DWORD GetLensCount()
 
     std::list<std::wstring> manufacturers = registry.GetChildKeys(L"Lenses");
 
-    for (std::list<std::wstring>::const_iterator it = manufacturers.begin(); it != manufacturers.end(); it++)
+    for (const auto &manufacturer: manufacturers)
     {
         std::wostringstream lensPath;
 
-        lensPath << L"Lenses\\" << *it;
+        lensPath << L"Lenses\\" << manufacturer;
 
         std::list<std::wstring> lenses = registry.GetChildKeys(lensPath.str());
         count += lenses.size();
@@ -1624,27 +1600,27 @@ IMPEXP HRESULT GetLensInfo(DWORD offset, LENSINFO* plinfo)
     bool populated = false;
     std::list<std::wstring> manufacturers = registry.GetChildKeys(L"Lenses");
 
-    for (std::list<std::wstring>::const_iterator it = manufacturers.begin(); it != manufacturers.end(); it++)
+    for (const auto &manufacturer: manufacturers)
     {
         std::wostringstream lensPath;
 
-        lensPath << L"Lenses\\" << *it;
+        lensPath << L"Lenses\\" << manufacturer;
 
         std::list<std::wstring> lenses = registry.GetChildKeys(lensPath.str());
 
-        for (std::list<std::wstring>::const_iterator lit = lenses.begin(); lit != lenses.end(); lit++)
+        for (const auto &lens: lenses)
         {
             std::wostringstream pathBuilder;
             std::wostringstream lp2;
 
-            pathBuilder << *it << L"\\" << *lit;
-            lp2 << lensPath.str() << L"\\" << *lit;
+            pathBuilder << manufacturer << L"\\" << lens;
+            lp2 << lensPath.str() << L"\\" << lens;
 
             if (index == offset)
             {
                 plinfo->id = exportString(pathBuilder.str());
-                plinfo->manufacturer = exportString(*it);
-                plinfo->model = exportString(registry.GetString(lp2.str(), L"", *lit));
+                plinfo->manufacturer = exportString(manufacturer);
+                plinfo->model = exportString(registry.GetString(lp2.str(), L"", lens));
                 plinfo->lensPath = exportString(lp2.str());
 
                 populated = true;

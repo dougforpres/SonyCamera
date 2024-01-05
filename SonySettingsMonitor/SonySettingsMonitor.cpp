@@ -12,18 +12,18 @@
 #include <math.h>
 #include "SonyMTPCamera.h"
 
-#define FOCUS_PROP 0xd2d1
+constexpr int FOCUS_PROP = 0xd2d1;
 
-#define FOCUS_FULL_CLOSE 0xfff9
-#define FOCUS_BIG_CLOSE 0xfffd
-#define FOCUS_MEDIUM_CLOSE 0xfffe
-#define FOCUS_SMALL_CLOSE 0xffff
-#define FOCUS_SMALL_FAR 0x0001
-#define FOCUS_MEDIUM_FAR 0x0002
-#define FOCUS_BIG_FAR 0x0003
-#define FOCUS_FULL_FAR 0x0007
+constexpr int FOCUS_FULL_CLOSE = 0xfff9;
+constexpr int FOCUS_BIG_CLOSE = 0xfffd;
+constexpr int FOCUS_MEDIUM_CLOSE = 0xfffe;
+constexpr int FOCUS_SMALL_CLOSE = 0xffff;
+constexpr int FOCUS_SMALL_FAR = 0x0001;
+constexpr int FOCUS_MEDIUM_FAR = 0x0002;
+constexpr int FOCUS_BIG_FAR = 0x0003;
+constexpr int FOCUS_FULL_FAR = 0x0007;
 
-void
+static void
 scanFocus(HANDLE h, DWORD stepSize, int steps, bool slow)
 {
     // First, set focus to infinite
@@ -84,22 +84,22 @@ short current_position = -1;
 
 std::map<unsigned short, short> steps;
 
-double calculate_step(unsigned short step_size)
+static double calculate_step(unsigned short step_size)
 {
     double scale = double(max_position) / pow(step_growth_rate, max_step_size - 1);
 
     return pow(step_growth_rate, step_size) * scale;
 }
 
-void populate_sizes()
+static void populate_sizes()
 {
     for (int i = 0; i < max_step_size; i++)
     {
-        steps[i + 1] = calculate_step(i);
+        steps[i + 1] = (short)calculate_step(i);
     }
 }
 
-void move(HANDLE hCamera, short step)
+static void move(HANDLE hCamera, short step)
 {
     short diff = steps[abs(step)];
 
@@ -137,7 +137,7 @@ void move(HANDLE hCamera, short step)
     Sleep(200);
 }
 
-short nearest_step(short size)
+static short nearest_step(short size)
 {
     size = abs(size);
 
@@ -158,7 +158,7 @@ short nearest_step(short size)
     return best_id;
 }
 
-void set_focus(HANDLE hCamera, short position)
+static void set_focus(HANDLE hCamera, short position)
 {
     if (current_position == -1 || always_reset_to_infinite)
     {
@@ -184,7 +184,7 @@ void set_focus(HANDLE hCamera, short position)
     }
 }
 
-void
+static void
 testFocus(HANDLE h)
 {
 //    populate_sizes();
@@ -199,7 +199,7 @@ testFocus(HANDLE h)
     }
 }
 
-void
+static void
 resetFocus(HANDLE h, int count)
 {
     for (int i = 0; i < count; i++)
@@ -209,7 +209,7 @@ resetFocus(HANDLE h, int count)
     }
 }
 
-void
+static void
 calcFocusRanges(HANDLE h)
 {
     std::map<int, float> values;
@@ -218,7 +218,7 @@ calcFocusRanges(HANDLE h)
 
     GetPropertyDescriptor(h, FOCUS_PROP, &pd);
 
-    printf("Scanning focus, largest step first!\nAfter that, assuming a > %.1fx growth rate\n\n");
+    printf("Scanning focus, largest step first!\nAfter that, assuming a > %.1fx growth rate\n\n", growth);
 
     for (int size = 7; size > 0; size--)
     {
@@ -230,17 +230,19 @@ calcFocusRanges(HANDLE h)
 
         if (size < 7)
         {
-            int pre = values[size + 1] * growth;
+            double pre = values[size + 1] * growth;
+
+            printf("I think this size will require around %.2f steps\n", pre);
 
             // the pre value is very accurate, and we don't want to go over, so we'll trim say 5% off
             pre = pre * 0.95;
 
             // Move some portion of distance to assumed next step
-            printf("Based on previous setting, pre-moving %d steps (so you don't have to)\n", pre);
+            printf("Based on previous setting, pre-moving %d steps (so you don't have to)\n", (int)pre);
 
-            for (int s = 0; s < pre; s++)
+            for (int s = 0; s < (int)pre; s++)
             {
-                printf("\r%d/%d...", s+1, pre);
+                printf("\r%d/%d...", s+1, (int)pre);
                 SetPropertyValue(h, FOCUS_PROP, -size);
                 Sleep(200);
                 steps++;
@@ -282,10 +284,11 @@ calcFocusRanges(HANDLE h)
         printf("Step size %d - count %.1f\n", i, values[i]);
     }
 
+    printf("\n\nPress 'X' or 'x' to exit: ");
+
     do
     {
-        printf("\n\nPress 'X' to exit");
-    } while (toupper(_getch() != 'X'));
+    } while (toupper(_getch()) != 'X');
 
     //scanFocus(h, 7, 1, false);  // All the way - 1 step end-to-end
     //scanFocus(h, 6, 3, false);  // 45% - not super useful - 3 steps end-to-end
@@ -296,7 +299,7 @@ calcFocusRanges(HANDLE h)
     //scanFocus(h, 1, 264, false);
 }
 
-void testFocusAPI(HANDLE h)
+static void testFocusAPI(HANDLE h)
 {
     DWORD count = GetLensCount();
 
@@ -305,9 +308,9 @@ void testFocusAPI(HANDLE h)
     LENSINFO lense;
 
     // Test get info method
-    DWORD infoCount = count;
+    int infoCount = (int)count;
 
-    for (int i = 0; i < count; i++)
+    for (int i = 0; i < infoCount; i++)
     {
         GetLensInfo(i, &lense);
 
@@ -342,11 +345,11 @@ void testFocusAPI(HANDLE h)
     }
 }
 
-void
+static void
 watchSettings(HANDLE h, bool loop)
 {
     DWORD count = 0;
-    IMAGEINFO iinfo;
+    IMAGEINFO iinfo{};
     
     GetPropertyList(h, nullptr, &count);
 
@@ -357,7 +360,7 @@ watchSettings(HANDLE h, bool loop)
 //    RefreshPropertyList(h);
     GetAllPropertyValues(h, pv1, &count);
 
-    for (int i = 0; i < count; i++)
+    for (int i = 0; i < (int)count; i++)
     {
         PROPERTYVALUE* v = (pv1 + i);
         PROPERTYDESCRIPTOR d;
@@ -382,7 +385,7 @@ watchSettings(HANDLE h, bool loop)
             if (pv2)
             {
                 // Compare
-                for (int i = 0; i < count; i++)
+                for (int i = 0; i < (int)count; i++)
                 {
                     PROPERTYVALUE* t1 = (pv1 + i);
                     PROPERTYVALUE* t2 = (pv2 + i);
@@ -403,7 +406,7 @@ watchSettings(HANDLE h, bool loop)
             }
 
             // Clean up text
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < (int)count; i++)
             {
                 PROPERTYVALUE* t2 = (pv2 + i);
 
@@ -419,7 +422,7 @@ watchSettings(HANDLE h, bool loop)
     }
 }
 
-void
+static void
 dumpExposureOptions(HANDLE h)
 {
     PROPERTYDESCRIPTOR descriptor;
@@ -433,7 +436,7 @@ dumpExposureOptions(HANDLE h)
 
     count = descriptor.valueCount;
 
-    for (int i = 0; i < count; i++)
+    for (int i = 0; i < (int)count; i++)
     {
         hr = GetPropertyValueOption(h, 0xffff, &option, i);
 
@@ -446,13 +449,13 @@ dumpExposureOptions(HANDLE h)
     }
 }
 
-void
+static void
 testExposure(HANDLE h)
 {
     // Device is open
     // Get exposure time info
     PROPERTYDESCRIPTOR descriptor;
-    #define SHUTTERSPEED 0xd20d
+    constexpr int SHUTTERSPEED = 0xd20d;
     HRESULT hr = GetPropertyDescriptor(h, SHUTTERSPEED, &descriptor);
 
     if (hr != ERROR_SUCCESS)
@@ -475,7 +478,7 @@ testExposure(HANDLE h)
 
     std::cout << "Setting shutter speed to 1/100..." << std::endl;
 
-    SetExposureTime(h, 0.01, &value);
+    SetExposureTime(h, (float)0.01, &value);
 
     if (hr != ERROR_SUCCESS)
     {
@@ -503,7 +506,7 @@ testExposure(HANDLE h)
 
     std::cout << "Setting shutter speed to 1/3..." << std::endl;
 
-    SetExposureTime(h, 0.333, &value);
+    SetExposureTime(h, (float)0.333, &value);
 
     if (hr != ERROR_SUCCESS)
     {
@@ -517,7 +520,7 @@ testExposure(HANDLE h)
 
     std::cout << "Setting shutter speed to 1/23..." << std::endl;
 
-    SetExposureTime(h, 1.0/23.0, &value);
+    SetExposureTime(h, (float)(1.0/23.0), &value);
 
     if (hr != ERROR_SUCCESS)
     {
@@ -531,7 +534,7 @@ testExposure(HANDLE h)
 
     std::cout << "Setting shutter speed to 1/4001..." << std::endl;
 
-    SetExposureTime(h, 1.0/4001.0, &value);
+    SetExposureTime(h, (float)(1.0/4001.0), &value);
 
     if (hr != ERROR_SUCCESS)
     {
@@ -545,7 +548,7 @@ testExposure(HANDLE h)
 
     std::cout << "Setting shutter speed to 32..." << std::endl;
 
-    SetExposureTime(h, 32.0, &value);
+    SetExposureTime(h, (float)32.0, &value);
 
     if (hr != ERROR_SUCCESS)
     {
@@ -559,7 +562,7 @@ testExposure(HANDLE h)
 
     std::cout << "Setting shutter speed to BULB..." << std::endl;
 
-    SetExposureTime(h, 0, &value);
+    SetExposureTime(h, (float)(0), &value);
 
     if (hr != ERROR_SUCCESS)
     {
@@ -575,7 +578,7 @@ testExposure(HANDLE h)
     std::cout << "Got it";
 }
 
-void
+static void
 testSetISO(HANDLE h)
 {
     SetPropertyValue(h, 0xd21e, 640);
@@ -585,7 +588,7 @@ int main()
 {
 //    HRESULT comhr = CoInitialize(nullptr);
 
-    int portableDeviceCount = GetPortableDeviceCount();
+    int portableDeviceCount = GetSupportedDeviceCount();
 
     std::cout << portableDeviceCount << " portable devices found\n\n";
     PORTABLEDEVICEINFO pdinfo;
@@ -596,7 +599,7 @@ int main()
         std::cout << "\nDevice #" << p + 1 << "\n";
         memset(&pdinfo, 0, sizeof(pdinfo));
 
-        if (GetPortableDeviceInfo(p, &pdinfo) == ERROR_SUCCESS)
+        if (GetSupportedDeviceInfo(p, &pdinfo) == ERROR_SUCCESS)
         {
             if (firstDevice.empty())
             {
@@ -622,8 +625,8 @@ int main()
 //    testExposure(h);
 // 
 //     testFocus(h);
-    testFocusAPI(h);
-//    calcFocusRanges(h);
+//    testFocusAPI(h);
+    calcFocusRanges(h);
 //    testSetISO(h);
 //    dumpExposureOptions(h);
 

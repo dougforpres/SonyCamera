@@ -956,7 +956,7 @@ CameraPropertyFactory::CameraPropertyFactory()
 void
 CameraPropertyFactory::AddCreator(Property id, pConstructor c)
 {
-    std::pair<std::unordered_map<Property, pConstructor>::iterator, bool> res = m_creators.insert(std::pair<Property, pConstructor>(id, nullptr));
+    auto res = m_creators.insert(std::pair<Property, pConstructor>(id, nullptr));
     (*res.first).second = c;
 }
 

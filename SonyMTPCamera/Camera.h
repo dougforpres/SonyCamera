@@ -72,7 +72,7 @@ public:
     virtual Image* GetImage(DWORD imageId);
     CameraSettings* GetSettings() const;
     CameraProperty* GetProperty(Property id) const;
-    virtual bool RefreshSettings() = 0;
+    virtual bool RefreshSettings(bool refreshFakePropertiesToo) = 0;
     void LoadFakeProperties(CameraSettings* settings) const;
 //    virtual const PropertyInfoMap GetSupportedProperties() const;
 

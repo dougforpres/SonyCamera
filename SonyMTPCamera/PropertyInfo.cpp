@@ -33,17 +33,17 @@ PropertyInfo::Copy(const PropertyInfo* rhs)
         rhs->m_rangeHi ? new PropertyValue(*rhs->m_rangeHi) : nullptr,
         rhs->m_rangeStep ? new PropertyValue(*rhs->m_rangeStep) : nullptr);
 
-    for (std::list<PropertyValue*>::const_iterator it = m_enum.begin(); it != m_enum.end(); it++)
+    for (const auto pValue: m_enum)
     {
-        delete (*it);
+        delete pValue;
     }
 
     m_enum.clear();
 
-    for (std::list<PropertyValue*>::const_iterator it = rhs->m_enum.begin(); it != rhs->m_enum.end(); it++)
+    for (const auto pValue: rhs->m_enum)
     {
         {
-            m_enum.push_back(new PropertyValue(*(*it)));
+            m_enum.push_back(new PropertyValue(*pValue));
         }
     }
 }
@@ -199,16 +199,16 @@ PropertyInfo::GetRangeStep() const
 void
 PropertyInfo::SetEnumeration(std::list<PropertyValue*> values)
 {
-    for (std::list<PropertyValue*>::iterator dit = m_enum.begin(); dit != m_enum.end(); dit++)
+    for (auto pValue: m_enum)
     {
-        delete (*dit);
+        delete pValue;
     }
 
     m_enum.clear();
 
-    for (std::list<PropertyValue*>::const_iterator it = values.begin(); it != values.end(); it++)
+    for (const auto pValue: values)
     {
-        m_enum.push_back(*it);
+        m_enum.push_back(pValue);
     }
 }
 
@@ -230,7 +230,7 @@ PropertyInfo::ToString() const
     case FormMode::ENUMERATION:
         formBuilder << L"Enum [";
 
-        for (std::list<PropertyValue*>::const_iterator it = m_enum.begin(); it != m_enum.end(); it++)
+        for (auto it = m_enum.cbegin(); it != m_enum.cend(); it++)
         {
             formBuilder << (it == m_enum.begin() ? L"" : L", ") << (*it)->ToString().c_str();
         }

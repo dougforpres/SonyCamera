@@ -22,21 +22,23 @@ CameraSupportedProperties::CameraSupportedProperties(Message* message)
 
     m_unknown = GetWORD(offset);
 
+#ifdef DEBUG
     LOGTRACE(L"unknown = %d", m_unknown);
+#endif
     std::list<WORD> temp;
 
     temp = GetWORDArray(offset);
 
-    for (std::list<WORD>::iterator it = temp.begin(); it != temp.end(); it++)
+    for (auto propId: temp)
     {
-        m_lista.push_back((Property)*it);
+        m_lista.push_back((Property)propId);
     }
 
     temp = GetWORDArray(offset);
 
-    for (std::list<WORD>::iterator it = temp.begin(); it != temp.end(); it++)
+    for (auto propId: temp)
     {
-        m_listb.push_back((Property) * it);
+        m_listb.push_back((Property)propId);
     }
 }
 
@@ -80,16 +82,16 @@ CameraSupportedProperties::AsString()
 
     std::list<Property>::iterator it;
 
-    for (it = m_lista.begin(); it != m_lista.end(); it++)
+    for (auto propId: m_lista)
     {
-        builder << "    x" << std::hex << std::setw(4) << std::setfill(L'0') << (WORD)*it << std::dec << " (" << ResourceLoader::GetString((DWORD)*it) << ")" << std::endl;
+        builder << "    x" << std::hex << std::setw(4) << std::setfill(L'0') << (WORD)propId << std::dec << " (" << ResourceLoader::GetString((DWORD)*it) << ")" << std::endl;
     }
 
     builder << "]," << std::endl << "listb (buttons?) [" << std::endl;
 
-    for (it = m_listb.begin(); it != m_listb.end(); it++)
+    for (auto propId: m_listb)
     {
-        builder << "    x" << std::hex << std::setw(4) << std::setfill(L'0') << (WORD)*it << std::dec << " (" << ResourceLoader::GetString((DWORD)*it) << ")" << std::endl;
+        builder << "    x" << std::hex << std::setw(4) << std::setfill(L'0') << (WORD)propId << std::dec << " (" << ResourceLoader::GetString((DWORD)*it) << ")" << std::endl;
     }
 
     builder << "]" << std::endl;

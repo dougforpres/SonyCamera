@@ -39,7 +39,7 @@ public:
     ~SonyCamera();
 
     bool Initialize();
-    bool RefreshSettings();
+    bool RefreshSettings(bool refreshFakePropertiesToo);
     bool SetProperty(const Property id, PropertyValue* value);
     virtual UINT16 SetFocus(UINT16 focusPosition);
     virtual UINT16 GetFocusLimit();

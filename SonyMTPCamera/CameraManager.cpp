@@ -358,6 +358,28 @@ CameraManager::SetupSupportedDevices()
     registry.SetStringDefault(key, L"Exposure Times", L"0,19660810,16384010,13107210,9830410,8519690,6553610,5242890,3932170,3276810,2621450,2097162,1638410,1310730,1048586,851978,655370,524298,393226,327690,262154,65539,65540,65541,65542,65544,65546,65549,65551,65556,65561,65566,65576,65586,65596,65616,65636,65661,65696,65736,65786,65856,65936,66036,66176,66336,66536,66786,67136,67536,68036,68736,69536");
     registry.SetStringDefault(key, L"ISOs", L"16777215,50,64,80,100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000,5000,6400,8000,10000,12800,16000,20000,25600,32000,40000,51200,64000,80000,102400,128000");
 
+    // a7CM2
+    key = L"Cameras\\Sony Corporation\\ILCE-7CM2";
+
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a7C Mk II");
+    registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
+    registry.SetDoubleDefault(key, L"Sensor X Size um", 5.95);
+    registry.SetDoubleDefault(key, L"Sensor Y Size um", 5.95);
+    registry.SetDWORDDefault(key, L"Sensor X Resolution", 7040);
+    registry.SetDWORDDefault(key, L"Sensor Y Resolution", 4688);
+    registry.SetDWORDDefault(key, L"AutoCropped X Resolution", 7008);
+    registry.SetDWORDDefault(key, L"AutoCropped Y Resolution", 4672);
+    registry.SetDWORDDefault(key, L"Preview X Resolution", 0);
+    registry.SetDWORDDefault(key, L"Preview Y Resolution", 0);
+    registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
+    registry.SetDoubleDefault(key, L"Exposure Time Max", 900.0);
+    registry.SetDoubleDefault(key, L"Exposure Time Step", 0.000125);
+    registry.SetDWORDDefault(key, L"Sensor Type", 2);
+    registry.SetDWORDDefault(key, L"Supports Liveview", 0);
+    registry.SetStringDefault(key, L"Exposure Times", L"0,19660810,16384010,13107210,9830410,8519690,6553610,5242890,3932170,3276810,2621450,2097162,1638410,1310730,1048586,851978,655370,524298,393226,327690,262154,65539,65540,65541,65542,65544,65546,65549,65551,65556,65561,65566,65576,65586,65596,65616,65636,65661,65696,65736,65786,65856,65936,66036,66176,66336,66536,66786,67136,67536,68036,68736,69536");
+    registry.SetStringDefault(key, L"ISOs", L"16777215,50,64,80,100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000,5000,6400,8000,10000,12800,16000,20000,25600,32000,40000,51200,64000,80000,102400,128000");
+
     // a7R
     key = L"Cameras\\Sony Corporation\\ILCE-7R";
 
@@ -877,7 +899,7 @@ CameraManager::SetupSupportedDevices()
 
     key = L"Lenses\\Sigma\\c100400f5-63";
     registry.CreateKey(key);
-    registry.SetStringDefault(key, L"", L"100-400MM F5-6.3 DG DN OS | C");
+    registry.SetStringDefault(key, L"", L"100-400mm F5-6.3 DG DN OS | C");
     registry.SetStringDefault(key, L"Steps", L"5554,2313,932,359,137,52,19.6");
 
     key = L"Lenses\\Sony\\SEL200600G";
@@ -900,6 +922,36 @@ CameraManager::SetupSupportedDevices()
     registry.SetStringDefault(key, L"", L"FE 2.8/90 MACRO G OSS");
     registry.SetStringDefault(key, L"Steps", L"12194,5180,2038,800,306,117,45");
 
+    key = L"Lenses\\Rokinon\\AF12MMF2.0E";
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"AF 12mm F2.0 E");
+    registry.SetStringDefault(key, L"Steps", L"430,178,72.5,28,11,4.1,2");
+
+    key = L"Lenses\\Rokinon\\AF135MMF1.8E";
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"AF 135mm F1.8 E");
+    registry.SetStringDefault(key, L"Steps", L"2792,1255,558,242,101,39.1,15.2");
+
+    key = L"Lenses\\Sony\\SEL20F28";
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"E 20mm F2.8 APS-C Ultra-wide Prime");
+    registry.SetStringDefault(key, L"Steps", L"294,148,67,26,9.8,3.5,1");
+
+    key = L"Lenses\\Sony\\SEL50F18";
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"E 50mm F1.8 OSS APS-C Standard Prime");
+    registry.SetStringDefault(key, L"Steps", L"1886,704,286,109,41.5,16,5.8");
+
+    key = L"Lenses\\Sony\\SEL55210";
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"E 55-210mm F/4.5-6.3 OSS");
+    registry.SetStringDefault(key, L"Steps", L"365,146,57,22,8.2,3.1,1.1");
+
+    key = L"Lenses\\Sony\\SEL18135";
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"E 18-135mm F/3.5-5.6 OSS");
+    registry.SetStringDefault(key, L"Steps", L"158,73,29,11.6,4.2,1.4,1");
+
     registry.Close();
 
     LOGINFO(L"Out: CameraManager::SetupSupportedDevices()");
@@ -913,7 +965,7 @@ CameraManager::CreateCamera(Device* device, DWORD flags)
     HANDLE hResult = INVALID_HANDLE_VALUE;
 
     // See if we already have this device
-    for (std::unordered_map<HANDLE, Camera*>::iterator it = m_cameraMap.begin(); it != m_cameraMap.end() && hResult == INVALID_HANDLE_VALUE; it++)
+    for (auto it = m_cameraMap.begin(); it != m_cameraMap.end() && hResult == INVALID_HANDLE_VALUE; it++)
     {
         if ((*it).second->GetId() == device->GetId())
         {

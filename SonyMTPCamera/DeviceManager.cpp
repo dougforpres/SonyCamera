@@ -36,7 +36,7 @@ DeviceManager::GetDevice(std::wstring id)
 
     Device* result = nullptr;
 
-    for (std::list<Device*>::iterator it = devices.begin(); it != devices.end() && result == NULL; it++)
+    for (auto it = devices.begin(); it != devices.end() && result == NULL; it++)
     {
         if ((*it)->GetId() == id)
         {
@@ -76,7 +76,7 @@ DeviceManager::RefreshDevices()
 
     std::list<Device*> newAllDevices = std::list<Device*>();
 
-    for (std::list<Device*>::iterator newit = foundDevices.begin(); newit != foundDevices.end(); newit++)
+    for (auto foundDevice: foundDevices)
     {
         // If the current item is already in "m_allDevices" then move the current one over
         // If it's not, then move the new one in
@@ -86,7 +86,7 @@ DeviceManager::RefreshDevices()
 
         while (it != m_allDevices.end() && !found)
         {
-            if ((*it)->GetId() == (*newit)->GetId())
+            if ((*it)->GetId() == foundDevice->GetId())
             {
                 found = true;
                 LOGINFO(L"Existing device '%s' being copied over", (*it)->GetId().c_str());
@@ -101,14 +101,14 @@ DeviceManager::RefreshDevices()
 
         if (!found)
         {
-            LOGINFO(L"New device '%s' being added", (*newit)->GetId().c_str());
-            newAllDevices.push_back(*newit);
+            LOGINFO(L"New device '%s' being added", foundDevice->GetId().c_str());
+            newAllDevices.push_back(foundDevice);
         }
     }
 
-    for (std::list<Device*>::iterator it = m_allDevices.begin(); it != m_allDevices.end(); it++)
+    for (auto device: m_allDevices)
     {
-        delete* it;
+        delete device;
     }
 
     m_allDevices = newAllDevices;
@@ -135,11 +135,11 @@ DeviceManager::GetFilteredDevices()
     std::list<Device*> allDevices = GetAllDevices(false);
     std::list<Device*> result;
 
-    for (std::list<Device*>::iterator it = allDevices.begin(); it != allDevices.end(); it++)
+    for (auto device:  allDevices)
     {
-        if ((*it)->IsSupported())
+        if (device->IsSupported())
         {
-            result.push_back(*it);
+            result.push_back(device);
         }
     }
 

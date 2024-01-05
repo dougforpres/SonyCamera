@@ -59,11 +59,11 @@ CameraSettings::operator=(CameraSettings* rhs)
 void
 CameraSettings::Copy(const CameraSettings& rhs)
 {
-    for (CAMERAPROP::const_iterator it = rhs.m_properties.begin(); it != rhs.m_properties.end(); it++)
+    for (auto it = rhs.m_properties.cbegin(); it != rhs.m_properties.cend(); it++)
     {
-        CAMERAPROP::const_iterator fit = find((*it).first);
+        auto fit = cfind((*it).first);
 
-        if (fit != end())
+        if (fit != cend())
         {
             CameraProperty* oldProp = (*fit).second;
             CameraProperty* newProp = (*it).second;
@@ -94,7 +94,7 @@ CameraSettings::~CameraSettings()
     LOGTRACE(L"CameraSettings::~CameraSettings() [this = %08p]", this);
 #endif
 
-    for (CAMERAPROP::iterator it = m_properties.begin(); it != m_properties.end(); it++)
+    for (auto it = m_properties.begin(); it != m_properties.end(); it++)
     {
         delete (*it).second;
     }
@@ -109,19 +109,19 @@ CameraSettings::AddProperty(CameraProperty* property)
 }
 
 CAMERAPROP::const_iterator
-CameraSettings::begin()
+CameraSettings::cbegin()
 {
-    return m_properties.begin();
+    return m_properties.cbegin();
 }
 
 CAMERAPROP::const_iterator
-CameraSettings::end()
+CameraSettings::cend()
 {
-    return m_properties.end();
+    return m_properties.cend();
 }
 
 CAMERAPROP::const_iterator
-CameraSettings::find(const Property id) const
+CameraSettings::cfind(const Property id) const
 {
     return m_properties.find(id);
 }
@@ -138,9 +138,6 @@ CameraSettings::GetProperty(Property id) const
     CAMERAPROP::const_iterator it = m_properties.find(id);
 
     return (it != m_properties.end()) ? (*it).second : nullptr;
-//    return m_properties[id];// CAMERAPROP::const_iterator it = m_properties.find(id);
-//
-//    return (it != m_properties.end()) ? (*it).second : nullptr;
 }
 
 PropertyValue*

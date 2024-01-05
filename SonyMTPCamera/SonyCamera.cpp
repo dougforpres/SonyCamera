@@ -125,7 +125,7 @@ SonyCamera::Initialize()
 
     try
     {
-        RefreshSettings();
+        RefreshSettings(true);
     }
     catch (CameraException& ex)
     {
@@ -142,7 +142,7 @@ SonyCamera::Initialize()
 }
 
 bool
-SonyCamera::RefreshSettings()
+SonyCamera::RefreshSettings(bool refreshFakePropertiesToo)
 {
     LOGTRACE(L"In: SonyCamera::RefreshSettings()");
 
@@ -157,7 +157,7 @@ SonyCamera::RefreshSettings()
         CameraSettings cs = CameraSettings(rx);
 
         // Only need to load up the fakes first time thru
-        if (!m_settings)
+        if (!m_settings || refreshFakePropertiesToo)
         {
             LoadFakeProperties(&cs);
         }

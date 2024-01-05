@@ -10,11 +10,11 @@ refreshSettings(CameraTaskInfo& info)
 {
     try
     {
-        info.pCamera->RefreshSettings();
+        info.pCamera->RefreshSettings((int)info.pTask->GetParam1() != 0 ? true : false);
     }
     catch (CameraException& ex)
     {
-        LOGWARN(L"Error refreshing settings... going to ignore");
+        LOGWARN(L"Error refreshing settings... going to ignore '%s'", ex.GetMessage().c_str());
     }
 
     return StateResult::Success;

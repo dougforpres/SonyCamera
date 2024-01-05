@@ -94,9 +94,9 @@ MessageWriter::WriteBYTEArray(const std::list<BYTE> value)
     // Arrays have DWORD header with # of values
     WriteDWORD(value.size());
 
-    for (std::list<BYTE>::const_iterator it = value.begin(); it != value.end(); it++)
+    for (const auto v: value)
     {
-        WriteBYTE(*it);
+        WriteBYTE(v);
     }
 }
 
@@ -106,9 +106,9 @@ MessageWriter::WriteWORDArray(const std::list<WORD> value)
     // Arrays have DWORD header with # of values
     WriteDWORD(value.size());
 
-    for (std::list<WORD>::const_iterator it = value.begin(); it != value.end(); it++)
+    for (const auto v: value)
     {
-        WriteWORD(*it);
+        WriteWORD(v);
     }
 }
 
@@ -118,9 +118,9 @@ MessageWriter::WriteDWORDArray(const std::list<DWORD> value)
     // Arrays have DWORD header with # of values
     WriteDWORD(value.size());
 
-    for (std::list<DWORD>::const_iterator it = value.begin(); it != value.end(); it++)
+    for (const auto v: value)
     {
-        WriteDWORD(*it);
+        WriteDWORD(v);
     }
 }
 
@@ -130,8 +130,8 @@ MessageWriter::WriteStringArray(const std::list<std::wstring> value)
     // Arrays have DWORD header with # of values
     WriteDWORD(value.size());
 
-    for (std::list<std::wstring>::const_iterator it = value.begin(); it != value.end(); it++)
+    for (const auto &v: value)
     {
-        WriteString(*it);
+        WriteString(v);
     }
 }

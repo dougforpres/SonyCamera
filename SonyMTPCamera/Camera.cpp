@@ -59,7 +59,7 @@ Camera::IsInitialized() const
 void
 Camera::OnPropertiesUpdated()
 {
-    RefreshPropertiesTask* task = new RefreshPropertiesTask();
+    RefreshPropertiesTask* task = new RefreshPropertiesTask(false);
 
     if (!task->QueueAndForget(this))
     {
@@ -216,9 +216,9 @@ Camera::LoadFakeProperties(CameraSettings* settings) const
     std::list<PropertyValue*> values;
     std::list<DWORD> et = deviceInfo.GetExposureTimes();
 
-    for (std::list<DWORD>::iterator ei = et.begin(); ei != et.end(); ei++)
+    for (auto pv: et)
     {
-        values.push_back(new PropertyValue((UINT32)*ei));
+        values.push_back(new PropertyValue((UINT32)pv));
     }
 
     inf->SetEnumeration(values);
@@ -241,9 +241,9 @@ Camera::LoadFakeProperties(CameraSettings* settings) const
 
     et = deviceInfo.GetISOs();
 
-    for (std::list<DWORD>::iterator ei = et.begin(); ei != et.end(); ei++)
+    for (auto pv: et)
     {
-        values.push_back(new PropertyValue((UINT32)*ei));
+        values.push_back(new PropertyValue((UINT32)pv));
     }
 
     inf->SetEnumeration(values);
@@ -441,7 +441,7 @@ Camera::GetImage(DWORD id)
 void
 Camera::DoRefreshProperties()
 {
-    RefreshPropertiesTask rpt;
+    RefreshPropertiesTask rpt(false);
 
     rpt.Run(this);
 }

@@ -733,7 +733,7 @@ printExposureTimes(HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortForm)
 
         int c = 0;
 
-        for (int i = 0; i < descriptor.valueCount; i++)
+        for (unsigned int i = 0; i < descriptor.valueCount; i++)
         {
             hr = fGetPropertyValueOption(hCamera, 0xffff, &option, i);
 
@@ -778,7 +778,7 @@ printISOs(HANDLE hCamera, PORTABLEDEVICEINFO* pdinfo, int shortForm)
 
         int c = 0;
 
-        for (int i = 0; i < descriptor.valueCount; i++)
+        for (unsigned int i = 0; i < descriptor.valueCount; i++)
         {
             hr = fGetPropertyValueOption(hCamera, 0xfffe, &option, i);
 
