@@ -80,18 +80,18 @@ CameraSupportedProperties::AsString()
 
     builder << "lista [" << std::endl;
 
-    std::list<Property>::iterator it;
+//    std::list<Property>::iterator it;
 
     for (auto propId: m_lista)
     {
-        builder << "    x" << std::hex << std::setw(4) << std::setfill(L'0') << (WORD)propId << std::dec << " (" << ResourceLoader::GetString((DWORD)*it) << ")" << std::endl;
+        builder << "    x" << std::hex << std::setw(4) << std::setfill(L'0') << (WORD)propId << std::dec << " (" << ResourceLoader::GetString((DWORD)propId) << ")" << std::endl;
     }
 
     builder << "]," << std::endl << "listb (buttons?) [" << std::endl;
 
     for (auto propId: m_listb)
     {
-        builder << "    x" << std::hex << std::setw(4) << std::setfill(L'0') << (WORD)propId << std::dec << " (" << ResourceLoader::GetString((DWORD)*it) << ")" << std::endl;
+        builder << "    x" << std::hex << std::setw(4) << std::setfill(L'0') << (WORD)propId << std::dec << " (" << ResourceLoader::GetString((DWORD)propId) << ")" << std::endl;
     }
 
     builder << "]" << std::endl;

@@ -372,9 +372,9 @@ watchSettings(HANDLE h, bool loop)
 
     if (loop)
     {
-        pv2 = pv1;
+//        pv2 = pv1;
 
-        for (int i = 0; i < 20; i++)
+        for (int i = 0; i < 200; i++)
         {
             printf("---\n");
             Sleep(500);
@@ -406,14 +406,19 @@ watchSettings(HANDLE h, bool loop)
             }
 
             // Clean up text
-            for (int i = 0; i < (int)count; i++)
+            if (pv2)
             {
-                PROPERTYVALUE* t2 = (pv2 + i);
-
-                if (t2->text)
+                for (int i = 0; i < (int)count; i++)
                 {
-                    CoTaskMemFree(t2->text);
+                    PROPERTYVALUE* t2 = (pv2 + i);
+
+                    if (t2->text)
+                    {
+                        CoTaskMemFree(t2->text);
+                    }
                 }
+
+                delete[] pv2;
             }
 
             pv2 = pv1;
@@ -619,14 +624,16 @@ int main()
     HANDLE h = OpenDevice((LPWSTR)firstDevice.c_str());
 
     // Uncomment to just keep pulling settings looking for changes
-//    watchSettings(h, true);
+    watchSettings(h, true);
 
     // Uncomment to try state-machiney thing to change exposure time
 //    testExposure(h);
 // 
 //     testFocus(h);
 //    testFocusAPI(h);
-    calcFocusRanges(h);
+// 
+//     For testing out a new lens and getting its metrics
+//    calcFocusRanges(h);
 //    testSetISO(h);
 //    dumpExposureOptions(h);
 

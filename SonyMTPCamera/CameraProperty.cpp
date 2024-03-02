@@ -834,6 +834,7 @@ StringLookupProperty::StringLookupProperty()
         AddResource(Property::AspectRatio, 0x0004, IDS_ASPECTRATIO_1X1);
 
         // Flash Mode
+        AddResource(Property::FlashMode, 0x0002, IDS_FLASHMODE_OFF);
         AddResource(Property::FlashMode, 0x0003, IDS_FLASHMODE_FILL);
         AddResource(Property::FlashMode, 0x0005, IDS_FLASHMODE_FILL_REDEYE);
         AddResource(Property::FlashMode, 0x8003, IDS_FLASHMODE_REAR_SYNC);

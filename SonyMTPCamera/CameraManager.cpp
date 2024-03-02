@@ -142,6 +142,28 @@ CameraManager::SetupSupportedDevices()
     registry.SetStringDefault(key, L"Exposure Times", L"0,19660810,16384010,13107210,9830410,8519690,6553610,5242890,3932170,3276810,2621450,2097162,1638410,1310730,1048586,851978,655370,524298,393226,327690,262154,65539,65540,65541,65542,65544,65546,65549,65551,65556,65561,65566,65576,65586,65596,65616,65636,65661,65696,65736,65786,65856,65936,66036,66176,66336,66536,66786,67136,67536,68036,68736,69536");
     registry.SetStringDefault(key, L"ISOs", L"0,100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000,5000,6400,8000,10000,12800,16000,20000,25600");
 
+    // a6001 - Modified a6000
+    key = L"Cameras\\Sony Corporation\\ILCE-6001";
+
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"a6001");
+    registry.SetStringDefault(key, L"Sensor Name", L"CMOS");
+    registry.SetDoubleDefault(key, L"Sensor X Size um", 3.91);
+    registry.SetDoubleDefault(key, L"Sensor Y Size um", 3.91);
+    registry.SetDWORDDefault(key, L"Sensor X Resolution", 6024);
+    registry.SetDWORDDefault(key, L"Sensor Y Resolution", 4024);
+    registry.SetDWORDDefault(key, L"AutoCropped X Resolution", 6000);
+    registry.SetDWORDDefault(key, L"AutoCropped Y Resolution", 4000);
+    registry.SetDWORDDefault(key, L"Preview X Resolution", 1024);
+    registry.SetDWORDDefault(key, L"Preview Y Resolution", 680);
+    registry.SetDoubleDefault(key, L"Exposure Time Min", 0.000125);
+    registry.SetDoubleDefault(key, L"Exposure Time Max", 900.0);
+    registry.SetDoubleDefault(key, L"Exposure Time Step", 0.000125);
+    registry.SetDWORDDefault(key, L"Sensor Type", 2);
+    registry.SetDWORDDefault(key, L"Supports Liveview", 0);
+    registry.SetStringDefault(key, L"Exposure Times", L"0,19660810,16384010,13107210,9830410,8519690,6553610,5242890,3932170,3276810,2621450,2097162,1638410,1310730,1048586,851978,655370,524298,393226,327690,262154,65539,65540,65541,65542,65544,65546,65549,65551,65556,65561,65566,65576,65586,65596,65616,65636,65661,65696,65736,65786,65856,65936,66036,66176,66336,66536,66786,67136,67536,68036,68736,69536");
+    registry.SetStringDefault(key, L"ISOs", L"16777215,100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000,5000,6400,8000,10000,12800,16000,20000,25600");
+
     // a6100
     key = L"Cameras\\Sony Corporation\\ILCE-6100";
 
@@ -951,6 +973,22 @@ CameraManager::SetupSupportedDevices()
     registry.CreateKey(key);
     registry.SetStringDefault(key, L"", L"E 18-135mm F/3.5-5.6 OSS");
     registry.SetStringDefault(key, L"Steps", L"158,73,29,11.6,4.2,1.4,1");
+
+    key = L"Lenses\\Sony\\SEL70350G";
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"E 70-350mm F/4.5-6.3 G OSS");
+    registry.SetStringDefault(key, L"Steps", L"494,234,95,37.4,14.2,5.2,2");
+
+
+    key = L"Lenses\\Sony\\SEL100400GM";
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"FE 100-400mm f/4.5-5.6 GM OSS");
+    registry.SetStringDefault(key, L"Steps", L"1042,450,194,73.5,27.4,10.5,4");
+
+    key = L"Lenses\\Sony\\SEL20F18G";
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"FE 20mm f/1.8 G");
+    registry.SetStringDefault(key, L"Steps", L"533,202,78.5,30,11.2,4.2,1.4");
 
     registry.Close();
 

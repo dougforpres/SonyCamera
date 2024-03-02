@@ -170,6 +170,7 @@
 #define IDS_FLASHMODE_REAR_SYNC         0xfb03
 #define IDS_FLASHMODE_SLOW_SYNC_REDEYE  0xfb04
 #define IDS_FLASHMODE_SLOW_SYNC         0xfb05
+#define IDS_FLASHMODE_OFF               0xfb06
 #define IDS_DROAUTOHDR_OFF              0xfc01
 #define IDS_DROAUTOHDR_AUTO             0xfc02
 #define IDS_ON                          0xfd01

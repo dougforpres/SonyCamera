@@ -193,7 +193,7 @@ OpenDeviceEx(LPWSTR deviceName, DWORD flags)
                     // It will be useful to dump a list of camera properties
                     std::unique_ptr<CameraSettings> cs(camera->GetSettings());
 
-                    for (auto propIt = cs->cbegin(); propIt != cs->cend(); it++)
+                    for (auto propIt = cs->cbegin(); propIt != cs->cend(); propIt++)
                     {
                         LOGDEBUG(L"Camera property: %04x = %s", (*propIt).first, (*propIt).second->ToString().c_str());
                     }
@@ -1412,7 +1412,6 @@ SetExposureTime(HANDLE hCamera, float desired, PROPERTYVALUE* valueOut)
     {
         return ERROR_INVALID_HANDLE;
     }
-
 
     try
     {
