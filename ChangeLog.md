@@ -1,4 +1,9 @@
 # Change Log
+## 1.0.1.20
+* (Lens) Sigma 23mm F1.4: Added.
+* Fixed an issue with the SetFocus command, where it might issue commands to the camera simultaneously with property refreshes, causing a failure.
+* Removed some debugging for non-debug builds.
+
 ## 1.0.1.19
 * Fixed issue where SonyCameraInfo wouldn't output learnt Exposure and ISO info until the next run.
 * ICLE-7CM2 (a7C Mk II): Added.

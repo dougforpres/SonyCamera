@@ -423,17 +423,23 @@ MTPDevice::InternalSend(Device::Op kind, Message* out)
     switch (kind)
     {
     case Op::CommandOnly:
+#ifdef DEBUG
         LOGTRACE(L"Sending Command(x%04x) only, no send/receive data block", out->GetCommand());
+#endif
         opType = WPD_COMMAND_MTP_EXT_EXECUTE_COMMAND_WITHOUT_DATA_PHASE;
         break;
 
     case Op::ReceiveData:
+#ifdef DEBUG
         LOGTRACE(L"Sending Command(x%04x), expecting data in return", out->GetCommand());
+#endif
         opType = WPD_COMMAND_MTP_EXT_EXECUTE_COMMAND_WITH_DATA_TO_READ;
         break;
 
     case Op::SendData:
+#ifdef DEBUG
         LOGTRACE(L"Sending Command(x%04x) and data (%d bytes), not expecting data back", out->GetCommand(), out->GetDataLen());
+#endif
         opType = WPD_COMMAND_MTP_EXT_EXECUTE_COMMAND_WITH_DATA_TO_WRITE;
         break;
     }
@@ -617,7 +623,9 @@ MTPDevice::InternalSend(Device::Op kind, Message* out)
                 &cbBytesWritten);
         }
 
+#ifdef DEBUG
         LOGTRACE(L"successfully wrote %d bytes", cbBytesWritten);
+#endif
     }
 
     if (hr == S_OK && kind == Op::ReceiveData)

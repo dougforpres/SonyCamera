@@ -144,7 +144,9 @@ SonyCamera::Initialize()
 bool
 SonyCamera::RefreshSettings(bool refreshFakePropertiesToo)
 {
+    #ifdef DEBUG
     LOGTRACE(L"In: SonyCamera::RefreshSettings()");
+    #endif
 
     Message* tx;
     Message* rx;
@@ -186,7 +188,9 @@ SonyCamera::RefreshSettings(bool refreshFakePropertiesToo)
         throw CameraException(L"Error reading settings from camera");
     }
 
+#ifdef DEBUG
     LOGTRACE(L"Out: SonyCamera::RefreshSettings()");
+#endif
 
     return true;
 }
@@ -429,7 +433,12 @@ SonyCamera::MoveFocus(INT16 step)
     LOGTRACE(L"Moving focus by %d (current = %d, step_size = %d).. ", step, m_currentFocusPosition, diff);
 
     PropertyValue pv(step);
-    SetProperty(Property::FocusControl, &pv);
+//    SetProperty(Property::FocusControl, &pv);
+
+    SetPropertyTaskParams params(Property::FocusControl, pv);
+    SetPropertyTask task(&params);
+
+    task.Run(this);
 
     //if (abs(step) == m_focusSteps.rbegin()->first)
     //{

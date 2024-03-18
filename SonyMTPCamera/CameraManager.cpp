@@ -919,6 +919,11 @@ CameraManager::SetupSupportedDevices()
     registry.SetStringDefault(key, L"", L"16mm F1.4 DC DN | Contemporary 017");
     registry.SetStringDefault(key, L"Steps", L"1185,458,177,68.3,26.4,10.2,3.9");
 
+    key = L"Lenses\\Sigma\\23mm-f1-4-dc-dn-c";
+    registry.CreateKey(key);
+    registry.SetStringDefault(key, L"", L"23mm F1.4 DC DN | C");
+    registry.SetStringDefault(key, L"Steps", L"1203,432,170,64,25,9.3,3.4");
+
     key = L"Lenses\\Sigma\\c100400f5-63";
     registry.CreateKey(key);
     registry.SetStringDefault(key, L"", L"100-400mm F5-6.3 DG DN OS | C");

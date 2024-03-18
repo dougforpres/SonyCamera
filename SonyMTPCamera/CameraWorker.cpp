@@ -135,7 +135,7 @@ DWORD CameraWorker::Run()
             isIdleTask = true;
             idleCount++;
 
-            Sleep(25);
+            Sleep(50);
         }
 
         if (currentTask && currentTask->SupportsCameraState(lastCameraState))
@@ -161,11 +161,11 @@ DWORD CameraWorker::Run()
                     // If there is no waiter, there is no way to indicate the task is complete.
                     // It is expected the only task that will fall into this category is the
                     // one auto-generated when there is nothing to do
-                    LOGTRACE(L"Deleting un-waited-for task %s", currentTask->Name().c_str());
+//                    LOGTRACE(L"Deleting un-waited-for task %s", currentTask->Name().c_str());
                     delete currentTask;
                 }
 
-                if (isIdleTask && idleCount % 40 == 0) {
+                if (isIdleTask && idleCount % 20 == 0) {
                     // Check to see if there's a photo waiting that we didn't get notified of
                     // This will just queue up a download - when the download completes
 #ifdef DEBUG
