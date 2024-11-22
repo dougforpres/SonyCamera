@@ -1,4 +1,7 @@
 # Change Log
+## 1.0.1.21
+* ICLE-7CR (a7CR): Added.
+
 ## 1.0.1.20
 * (Lens) Sigma 23mm F1.4: Added.
 * Fixed an issue with the SetFocus command, where it might issue commands to the camera simultaneously with property refreshes, causing a failure.
