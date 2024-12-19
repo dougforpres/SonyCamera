@@ -1,6 +1,7 @@
 # Change Log
 ## 1.0.1.21
 * ICLE-7CR (a7CR): Added.
+* DSC-RX1RM2 (RX1R Mk II): Added.
 
 ## 1.0.1.20
 * (Lens) Sigma 23mm F1.4: Added.
