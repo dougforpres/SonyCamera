@@ -65,6 +65,9 @@ MTPDevice::Open()
 {
     LOGTRACE(L"In: MTPDevice::Open");
 
+    // Opening is the point at which the device is presumed present again.
+    InterlockedExchange(&m_gone, 0);
+
     if (m_openCount == 0)
     {
         LOGTRACE(L"  First time opened, doing some setup");
@@ -139,26 +142,34 @@ MTPDevice::Close()
             LOGINFO(L"MTPDevice::Close - opencount == 1, issuing actual close on device");
 
             // Per MS, close is automatically done when release bumps open count to 0
-            HRESULT hr = m_device->Close();
+            // Skipped entirely if the device has already gone: Close() is a
+            // round trip to hardware that is not there, and its only useful
+            // effect - dropping our reference - is done below regardless.
+            HRESULT hr = IsGone() ? E_FAIL : m_device->Close();
 
-            if (SUCCEEDED(hr))
+            if (FAILED(hr))
             {
-                LOGINFO(L"MTPDevice::Close - closed, now releasing IUnknown");
-                m_openCount--;
-                m_device->Release();
-                m_device = nullptr;
+                LOGERROR(L"Unable to close device - error: %08x - releasing it anyway", hr);
+            }
 
+            // Released whether or not the close succeeded.  Previously a
+            // failed close left IPortableDevice held for the life of the
+            // process, which is exactly the state a camera that has been
+            // unplugged leaves it in.
+            LOGINFO(L"MTPDevice::Close - releasing IUnknown");
+            m_openCount--;
+            m_device->Release();
+            m_device = nullptr;
+
+            if (m_handle != INVALID_HANDLE_VALUE)
+            {
                 CloseHandle(m_handle);
                 m_handle = INVALID_HANDLE_VALUE;
-
-                LOGINFO(L"Out: Device::Close - Closed()");
-
-                closed = true;
             }
-            else
-            {
-                LOGERROR(L"Unable to close device - error: %08x", hr);
-            }
+
+            LOGINFO(L"Out: Device::Close - Closed()");
+
+            closed = true;
         }
         else
         {
@@ -414,6 +425,16 @@ Message*
 MTPDevice::InternalSend(Device::Op kind, Message* out)
 {
 //    LOGTRACE(L"In: MTPDevice::InternalSend");
+
+    if (IsGone())
+    {
+        // The device has already told us it is not there.  Everything that
+        // talks to it comes through here, so this one check keeps the whole
+        // driver - capture, download, properties, focus - off a device that
+        // Windows has taken away.  An empty response is what those callers
+        // get from a failed call anyway.
+        return new Message(0);
+    }
 
     HRESULT  hr = S_OK;
     IPortableDeviceValues* pDevValues;
@@ -913,7 +934,54 @@ MTPDevice::IsSuccess(HRESULT hr, const wchar_t* message)
     if (!result)
     {
         LOGERROR(L"Failed executing %s (hr = x%08x)", message, hr);
+
+        // Every call into the portable device stack passes through here, so
+        // this is where the device going away is noticed - once, on the first
+        // error that says so, rather than separately in each caller.
+        if (IsDeviceGoneResult(hr))
+        {
+            MarkGone();
+        }
     }
 
     return result;
+}
+
+void
+MTPDevice::OnGone()
+{
+    // Windows has taken the device away.  Let go of everything we hold on its
+    // behalf now, while the objects still exist, rather than waiting for the
+    // portable device stack to destroy them underneath us.
+    //
+    // Two things matter here.  The event registration means WPD still has a
+    // pointer to one of our objects and will call into it while tearing the
+    // device down.  And Close() only releases IPortableDevice when the close
+    // itself succeeds - which it cannot, on a device that is already gone - so
+    // without this the interface is simply held until the process exits.
+    LOGINFO(L"MTPDevice::OnGone - unregistering device events for the departed device");
+
+    // Only the event registration is dropped here.  IPortableDevice is
+    // deliberately left alone: this runs from IsSuccess, which is called from
+    // inside InternalSend, and that function goes on to use m_device again -
+    // releasing it here would leave it dereferencing freed memory.  The
+    // interface is released on close instead, which now happens even when the
+    // close itself fails.
+    StopNotifications();
+}
+
+bool
+MTPDevice::IsDeviceGoneResult(HRESULT hr)
+{
+    // Spelled out rather than using the WPD_E_ names, which are not declared
+    // by the headers this file includes.
+    constexpr HRESULT DEVICE_NOT_OPEN = (HRESULT)0x802A0002L;   // WPD_E_DEVICE_NOT_OPEN
+    constexpr HRESULT DEVICE_IS_HUNG = (HRESULT)0x802A0006L;    // WPD_E_DEVICE_IS_HUNG
+
+    return hr == DEVICE_NOT_OPEN
+        || hr == DEVICE_IS_HUNG
+        || hr == HRESULT_FROM_WIN32(ERROR_DEVICE_NOT_CONNECTED)
+        || hr == HRESULT_FROM_WIN32(ERROR_DEVICE_REMOVED)
+        || hr == HRESULT_FROM_WIN32(ERROR_NO_SUCH_DEVICE)
+        || hr == RPC_E_DISCONNECTED;
 }

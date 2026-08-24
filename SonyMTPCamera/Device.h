@@ -48,6 +48,25 @@ public:
     virtual bool NeedsSession();
     int GetOpenCount() const;
 
+    // Set the moment a call reports that the device is no longer there, and
+    // cleared when it is opened again.
+    //
+    // Once Windows has taken the device away, every further call into the
+    // portable device stack is both pointless and dangerous - one of them
+    // eventually faults and takes the hosting application with it.  There is
+    // no ordering guarantee about which call gets there first, so rather than
+    // guard each caller individually this is checked at the single point all
+    // of them pass through.
+    void MarkGone();
+    bool IsGone() const;
+
+protected:
+    // Called exactly once, from MarkGone, so a subclass can let go of anything
+    // it holds on behalf of a device that no longer exists.
+    virtual void OnGone();
+
+public:
+
 protected:
     std::wstring m_id;
     std::wstring m_friendlyName;
@@ -55,6 +74,7 @@ protected:
     std::wstring m_description;
     HANDLE m_handle = INVALID_HANDLE_VALUE;
     short m_openCount = 0;
+    volatile LONG m_gone = 0;
 
 private:
 };

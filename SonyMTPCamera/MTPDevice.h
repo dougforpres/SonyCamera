@@ -29,6 +29,7 @@ public:
 
 protected:
     virtual Message* InternalSend(Op kind, Message* out);
+    virtual void OnGone();
 
 private:
     void InitManufacturer();
@@ -36,6 +37,7 @@ private:
     void InitFriendlyName();
     void CreateClientInformation();
     bool IsSuccess(HRESULT hr, const wchar_t* message);
+    static bool IsDeviceGoneResult(HRESULT hr);
 
     IPortableDevice* m_device = nullptr;
     IPortableDeviceManager* m_manager = nullptr;

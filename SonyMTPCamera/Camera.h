@@ -92,6 +92,23 @@ public:
     virtual UINT16 GetFocusLimit() = 0;
     virtual UINT16 GetFocus() = 0;
 
+    // Tracks whether the camera is still answering at all.
+    //
+    // When there is nothing else to do, the worker refreshes settings every
+    // 50ms so that a photo taken with the camera's own shutter button is
+    // noticed.  If the device has gone away - unplugged, powered off, or the
+    // USB connection dropped - every one of those refreshes fails, and the
+    // worker keeps issuing them regardless.  Polling a device that is no
+    // longer there eventually faults inside the WPD stack and takes the
+    // hosting application down with it.
+    //
+    // A single failure means nothing: cameras refuse individual properties
+    // routinely, which is why refreshSettings swallows the exception and
+    // carries on.  Several in a row with none succeeding in between is a
+    // different matter, and is the signal used to stop the idle polling.
+    void RecordSettingsRefreshResult(bool succeeded);
+    bool LooksDisconnected() const;
+
     Lockable settingsLock;
 
 protected:
@@ -111,6 +128,11 @@ protected:
     CaptureStatus m_captureStatus = CaptureStatus::Created;
 
 private:
+    // Consecutive failed settings refreshes with no success in between, and
+    // how many of them mean the device is gone rather than merely awkward.
+    static constexpr LONG DISCONNECTED_REFRESH_FAILURES = 5;
+    volatile LONG m_consecutiveRefreshFailures = 0;
+
     bool m_shutdown = false;
     CameraWorker* pWorker = nullptr;
     bool initialized = false;
