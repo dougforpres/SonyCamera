@@ -41,6 +41,28 @@ Device::GetOpenCount() const
     return m_openCount;
 }
 
+void
+Device::MarkGone()
+{
+    if (InterlockedExchange(&m_gone, 1) == 0)
+    {
+        LOGERROR(L"Device '%s' reports it is no longer connected - no further calls will be made to it until it is opened again", m_id.c_str());
+
+        OnGone();
+    }
+}
+
+void
+Device::OnGone()
+{
+}
+
+bool
+Device::IsGone() const
+{
+    return m_gone != 0;
+}
+
 std::wstring
 Device::GetId()
 {
