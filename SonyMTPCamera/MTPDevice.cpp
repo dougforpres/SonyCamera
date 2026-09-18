@@ -677,7 +677,20 @@ MTPDevice::InternalSend(Device::Op kind, Message* out)
                 bool maximumMemoryMode = (bool)registry.GetDWORD(L"", L"Maximum Memory Mode", 0);
                 registry.Close();
 
-                ULONG bufferSize = maximumMemoryMode ? cbReportedDataSize : min(cbReportedDataSize, max(cbOptimalDataSize * 16, 2 ^ 23));
+                // 8MB, as the comment above intends. This was written `2 ^ 23`,
+                // but `^` is XOR in C++, not exponentiation: 2 ^ 23 evaluates to
+                // 21, so the floor was twenty-one BYTES rather than eight megabytes.
+                //
+                // It normally goes unnoticed, because cbOptimalDataSize * 16 is a
+                // few MB and wins the max(). But cbOptimalDataSize is only set if
+                // the OPTIMAL_TRANSFER_BUFFER_SIZE query above succeeded, and that
+                // query's hr is discarded -- the TOTAL_DATA_SIZE call immediately
+                // after overwrites it -- so a device that does not answer it leaves
+                // the variable at its initial 0. The floor is then all that is left,
+                // and a 21-byte buffer turns a 12MB image into ~600,000 round trips.
+                static const ULONG TRANSFER_BUFFER_TARGET = 8 * 1024 * 1024;
+
+                ULONG bufferSize = maximumMemoryMode ? cbReportedDataSize : min(cbReportedDataSize, max(cbOptimalDataSize * 16, TRANSFER_BUFFER_TARGET));
 //                LOGTRACE(L"Using a transfer buffer of %d bytes (maxmum memory mode is %s)", bufferSize, maximumMemoryMode ? L"ON" : L"OFF");
 
                 BYTE* pbBufferIn = NULL;
