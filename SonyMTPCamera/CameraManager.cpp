@@ -1088,9 +1088,18 @@ CameraManager::CreateCamera(Device* device, DWORD flags)
 
             OpenCameraTask task;
 
-            if (task.Run(camera))
+            // The task succeeds even when the device fails to open (e.g. still unplugged),
+            // so check the handle. Registering it anyway put a dead camera under handle
+            // xffffffff, which OpenDevice then tried to initialize and hung on.
+            if (task.Run(camera) && task.GetHandle() != INVALID_HANDLE_VALUE)
             {
                 hResult = AddCamera(task.GetHandle(), camera);
+            }
+            else
+            {
+                LOGWARN(L"CameraManager::CreateCamera: Unable to open '%s'", device->GetFriendlyName().c_str());
+                delete camera;
+                camera = nullptr;
             }
         }
         else
@@ -1108,6 +1117,13 @@ HANDLE
 CameraManager::AddCamera(HANDLE hCamera, Camera* camera)
 {
     LOGTRACE(L"In: CameraManager::AddCamera(x%p, x%p)", hCamera, camera);
+
+    if (hCamera == INVALID_HANDLE_VALUE || CompatibleHandle(hCamera) == CompatibleHandle(INVALID_HANDLE_VALUE))
+    {
+        LOGERROR(L"CameraManager::AddCamera: refusing to add a camera with an invalid handle");
+
+        return INVALID_HANDLE_VALUE;
+    }
 
     HANDLE shortHandle = CompatibleHandle(hCamera);
     // In 64-bit windows we could get a > 32-bit handle.  The ASCOM code is expecting a 32-bit value.
@@ -1146,6 +1162,11 @@ Camera*
 CameraManager::GetCameraForHandle(HANDLE hCamera)
 {
     hCamera = CompatibleHandle(hCamera);
+
+    if (hCamera == CompatibleHandle(INVALID_HANDLE_VALUE))
+    {
+        return nullptr;
+    }
 
     std::unordered_map<HANDLE, Camera*>::iterator it = m_cameraMap.find(hCamera);
 

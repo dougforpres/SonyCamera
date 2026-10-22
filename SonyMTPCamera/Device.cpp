@@ -74,6 +74,13 @@ Device::StopNotifications()
 }
 
 bool
+Device::DrainNotifications(DWORD timeout)
+{
+    // Stub, Override - nothing to wait for unless notifications are supported
+    return true;
+}
+
+bool
 Device::StartNotifications(Camera* camera)
 {
     // Stub, Override

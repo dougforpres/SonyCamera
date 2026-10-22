@@ -181,6 +181,14 @@ OpenDeviceEx(LPWSTR deviceName, DWORD flags)
             result = GetCameraManager()->CreateCamera(*it, (flags & OPENDEVICEEX_OPEN_ANY_DEVICE) ? OPEN_OVERRIDE : 0);
             Camera* camera = GetCameraManager()->GetCameraForHandle(result);
 
+            if (!camera)
+            {
+                LOGERROR(L"OpenDevice: Unable to create/open camera for '%s'", deviceName);
+                result = INVALID_HANDLE_VALUE;
+
+                continue;
+            }
+
             try
             {
                 Locker lock(camera);
@@ -212,11 +220,11 @@ OpenDeviceEx(LPWSTR deviceName, DWORD flags)
             {
                 LOGERROR(L"Exception initializing camera: %s", gfe.GetMessage().c_str());
 
-                result = INVALID_HANDLE_VALUE;
                 camera->Close();
                 GetCameraManager()->RemoveCamera(result);
                 delete camera;
                 camera = nullptr;
+                result = INVALID_HANDLE_VALUE;
             }
         }
     }
@@ -231,7 +239,25 @@ CloseDevice(HANDLE hCamera)
 {
     LOGTRACE(L"In: CloseDevice(x%p)", hCamera);
 
+    // Serialize closes, so a second close of the same handle cannot pick up the camera
+    // while the first is deleting it
+    static SRWLOCK closeLock = SRWLOCK_INIT;
+
+    struct CloseLockGuard
+    {
+        CloseLockGuard() { AcquireSRWLockExclusive(&closeLock); }
+        ~CloseLockGuard() { ReleaseSRWLockExclusive(&closeLock); }
+    } closeGuard;
+
     Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
+
+    if (!camera)
+    {
+        // Already closed (e.g. the caller closed twice after the device was removed)
+        LOGWARN(L"Out: CloseDevice(x%p) - camera not found, nothing to close", hCamera);
+
+        return;
+    }
 
     try
     {
@@ -276,7 +302,7 @@ GetDeviceInfo(HANDLE hCamera, DEVICEINFO *info)
 
     Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
 
-    if (hCamera)
+    if (camera)
     {
         DeviceInfo deviceInfo = camera->GetDeviceInfo();
 
@@ -319,6 +345,14 @@ GetPreviewImage(HANDLE hCamera, IMAGEINFO *info)
     LOGTRACE(L"In: GetPreviewImage(x%p, @ x%p)", hCamera, info);
 
     Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
+
+    if (!camera)
+    {
+        info->status = (DWORD)CaptureStatus::Failed;
+        LOGWARN(L"Out: GetPreviewImage(x%p, @ x%p) - camera not found", hCamera, info);
+
+        return ERROR_INVALID_HANDLE;
+    }
 
     try
     {
@@ -402,6 +436,14 @@ StartCapture(HANDLE hCamera, IMAGEINFO* info)
 
     Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
 
+    if (!camera)
+    {
+        info->status = (DWORD)CaptureStatus::Failed;
+        LOGWARN(L"Out: StartCapture(x%p, @ x%p) - camera not found", hCamera, info);
+
+        return ERROR_INVALID_HANDLE;
+    }
+
     try
     {
         // Lock will be auto-released as soon as we leave the try
@@ -422,6 +464,9 @@ StartCapture(HANDLE hCamera, IMAGEINFO* info)
     {
         const std::wstring s = gfe.GetMessage();
         LOGERROR(L"Exception starting capture: %s", gfe.GetMessage().c_str());
+
+        info->status = (DWORD)CaptureStatus::Failed;
+        camera->SetCaptureStatus(CaptureStatus::Failed);
     }
 
     LOGTRACE(L"Out: StartCapture(x%08p, @ x%08p) - result = x%08x", hCamera, info, result);
@@ -436,6 +481,13 @@ GetCaptureStatus(HANDLE hCamera, IMAGEINFO* info)
     LOGTRACE(L"In: GetCaptureStatus(x%08p)", hCamera);
 #endif
     Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
+
+    if (!camera)
+    {
+        info->status = (DWORD)CaptureStatus::Failed;
+
+        return ERROR_INVALID_HANDLE;
+    }
 
     try
     {
@@ -480,6 +532,13 @@ CancelCapture(HANDLE hCamera, IMAGEINFO* info)
     LOGTRACE(L"In: CancelCapture(x%08p)", hCamera);
 
     Camera* camera = GetCameraManager()->GetCameraForHandle(hCamera);
+
+    if (!camera)
+    {
+        LOGWARN(L"Out: CancelCapture(x%08p) - camera not found", hCamera);
+
+        return ERROR_INVALID_HANDLE;
+    }
 
     try
     {

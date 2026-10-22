@@ -5,6 +5,17 @@
 #include "Logger.h"
 #include "Registry.h"
 
+// Holds the device's transaction lock for one MTP transaction, released even if it throws
+class TransactionGuard
+{
+public:
+    explicit TransactionGuard(SRWLOCK& lock) : m_lock(lock) { AcquireSRWLockExclusive(&m_lock); }
+    ~TransactionGuard() { ReleaseSRWLockExclusive(&m_lock); }
+
+private:
+    SRWLOCK& m_lock;
+};
+
 MTPDevice::MTPDevice(IPortableDeviceManager* PortableDeviceManager, std::wstring DeviceId)
     : Device(DeviceId),
       m_manager(PortableDeviceManager)
@@ -40,6 +51,9 @@ MTPDevice::MTPDevice(const MTPDevice& rhs)
 MTPDevice::~MTPDevice()
 {
     LOGTRACE(L"In: MTPDevice::~MTPDevice()");
+
+    StopNotifications();
+    DrainNotifications(NOTIFICATION_DRAIN_TIMEOUT);
 
     while (m_openCount > 0)
     {
@@ -178,13 +192,25 @@ MTPDevice::Close()
 bool
 MTPDevice::StartNotifications(Camera* camera)
 {
-    if (!m_eventHandler)
+    if (!m_eventHandler && m_device)
     {
+        // A handler from a previous open may still be finishing a callback
+        DrainNotifications(NOTIFICATION_DRAIN_TIMEOUT);
+
         // Set up event handler
-        m_eventHandler = new DeviceEventHandler(m_device, camera);
+        DeviceEventHandler* handler = new DeviceEventHandler();
+
+        if (FAILED(handler->Register(m_device, camera, m_id)))
+        {
+            handler->Release();
+
+            return false;
+        }
+
+        m_eventHandler = handler;
     }
 
-    return true;
+    return m_eventHandler != nullptr;
 }
 
 bool
@@ -192,11 +218,38 @@ MTPDevice::StopNotifications()
 {
     if (m_eventHandler)
     {
-        delete m_eventHandler;
+        // Does not wait for in-flight callbacks (this can run on the camera worker thread,
+        // which a callback may be waiting on).  The handler is kept so DrainNotifications
+        // can wait for them before the camera is deleted.
+        m_eventHandler->Unregister();
+
+        if (m_retiredEventHandler)
+        {
+            m_retiredEventHandler->Release();
+        }
+
+        m_retiredEventHandler = m_eventHandler;
         m_eventHandler = nullptr;
     }
 
     return true;
+}
+
+bool
+MTPDevice::DrainNotifications(DWORD timeout)
+{
+    bool drained = true;
+
+    if (m_retiredEventHandler)
+    {
+        drained = m_retiredEventHandler->WaitForCallbacks(timeout);
+
+        // WPD may still hold a reference (or be mid-callback), so release rather than delete
+        m_retiredEventHandler->Release();
+        m_retiredEventHandler = nullptr;
+    }
+
+    return drained;
 }
 
 std::wstring
@@ -884,6 +937,8 @@ MTPDevice::Send(Message* out)
         method = Op::SendData;
     }
 
+    TransactionGuard guard(m_transactionLock);
+
     // This method returns a message, so we need to ensure it's deleted
     Message *in = InternalSend(method, out);
 
@@ -897,6 +952,8 @@ Message*
 MTPDevice::Receive(Message* out)
 {
 //    LOGTRACE(L"In: MTPDevice::Receive");
+
+    TransactionGuard guard(m_transactionLock);
 
     Message* result = InternalSend(Op::ReceiveData, out);
 

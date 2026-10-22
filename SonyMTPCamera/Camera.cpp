@@ -8,6 +8,42 @@
 constexpr auto THREAD_WAIT_EXIT_LOOPS = 20;
 constexpr auto THREAD_WAIT_EXIT_SLEEP = 100;
 constexpr auto MUTEX_TIMEOUT = 10000;
+// Must stay below the 20 s callers wait for the camera lock (DEFAULT_LOCK_WAIT), so close/open can still get in
+constexpr ULONGLONG PREVIOUS_PHOTO_TIMEOUT = 15000;
+// 'Processing' (x0001) here is normally gone within a couple of seconds; when it is stuck
+// (see below) waiting the full timeout only delays the exposure
+constexpr ULONGLONG PROCESSING_STATUS_TIMEOUT = 3000;
+
+// After USB is pulled mid-exposure an ILCE-7M3 keeps reporting 'processing' (x0001) even
+// while taking and delivering new photos normally, across reconnects. Once a capture has
+// had to go ahead regardless, stop waiting on that status, until the camera reports an
+// empty buffer again.
+static volatile bool s_processingStatusUnreliable = false;
+
+constexpr DWORD TASK_CANCEL_TIMEOUT = 20000;
+
+// Cancel a task the worker may still hold, and delete it once the worker has finished with it.
+// If it does not finish in time, leak it rather than free memory the worker is still using.
+// (Templated so the derived destructor runs; ~CameraTask is not virtual.)
+template <typename T>
+static bool DisposeTask(T* task)
+{
+    if (!task)
+    {
+        return true;
+    }
+
+    if (task->Cancel(TASK_CANCEL_TIMEOUT) != WAIT_OBJECT_0)
+    {
+        LOGERROR(L"Task %s did not finish within %d ms of being cancelled; not deleting it while it may still be in use", task->Name().c_str(), TASK_CANCEL_TIMEOUT);
+
+        return false;
+    }
+
+    delete task;
+
+    return true;
+}
 
 Camera::Camera(Device* device)
     : m_device(device)
@@ -18,6 +54,9 @@ Camera::Camera(Device* device)
 
 Camera::~Camera()
 {
+    // A device event callback may still be using this camera (it can outlive Close)
+    m_device->DrainNotifications(NOTIFICATION_DRAIN_TIMEOUT);
+
     delete pWorker;
     pWorker = nullptr;
 
@@ -70,19 +109,83 @@ Camera::OnPropertiesUpdated()
 }
 
 void
+Camera::OnDeviceRemoved()
+{
+    LOGWARN(L"Camera device removed - failing the current capture and any new ones until it is reopened");
+
+    // Whatever is in progress can never complete now; let the caller stop waiting.
+    // Read the status before setting the flag, as GetCaptureStatus reports Failed once it is set.
+    CaptureStatus status = GetCaptureStatus();
+
+    InterlockedExchange(&m_deviceRemoved, 1);
+
+    if (status != CaptureStatus::Complete && status != CaptureStatus::Cancelled && status != CaptureStatus::Failed)
+    {
+        SetCaptureStatus(CaptureStatus::Failed);
+    }
+}
+
+bool
+Camera::IsDeviceRemoved() const
+{
+    return m_deviceRemoved != 0;
+}
+
+void
+Camera::EndCaptureWindow()
+{
+    InterlockedExchange(&m_preparingCapture, 0);
+}
+
+void
 Camera::OnImageBufferStatus(ImageBufferStatus status)
 {
     LOGINFO(L"Image Buffer Status Update %d", status);
 
+    if (status == ImageBufferStatus::ImageReady && IsDeviceRemoved())
+    {
+        LOGWARN(L"Ignoring image-ready notification, the device has been removed");
+        return;
+    }
+
+    if (status == ImageBufferStatus::ImageReady && m_preparingCapture)
+    {
+        // Photos still waiting are picked up by the worker's idle check once the camera is free
+        LOGINFO(L"Ignoring image-ready notification, a capture is being prepared or the shutter is open");
+        return;
+    }
+
     if (status == ImageBufferStatus::ImageReady)
     {
+        // Called from the WPD event thread (and the worker), concurrently with StartCapture,
+        // so only touch the task pointers under the lock.
+        if (WaitForSingleObject(m_hBusyMutex, 1000) != WAIT_OBJECT_0)
+        {
+            LOGWARN(L"Camera busy, ignoring image-ready notification");
+            return;
+        }
+
+        if (m_downloadAndProcessImageTask)
+        {
+            // A download is already queued, running, or holding an image not yet collected.
+            // A stuck camera can send these notifications repeatedly; replacing the task here
+            // lost the image or freed the task while it ran.
+            ReleaseMutex(m_hBusyMutex);
+            LOGINFO(L"Ignoring image-ready notification, a download is already in progress or waiting to be collected");
+            return;
+        }
+
         if (!m_takePhotoTaskParams) {
             m_takePhotoTaskParams = new TakePhotoTaskParams(0, OutputMode::PASSTHRU);
         }
 
-        m_downloadAndProcessImageTask = new DownloadAndProcessImageTask(m_takePhotoTaskParams);
+        DownloadAndProcessImageTask* task = new DownloadAndProcessImageTask(m_takePhotoTaskParams);
+        m_downloadAndProcessImageTask = task;
 
-        m_downloadAndProcessImageTask->Start(this);
+        ReleaseMutex(m_hBusyMutex);
+
+        // Queue outside the lock: queuing waits for the worker, which can be mid-exposure
+        task->Start(this);
     }
 }
 
@@ -97,6 +200,8 @@ Camera::Open()
     {
         if (m_device->GetOpenCount() == 1)
         {
+            // A fresh open means the device is (back) on USB
+            InterlockedExchange(&m_deviceRemoved, 0);
             m_device->StartNotifications(this);
         }
 
@@ -429,8 +534,9 @@ Camera::GetImage(DWORD id)
     }
     else
     {
-        // Failed
+        // Failed - the image did not take ownership of info, so clean it up here
         LOGWARN(L"Unable to fetch image x%08x", id);
+        delete info;
     }
 
     LOGTRACE(L"Out: Camera::GetImage(x%08x)", id);
@@ -451,50 +557,64 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
 {
     LOGTRACE(L"In: Camera::StartCapture(duration = %f, output = %d)", duration,(DWORD)outputMode);
 
+    if (IsDeviceRemoved())
+    {
+        LOGERROR(L"  Not starting capture, the device has been removed");
+        throw CameraException(L"Camera has been disconnected");
+    }
+
+    // Ignore image-ready events until the shutter is released. If no capture gets handed to the
+    // worker (an exception, or the shutter is busy), reopen the window here instead.
+    struct PreparingGuard
+    {
+        volatile long& flag;
+        bool handedOff = false;
+        explicit PreparingGuard(volatile long& f) : flag(f) { InterlockedExchange(&flag, 1); }
+        ~PreparingGuard() { if (!handedOff) InterlockedExchange(&flag, 0); }
+    } preparing(m_preparingCapture);
+
     bool result = false;
+
+    // Take the previous tasks over under the lock, but wait for them outside it: the worker
+    // needs the lock (with short timeouts) to finish them.
+    TakePhotoTask* oldPhotoTask = nullptr;
+    DownloadAndProcessImageTask* oldDownloadTask = nullptr;
+    TakePhotoTaskParams* oldParams = nullptr;
 
     DWORD waitResult = WaitForSingleObject(m_hBusyMutex, 1000);
 
     if (waitResult == WAIT_OBJECT_0)
     {
-        if (m_takePhotoTask)
-        {
-            {
-                LOGINFO(L"There's a pre-existing capture, attempting to clean up");
-                if (m_takePhotoTask->Cancel(20000) == WAIT_OBJECT_0)
-                {
-                    // Task successfully cancelled
-                    delete m_takePhotoTask;
-                    m_takePhotoTask = nullptr;
-                }
-                //                CleanupCapture();
-            }
-        }
-
-        if (m_downloadAndProcessImageTask)
-        {
-            {
-                LOGINFO(L"There's a pre-existing download, attempting to clean up");
-                if (m_downloadAndProcessImageTask->Cancel(20000) == WAIT_OBJECT_0)
-                {
-                    // Task successfully cancelled
-                    delete m_downloadAndProcessImageTask;;
-                    m_downloadAndProcessImageTask = nullptr;
-                }
-                //                CleanupCapture();
-            }
-        }
-
-        if (m_takePhotoTaskParams)
-        {
-            delete m_takePhotoTaskParams;
-            m_takePhotoTaskParams = nullptr;
-        }
+        oldPhotoTask = m_takePhotoTask;
+        oldDownloadTask = m_downloadAndProcessImageTask;
+        oldParams = m_takePhotoTaskParams;
+        m_takePhotoTask = nullptr;
+        m_downloadAndProcessImageTask = nullptr;
+        m_takePhotoTaskParams = nullptr;
 
         SetCaptureStatus(CaptureStatus::Created);
+
+        ReleaseMutex(m_hBusyMutex);
     }
 
-    ReleaseMutex(m_hBusyMutex);
+    if (oldPhotoTask)
+    {
+        LOGINFO(L"There's a pre-existing capture, attempting to clean up");
+    }
+
+    if (oldDownloadTask)
+    {
+        LOGINFO(L"There's a pre-existing download, attempting to clean up");
+    }
+
+    bool photoTaskDone = DisposeTask(oldPhotoTask);
+    bool downloadTaskDone = DisposeTask(oldDownloadTask);
+
+    // Both tasks point at the params, so only free them once neither can run any more
+    if (photoTaskDone && downloadTaskDone)
+    {
+        delete oldParams;
+    }
 
     // Get camera settings... this serves two purposes
     // 1. Ensure camera is in a state that will allow a photo to be taken
@@ -541,17 +661,51 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
         DoRefreshProperties();
     }
 
-    while (WORD bufferStatus = cs->GetPropertyValue(Property::PhotoBufferStatus)->GetUINT16() != 0)
-    {
-        std::unique_ptr<CameraSettings> cs(GetSettings());
+    // Re-read the status every pass and give up eventually - this holds the camera lock, so if the
+    // camera has gone (e.g. USB unplugged) an endless wait here blocks close/open too
+    PropertyValue* bufferStatusValue = cs->GetPropertyValue(Property::PhotoBufferStatus);
+    WORD bufferStatus = bufferStatusValue ? bufferStatusValue->GetUINT16() : 0;
+    ULONGLONG waitStart = GetTickCount64();
 
-        if (bufferStatus == 0x0001)
+    if (bufferStatus == 0)
+    {
+        s_processingStatusUnreliable = false;
+    }
+
+    while (bufferStatus != 0)
+    {
+        if (bufferStatus == 0x0001 && s_processingStatusUnreliable)
         {
-            // Camera is busy getting a photo ready for us
-            LOGTRACE(L"  Waiting for camera to have previous photo ready");
-            Sleep(100);
+            LOGTRACE(L"  Camera reports 'processing' but that status has been stuck, not waiting");
+            break;
         }
 
+        if (IsDeviceRemoved())
+        {
+            LOGERROR(L"  Device removed while waiting for previous photo to clear, giving up");
+            throw CameraException(L"Camera has been disconnected");
+        }
+
+        ULONGLONG waited = GetTickCount64() - waitStart;
+        ULONGLONG timeout = bufferStatus == 0x0001 ? PROCESSING_STATUS_TIMEOUT : PREVIOUS_PHOTO_TIMEOUT;
+
+        if (waited > timeout)
+        {
+            // Seen after USB was pulled mid-exposure: the reopened camera reports "processing"
+            // indefinitely for the interrupted shot. Failing here failed every later exposure,
+            // so carry on; a dead camera is caught by the device-removed flag instead.
+            LOGWARN(L"  Camera still reports a previous photo (x%04x) after %d ms, starting the new capture anyway", bufferStatus, (int)waited);
+
+            if (bufferStatus == 0x0001)
+            {
+                s_processingStatusUnreliable = true;
+            }
+
+            break;
+        }
+
+        // Do not try to fetch the photo while the camera reports 'processing' (x0001): on an
+        // ILCE-7M3 that made the camera drop off USB within ~2 s.
         if (bufferStatus & 0x8000)
         {
             // Photo is ready... we don't actually want it, so we'll just toss whatever we get back
@@ -565,9 +719,19 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
 
             LOGTRACE(L"  Previous photo retrieved and discarded");
         }
+        else
+        {
+            // Camera is busy getting a photo ready for us
+            LOGTRACE(L"  Waiting for camera to have previous photo ready (x%04x)", bufferStatus);
+            Sleep(100);
+        }
 
         // Re-fetch settings
         DoRefreshProperties();
+
+        std::unique_ptr<CameraSettings> csLoop(GetSettings());
+        bufferStatusValue = csLoop->GetPropertyValue(Property::PhotoBufferStatus);
+        bufferStatus = bufferStatusValue ? bufferStatusValue->GetUINT16() : 0;
     }
 
     cs = std::unique_ptr<CameraSettings>(GetSettings());
@@ -599,6 +763,8 @@ Camera::StartCapture(double duration, OutputMode outputMode, DWORD flags)
         m_takePhotoTaskParams = new TakePhotoTaskParams(duration, outputMode);
         m_takePhotoTask = new TakePhotoTask(m_takePhotoTaskParams);
 
+        // doCapture reopens the image-ready window once the shutter is released
+        preparing.handedOff = true;
         m_takePhotoTask->Start(this);
 
         result = true;
@@ -678,6 +844,13 @@ Camera::GetCaptureStatus()
     }
 
     ReleaseMutex(m_hBusyMutex);
+
+    // Nothing still in progress can complete once the device is gone (an already
+    // downloaded image can still be collected)
+    if (IsDeviceRemoved() && result != CaptureStatus::Complete && result != CaptureStatus::Cancelled)
+    {
+        result = CaptureStatus::Failed;
+    }
 
     switch (result)
     {
@@ -781,21 +954,27 @@ Camera::GetCapturedImage()
 bool
 Camera::CancelCapture()
 {
-    DWORD waitResult = WaitForSingleObject(m_hBusyMutex, 1000);
+    // As in StartCapture: take the task over under the lock, wait for it outside it
+    TakePhotoTask* task = nullptr;
 
-    if (waitResult == WAIT_OBJECT_0)
+    if (WaitForSingleObject(m_hBusyMutex, 1000) == WAIT_OBJECT_0)
     {
-        if (m_takePhotoTask)
-        {
-            m_takePhotoTask->Cancel(20000);
-            delete m_takePhotoTask;
-            m_takePhotoTask = nullptr;
-        }
+        task = m_takePhotoTask;
+        m_takePhotoTask = nullptr;
+        ReleaseMutex(m_hBusyMutex);
     }
 
-    SetCaptureStatus(CaptureStatus::Cancelled);
+    if (!DisposeTask(task) && WaitForSingleObject(m_hBusyMutex, 1000) == WAIT_OBJECT_0)
+    {
+        // The task still uses the params; keep StartCapture from freeing them
+        m_takePhotoTaskParams = nullptr;
+        ReleaseMutex(m_hBusyMutex);
+    }
 
-    ReleaseMutex(m_hBusyMutex);
+    // A cancelled capture may never reach doCapture, which would normally do this
+    EndCaptureWindow();
+
+    SetCaptureStatus(CaptureStatus::Cancelled);
 
     return true;
 }

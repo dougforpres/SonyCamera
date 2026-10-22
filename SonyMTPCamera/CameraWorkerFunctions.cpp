@@ -5,6 +5,10 @@
 #include "Camera.h"
 #include "CameraWorkerFunctions.h"
 
+constexpr int MAX_DOWNLOAD_ATTEMPTS = 5;
+constexpr DWORD DOWNLOAD_RETRY_DELAY = 200;
+constexpr DWORD EXPOSURE_WAIT_SLICE = 250;
+
 StateResult
 refreshSettings(CameraTaskInfo& info)
 {
@@ -71,6 +75,14 @@ setProperty(CameraTaskInfo& info)
 StateResult
 doCapture(CameraTaskInfo& info)
 {
+    // The photo for this shot is announced after the shutter is released; from then on act on
+    // image-ready events again (also if anything below throws)
+    struct CaptureWindowGuard
+    {
+        Camera* camera;
+        ~CaptureWindowGuard() { camera->EndCaptureWindow(); }
+    } captureWindow{ info.pCamera };
+
     PropertyValue up((WORD)(info.pCamera->GetDeviceInfo().GetButtonPropertiesInverted() ? 2 : 1));
     PropertyValue down((WORD)(info.pCamera->GetDeviceInfo().GetButtonPropertiesInverted() ? 1 : 2));
 
@@ -94,7 +106,27 @@ doCapture(CameraTaskInfo& info)
 
     info.pCamera->SetProperty(Property::ShutterFullDown, &down);
 
-    WaitForSingleObject(info.pTask->GetCancelEventHandle(), (DWORD)(exposureTime * 1000));
+    // Wait out the exposure in slices, so a removed device ends a long exposure at once
+    // instead of holding the worker (and with it close/reopen) for the whole duration
+    ULONGLONG exposureEnd = GetTickCount64() + (ULONGLONG)(exposureTime * 1000);
+
+    while (!info.pCamera->IsDeviceRemoved())
+    {
+        ULONGLONG now = GetTickCount64();
+
+        if (now >= exposureEnd)
+        {
+            break;
+        }
+
+        ULONGLONG remaining = exposureEnd - now;
+        DWORD slice = remaining < EXPOSURE_WAIT_SLICE ? (DWORD)remaining : EXPOSURE_WAIT_SLICE;
+
+        if (WaitForSingleObject(info.pTask->GetCancelEventHandle(), slice) == WAIT_OBJECT_0)
+        {
+            break;
+        }
+    }
 
     info.pCamera->SetProperty(Property::ShutterFullDown, &up);
     info.pCamera->SetProperty(Property::ShutterHalfDown, &up);
@@ -139,11 +171,20 @@ isImageReady(CameraSettings* cs)
 StateResult
 downloadImage(CameraTaskInfo& info)
 {
+    if (info.pCamera->IsDeviceRemoved())
+    {
+        LOGWARN(L"Not downloading image, the device has been removed");
+        info.pCamera->SetCaptureStatus(CaptureStatus::Failed);
+
+        return StateResult::Fail;
+    }
+
     info.pCamera->SetCaptureStatus(CaptureStatus::Reading);
 
     // If we get here, there must be at least one image ready
     bool imageReady = true;
     int imageCount = 0;
+    int failedAttempts = 0;
 
     while (imageReady)
     {
@@ -151,8 +192,33 @@ downloadImage(CameraTaskInfo& info)
 
         Image* image = info.pCamera->GetImage(FULL_IMAGE);
 
-        if (image)
+        if (!image)
         {
+            // Without a limit this spins forever once the device is gone (e.g. USB unplugged),
+            // blocking the worker thread and with it every later request, including close
+            failedAttempts++;
+
+            if (info.pCamera->IsDeviceRemoved())
+            {
+                LOGERROR(L"Unable to retrieve image #%d, the device has been removed", imageCount + 1);
+                break;
+            }
+
+            if (failedAttempts >= MAX_DOWNLOAD_ATTEMPTS)
+            {
+                LOGERROR(L"Unable to retrieve image #%d after %d attempts, giving up", imageCount + 1, failedAttempts);
+                break;
+            }
+
+            if (WaitForSingleObject(info.pTask->GetCancelEventHandle(), DOWNLOAD_RETRY_DELAY) == WAIT_OBJECT_0)
+            {
+                LOGWARN(L"Image download cancelled");
+                break;
+            }
+        }
+        else
+        {
+            failedAttempts = 0;
             image->SaveFile();
 
             // Use the RAW image data and discard JPEG
@@ -175,7 +241,15 @@ downloadImage(CameraTaskInfo& info)
         }
     }
 
-    return imageCount > 0 ? StateResult::Success : StateResult::Fail;
+    if (imageCount == 0)
+    {
+        // Let the caller (polling GetCaptureStatus) know, rather than leaving it "Reading" forever
+        info.pCamera->SetCaptureStatus(CaptureStatus::Failed);
+
+        return StateResult::Fail;
+    }
+
+    return StateResult::Success;
 }
 
 StateResult

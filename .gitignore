@@ -341,3 +341,6 @@ healthchecksdb
 /TestLibRaw
 /RawSpeed
 *.dll
+
+# Third-party x64 import library linked by SonyMTPCamera (not build output)
+!SonyMTPCamera/libusbK/x64/

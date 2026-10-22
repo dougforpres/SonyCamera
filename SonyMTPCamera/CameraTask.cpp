@@ -87,7 +87,10 @@ CameraTask::Start(Camera* camera)
     // Create semaphore, get camera worker, initate and wait for response
     CameraWorker* pWorker = camera->GetWorker();
 
-    waiter = CreateSemaphore(nullptr, 1, 1, nullptr);
+    // Initially unsignalled: the worker releases it when the task completes, so Cancel/WaitFor
+    // really wait for that. (It used to start signalled, so the owner deleted tasks the worker
+    // was still running - a crash when the camera sent image-ready events during a new capture.)
+    waiter = CreateSemaphore(nullptr, 0, 1, nullptr);
     cancel = CreateEvent(nullptr, TRUE, FALSE, nullptr);
 
     pWorker->QueueTask(this, waiter);

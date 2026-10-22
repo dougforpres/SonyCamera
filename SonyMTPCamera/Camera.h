@@ -87,6 +87,11 @@ public:
     CameraWorker* GetWorker();
     void OnPropertiesUpdated();
     void OnImageBufferStatus(ImageBufferStatus status);
+    // Called from the WPD event thread when Windows reports the device was removed
+    void OnDeviceRemoved();
+    bool IsDeviceRemoved() const;
+    // Called by doCapture once the shutter is released: image-ready events are acted on again
+    void EndCaptureWindow();
     virtual void SetFocusSteps(std::wstring steps, std::wstring sleeps, bool handsOff) = 0;
     virtual UINT16 SetFocus(UINT16 focusPosition) = 0;
     virtual UINT16 GetFocusLimit() = 0;
@@ -114,4 +119,10 @@ private:
     bool m_shutdown = false;
     CameraWorker* pWorker = nullptr;
     bool initialized = false;
+    // Set once the device is gone, so waits for it fail at once instead of timing out
+    volatile long m_deviceRemoved = 0;
+    // Set from the start of StartCapture until the shutter has been released (doCapture). In
+    // that window image-ready events must not start a download: StartCapture owns the image
+    // buffer, and fetching while the camera processes a shot made an ILCE-7M3 drop off USB.
+    volatile long m_preparingCapture = 0;
 };

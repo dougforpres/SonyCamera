@@ -6,6 +6,7 @@ constexpr auto CLIENT_NAME = L"Retro.kiwi Sony Camera";
 constexpr auto CLIENT_MAJOR_VER = 0;
 constexpr auto CLIENT_MINOR_VER = 1;
 constexpr auto CLIENT_REVISION = 1;
+constexpr DWORD NOTIFICATION_DRAIN_TIMEOUT = 5000;
 
 class Camera;
 
@@ -42,6 +43,7 @@ public:
     virtual HANDLE GetHandle();
     virtual bool StartNotifications(Camera* camera);
     virtual bool StopNotifications();
+    virtual bool DrainNotifications(DWORD timeout);
 
     bool IsSupported();
     virtual std::wstring GetRegistryPath() = 0;

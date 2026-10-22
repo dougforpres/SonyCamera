@@ -24,6 +24,7 @@ public:
 
     virtual bool StartNotifications(Camera* camera);
     virtual bool StopNotifications();
+    virtual bool DrainNotifications(DWORD timeout);
 
     virtual std::wstring GetRegistryPath();
 
@@ -41,4 +42,8 @@ private:
     IPortableDeviceManager* m_manager = nullptr;
     IPortableDeviceValues* m_clientInformation = nullptr;
     DeviceEventHandler* m_eventHandler = nullptr;
+    DeviceEventHandler* m_retiredEventHandler = nullptr;
+    // One MTP transaction (command, data phase, response) at a time: interleaving two
+    // threads' transfers made the camera drop off USB.
+    SRWLOCK m_transactionLock = SRWLOCK_INIT;
 };
